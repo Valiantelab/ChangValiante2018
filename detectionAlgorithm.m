@@ -28,8 +28,9 @@ LED = x(:,2);  %%To be used if you need to collect LED data in the future' switc
 LFP_normalized = LFP - LFP(1);
 
 %% Fred's 1st round of detection
+%Issue running this function still
 
-[onloc, offloc] = onoffDetect (x, t(1), t(end), samplingInterval*1e-6);
+%[onloc, offloc] = onoffDetect (x, t(1), t(end), samplingInterval*1e-6);
 
 %% Filter the data
 %Bandpass butter filter
@@ -39,9 +40,66 @@ LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);
 %% Derivative of the data (absolute)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
-%% Find peaks
+%Find the quantiles using function quartilesStat
+[mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-[pks, locs] = findpeaks (DiffLFP_normalizedFiltered)
+%Find peaks
+[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
+
+
+%Find start and end of epileptiform events
+interSpikeInterval = diff(locs_spike);
+
+%insert a point
+n=1
+interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
+interSpikeInterval(n,:) = (0);
+
+
+%Find peaks 
+[pks_onset, locs_onset] = findpeaks (interSpikeInterval, 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
+
+%find onset times
+onsetTimes = zeros(numel (locs_onset),1);
+for i=1:numel(locs_onset)
+  
+    onsetTimes(i) = t(locs_spike(locs_onset(i)));
+       
+ end
+
+%find offset times
+offsetTimes = zeros(numel (locs_onset),1);
+locs_offset = locs_onset - 1;
+
+for i=1:numel(locs_onset);
+  
+    offsetTimes(i) = t(locs_spike(locs_offset(i)));
+       
+end
+
+
+ %insert a point in onset array
+n=1
+insert = offsetTimes(1);
+onsetTimes(n+1:end+1,:) = onsetTimes(n:end,:);
+onsetTimes(n,:) = (insert);
+
+%insert a point in offset array
+n=1
+insert = t(locs_spike(end))
+offsetTimes(end+1) = (insert);
+
+%find epileptiform event duration
+duration = offsetTimes-onsetTimes;
+
+%SLE onset and offset times
+SLE = [onsetTimes, offsetTimes, duration]
+
+figure
+plot (interSpikeInterval);
+hold on
+plot ((locs_onset), (pks_onset), 'o')
+
 
 
 %% plot graph of normalized  data 
@@ -56,6 +114,17 @@ subplot (3,1,1)
 plot (t, LFP_normalized, 'k')
 hold on
 plot (t, lightpulse - 2)
+
+%plot onset markers
+for i=1:numel(locs_onset)
+plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'x')
+end
+
+%plot offset markers
+for i=1:numel(locs_onset)
+plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'o')
+end
+
 title ('Overview of LFP (10000 points/s)');
 ylabel ('LFP (mV)');
 xlabel ('Time (s)');
@@ -71,7 +140,17 @@ xlabel ('Time (s)');
 subplot (3,1,3) 
 plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g')
 hold on
-plot (t(locs), (pks), 'o')
+%plot (t(locs_spike), (pks_spike), 'o')
+%plot onset markers
+for i=1:numel(locs_onset)
+plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'x')
+end
+ 
 title ('Peaks (o) in Derivative of filtered LFP');
 ylabel ('LFP (mV)');
 xlabel ('Time (s)');
+
+%plot offset markers
+for i=1:numel(locs_onset)
+plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'o')
+end
