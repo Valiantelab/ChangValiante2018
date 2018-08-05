@@ -1,5 +1,5 @@
 %Program: Epileptiform Activity Detector 
-%Author: Michael Chang (michael.chang@live.ca)
+%Author: Michael Chang (michael.chang@live.ca) and Fred Chen; 
 %Copyright (c) 2018, Valiante Lab
 %Version 1.0
 
@@ -32,12 +32,12 @@ LFP_normalized = LFP - LFP(1);
 
 %[onloc, offloc] = onoffDetect (x, t(1), t(end), samplingInterval*1e-6);
 
-%% Filter the data
-%Bandpass butter filter
+%% Data Processing 
+%Bandpass butter filter [1 - 100 Hz]
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
 LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);
 
-%% Derivative of the data (absolute)
+%Derivative of the data (absolute)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
 %Find the quantiles using function quartilesStat
@@ -46,15 +46,13 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %Find peaks
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
-
 %Find start and end of epileptiform events
 interSpikeInterval = diff(locs_spike);
 
 %insert a point
-n=1
+n=1;
 interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
 interSpikeInterval(n,:) = (0);
-
 
 %Find peaks 
 [pks_onset, locs_onset] = findpeaks (interSpikeInterval, 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 

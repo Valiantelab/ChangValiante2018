@@ -20,30 +20,25 @@ frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in micros
 t = (0:(length(x)- 1))/frequency;
 t = t';
 
-%% Seperate .abf file signals into independent signals
+%% Seperate signals from .abf files
 LFP = x(:,1); 
-LED = x(:,2);  %%To be used if you need to collect LED data in the future' switch column 1 to 2
+LED = x(:,2); 
 
-%% normalize the data
+%% normalize the LFP data
 LFP_normalized = LFP - LFP(1);
-
-%% Fred's 1st round of detection
-%Issue running this function still
-
-%[onloc, offloc] = onoffDetect (x, t(1), t(end), samplingInterval*1e-6);
 
 %% Data Processing 
 %Bandpass butter filter [1 - 100 Hz]
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
 LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);
 
-%Derivative of the data (absolute)
+%Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-%Find peaks
+%Find peaks 
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
 %Find start and end of epileptiform events

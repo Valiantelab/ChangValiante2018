@@ -10,6 +10,10 @@ close all
 clear all
 clc
 
+%%Import csv file
+    [FileName,PathName] = uigetfile ('*.csv','pick .csv file', 'F:\');%Choose .csv file
+    M = csvread(FileName);
+
 %% Load .abf and excel data
 
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'F:\');%Choose abf file
@@ -20,30 +24,25 @@ frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in micros
 t = (0:(length(x)- 1))/frequency;
 t = t';
 
-%% Seperate .abf file signals into independent signals
+%% Seperate signals from .abf files
 LFP = x(:,1); 
-LED = x(:,2);  %%To be used if you need to collect LED data in the future' switch column 1 to 2
+LED = x(:,2); 
 
-%% normalize the data
+%% normalize the LFP data
 LFP_normalized = LFP - LFP(1);
-
-%% Fred's 1st round of detection
-%Issue running this function still
-
-%[onloc, offloc] = onoffDetect (x, t(1), t(end), samplingInterval*1e-6);
 
 %% Data Processing 
 %Bandpass butter filter [1 - 100 Hz]
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
 LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);
 
-%Derivative of the data (absolute)
+%Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-%Find peaks
+%Find peaks 
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
 %Find start and end of epileptiform events
@@ -108,7 +107,7 @@ set(gcf, 'Position', get(0, 'Screensize'));
 
 lightpulse = LED > 1;
 
-subplot (3,1,1)
+subplot (2,1,1)
 plot (t, LFP_normalized, 'k')
 hold on
 plot (t, lightpulse - 2)
@@ -127,28 +126,30 @@ title ('Overview of LFP (10000 points/s)');
 ylabel ('LFP (mV)');
 xlabel ('Time (s)');
 
-subplot (3,1,2) 
-plot (t, LFP_normalizedFiltered, 'b')
-hold on
-plot (t, lightpulse - 2)
-title ('Overview of filtered LFP (bandpass: 1 to 100 Hz)');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
 
-subplot (3,1,3) 
-plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g')
-hold on
-%plot (t(locs_spike), (pks_spike), 'o')
-%plot onset markers
-for i=1:numel(locs_onset)
-plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'x')
-end
- 
-title ('Peaks (o) in Derivative of filtered LFP');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
+subplot (2,1,2)
 
-%plot offset markers
-for i=1:numel(locs_onset)
-plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'o')
-end
+plot (M(:,1), '*b')
+hold on
+title ('Overview of m calculation');
+ylabel ('m');
+xlabel ('Time (s)');
+ylim ([0.92 1.02])
+
+%%Calculating Averages m
+preictal = M(88:103, 1)
+ictal1 = M(104:178,1)
+postictal = M(186:200,1)
+interictal= M(200:265,1)
+preictal2=M(250:266,1)
+ictal2 = M(268:336,1)
+
+%%Calculating Averages autocorrelation time
+preictal = M(88:103, 3);
+ictal1 = M(104:178,3);
+postictal = M(186:200,3);
+interictal= M(200:265,3);
+preictal2=M(250:266,3);
+ictal2 = M(268:336,3);
+
+mean(preictal)
