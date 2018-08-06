@@ -136,4 +136,58 @@ ylabel ('m');
 xlabel ('Time (s)');
 ylim ([0.92 1.02])
 
-%%Calculating Averages 
+
+%% Same Plot
+
+figure;
+set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+set(gcf,'Name','Overview of Data'); %select the name you want
+set(gcf, 'Position', get(0, 'Screensize'));
+
+lightpulse = LED > 1;
+
+plot (t, LFP_normalized, 'k')
+hold on
+plot (t, lightpulse - 2)
+
+%plot onset markers
+for i=1:numel(locs_onset)
+plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'x')
+end
+
+%plot offset markers
+for i=1:numel(locs_onset)
+plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'o')
+end
+
+title ('Overview of LFP (10000 points/s)');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
+
+
+yyaxis right
+
+plot (M(:,1), '*b')
+hold on
+title ('Overview of m calculation');
+ylabel ('m');
+xlabel ('Time (s)');
+%ylim ([0.92 1.02])
+
+%% Calculating Averages m
+preictal = M(12:23, 1)
+ictal1 = M(25:59,1)
+postictal = M(59:84,1)
+interictal= M(119:168,1)
+preictal2=M(168:181,1)
+ictal2 = M(182:204,1)
+
+%%Calculating Averages autocorrelation time
+preictal = M(88:103, 3);
+ictal1 = M(104:178,3);
+postictal = M(186:200,3);
+interictal= M(200:265,3);
+preictal2=M(250:266,3);
+ictal2 = M(268:336,3);
+
+mean(preictal)
