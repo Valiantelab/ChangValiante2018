@@ -44,7 +44,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %Find distance between spikes in data
 interSpikeInterval = diff(locs_spike);
 
-%insert "0" into the start of the column;  
+%insert "0" into the start of the column; this allows the first spike to be detect as a peak 
 n=1;
 interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
 interSpikeInterval(n,:) = (0);
