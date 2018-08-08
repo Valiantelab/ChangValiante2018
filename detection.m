@@ -122,6 +122,57 @@ end
     artifact = [artifactStart, artifactEnd, artifactDuration];
 
 
+%Figures for testing programming outcoming
+figure;
+plot (t(timeSeries), DiffLFP_normalizedFiltered(timeSeries))
+hold on
+plot (t(artifactSpikes), DiffLFP_normalizedFiltered(artifactSpikes), 'x')
+title ('Overview of DiffLFP_normalizedFiltered');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
+
+
+figure;
+plot (t(locs_artifact-10000:locs_artifact+10000), LFP_normalizedFiltered(locs_artifact-10000:locs_artifact+10000))
+hold on
+plot (t(temp1), LFP_normalizedFiltered(temp1), 'x')
+title ('Overview of LFP_normalizedFiltered');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
+
+figure;
+plot (t(locs_artifact-10000:locs_artifact+10000), LFP_normalized(locs_artifact-10000:locs_artifact+10000))
+hold on
+plot (t(temp1), LFP_normalized(temp1), 'x')
+title ('Overview of LFP_normalized');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
+
+%% 
+
+figure
+plot (t(5600000:5800000), LFP_normalized(5600000:5800000));
+hold on
+plot (t(locs_artifact), LFP_normalized(locs_artifact), 'o');
+title ('Overview of LFP');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
+
+figure
+plot (t(5600000:5800000), DiffLFP_normalizedFiltered(5600000:5800000));
+hold on
+plot (t(locs_artifact), DiffLFP_normalizedFiltered(locs_artifact), 'o');
+title ('Overview of differentiated filtered LFP (bandpass: 1 to 100 Hz)');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
+
+figure
+plot (t(5600000:5800000), LFP_normalizedFiltered(5600000:5800000));
+hold on
+plot (t(locs_artifact), LFP_normalizedFiltered(locs_artifact), 'o');
+title ('Overview of filtered LFP (bandpass: 1 to 100 Hz)');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
 
 %% plot graph of normalized  data 
 figure;
