@@ -38,29 +38,35 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-%% Find spikes in data
+%% Find prominient, distinct spikes in Derivative of filtered LFP
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
 %Find distance between spikes in data
 interSpikeInterval = diff(locs_spike);
 
-%insert "0" into the start of the column;  
+%insert "0" into the start interSpikeInterval, to detect first spike;  
 n=1;
 interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
 interSpikeInterval(n,:) = (0);
 
-%Find start and end of epileptiform events 
+%Find spikes following 10 s of silence (assume onset)
 [pks_onset, locs_onset] = findpeaks (interSpikeInterval, 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
 
-%find onset times
+%% find onset times
 onsetTimes = zeros(numel (locs_onset),1);
 for i=1:numel(locs_onset)
   
     onsetTimes(i) = t(locs_spike(locs_onset(i)));
        
- end
+end
 
-%find offset times
+%insert first detected spike into onset array
+n=1;
+onsetTimes(n+1:end+1,:) = onsetTimes(n:end,:);
+onsetTimes(n,:) = t(locs_spike(1));
+    
+
+%% find offset times
 offsetTimes = zeros(numel (locs_onset),1);
 locs_offset = locs_onset - 1;
 
@@ -70,28 +76,50 @@ for i=1:numel(locs_onset);
        
 end
 
-
- %insert a point in onset array
-n=1
-insert = offsetTimes(1);
-onsetTimes(n+1:end+1,:) = onsetTimes(n:end,:);
-onsetTimes(n,:) = (insert);
-
 %insert a point in offset array
 n=1
 insert = t(locs_spike(end))
 offsetTimes(end+1) = (insert);
 
-%find epileptiform event duration
+%% find epileptiform event duration
 duration = offsetTimes-onsetTimes;
 
-%SLE onset and offset times
+%putting it all into an array 
 SLE = [onsetTimes, offsetTimes, duration]
 
-figure
-plot (interSpikeInterval);
-hold on
-plot ((locs_onset), (pks_onset), 'o')
+%% Finding artifacts
+
+[pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*30, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
+
+%preallocate array
+artifactStart = zeros(numel(locs_artifact));
+artifactEnd = zeros(numel(locs_artifact));
+artifactDuration = zeros(numel(locs_artifact));
+
+artifact = zeros(numel(locs_artifact));
+
+
+
+%For-Loop
+
+for i= 1:numel(locs_artifact);
+
+    clear pks_artifact_spikes pks_artifact_spikes
+    
+    timeSeries=locs_artifact(i)-10000:locs_artifact(i)+10000;
+
+    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(DiffLFP_normalizedFiltered(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
+
+    artifactSpikes=timeSeries(locs_artifact_spikes);
+
+    artifactStart(i) = artifactSpikes(1);
+    artifactEnd (i)= artifactSpikes(end);
+    artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
+        
+end
+
+    %putting it all into an array 
+    artifact = [artifactStart, artifactEnd, artifactDuration];
 
 
 
