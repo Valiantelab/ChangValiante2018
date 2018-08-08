@@ -96,7 +96,7 @@ artifactStart = zeros(numel(locs_artifact));
 artifactEnd = zeros(numel(locs_artifact));
 artifactDuration = zeros(numel(locs_artifact));
 
-artifact = zeros(numel(locs_artifact));
+artifacts = zeros(numel(locs_artifact));
 
 
 
@@ -119,60 +119,7 @@ for i= 1:numel(locs_artifact);
 end
 
     %putting it all into an array 
-    artifact = [artifactStart, artifactEnd, artifactDuration];
-
-
-%Figures for testing programming outcoming
-figure;
-plot (t(timeSeries), DiffLFP_normalizedFiltered(timeSeries))
-hold on
-plot (t(artifactSpikes), DiffLFP_normalizedFiltered(artifactSpikes), 'x')
-title ('Overview of DiffLFP_normalizedFiltered');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
-
-
-figure;
-plot (t(locs_artifact-10000:locs_artifact+10000), LFP_normalizedFiltered(locs_artifact-10000:locs_artifact+10000))
-hold on
-plot (t(temp1), LFP_normalizedFiltered(temp1), 'x')
-title ('Overview of LFP_normalizedFiltered');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
-
-figure;
-plot (t(locs_artifact-10000:locs_artifact+10000), LFP_normalized(locs_artifact-10000:locs_artifact+10000))
-hold on
-plot (t(temp1), LFP_normalized(temp1), 'x')
-title ('Overview of LFP_normalized');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
-
-%% 
-
-figure
-plot (t(5600000:5800000), LFP_normalized(5600000:5800000));
-hold on
-plot (t(locs_artifact), LFP_normalized(locs_artifact), 'o');
-title ('Overview of LFP');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
-
-figure
-plot (t(5600000:5800000), DiffLFP_normalizedFiltered(5600000:5800000));
-hold on
-plot (t(locs_artifact), DiffLFP_normalizedFiltered(locs_artifact), 'o');
-title ('Overview of differentiated filtered LFP (bandpass: 1 to 100 Hz)');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
-
-figure
-plot (t(5600000:5800000), LFP_normalizedFiltered(5600000:5800000));
-hold on
-plot (t(locs_artifact), LFP_normalizedFiltered(locs_artifact), 'o');
-title ('Overview of filtered LFP (bandpass: 1 to 100 Hz)');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
+    artifacts = [artifactStart, artifactEnd, artifactDuration];
 
 %% plot graph of normalized  data 
 figure;
@@ -187,14 +134,18 @@ plot (t, LFP_normalized, 'k')
 hold on
 plot (t, lightpulse - 2)
 
+for i = 1:numel(locs_artifact) %plot artifacts in red
+    plot (t(artifacts(i,1):artifacts(i,2)), LFP_normalized(artifacts(i,1):artifacts(i,2)), 'r')
+end
+
 %plot onset markers
-for i=1:numel(locs_onset)
-plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'x')
+for i=1:numel(SLE(:,1))
+plot (t(locs_spike(SLE(i,1))), (LFP_normalized(SLE(i,1))), 'o')
 end
 
 %plot offset markers
 for i=1:numel(locs_onset)
-plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'o')
+plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'x')
 end
 
 title ('Overview of LFP (10000 points/s)');
@@ -212,17 +163,17 @@ xlabel ('Time (s)');
 subplot (3,1,3) 
 plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g')
 hold on
-%plot (t(locs_spike), (pks_spike), 'o')
+
 %plot onset markers
 for i=1:numel(locs_onset)
 plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'x')
 end
  
-title ('Peaks (o) in Derivative of filtered LFP');
-ylabel ('LFP (mV)');
-xlabel ('Time (s)');
-
 %plot offset markers
 for i=1:numel(locs_onset)
 plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'o')
 end
+
+title ('Peaks (o) in Derivative of filtered LFP');
+ylabel ('LFP (mV)');
+xlabel ('Time (s)');
