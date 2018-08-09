@@ -27,6 +27,9 @@ LED = x(:,2);
 %% normalize the LFP data
 LFP_normalized = LFP - LFP(1);
 
+%% Find Light pulse
+[P] = pulse_seq(LED);
+
 %% Data Processing 
 %Bandpass butter filter [1 - 100 Hz]
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
@@ -65,14 +68,39 @@ for i=1:numel(locs_onset)
       onsetTimes(i) = t(locs_spike(locs_onset(i)));      
 end
 
-%% find Offset 
+%% Finding artifacts
 
-%find onset time, see if there is another spike for 10 seconds afterwards, 
-%that is not light-triggered 
-%or an artifact
+[pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*30, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
 
-offsetTimes = zeros(numel (locs_onset),1);
+%preallocate array
+artifactStart = zeros(numel(locs_artifact));
+artifactEnd = zeros(numel(locs_artifact));
+artifactDuration = zeros(numel(locs_artifact));
 
+artifacts = zeros(numel(locs_artifact),3);
+
+
+%Remove artifact spiking 
+for i= 1:numel(locs_artifact);
+
+    clear pks_artifact_spikes pks_artifact_spikes
+    
+    timeSeries=locs_artifact(i)-10000:locs_artifact(i)+10000;
+
+    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(DiffLFP_normalizedFiltered(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
+
+    artifactSpikes=timeSeries(locs_artifact_spikes);
+
+    artifactStart(i) = artifactSpikes(1);
+    artifactEnd (i)= artifactSpikes(end);
+    artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
+        
+end
+
+    %putting it all into an array 
+    artifacts = [artifactStart, artifactEnd, artifactDuration];
+
+    %remove artifact spiking from array of prominient spikes
 for i=1:size(artifact,1)
     for j=1:numel(locs_spike)
         if locs_spike(j)>artifact(i,1) && locs_spike(j)<artifact(i,2) 
@@ -81,8 +109,28 @@ for i=1:size(artifact,1)
     end
     
 end
-%check to make sure it work
-locs_spike(locs_spike==-1)=[];
+
+    locs_spike(locs_spike==-1)=[];
+
+%% Finding light-triggered spikes
+
+for i=1:numel(P.range(:,1))
+    range = P.range(i,1):P.range(i,1)+1000 
+        ismember == (locs_spike,range)
+    end
+    
+        
+
+    
+%% finding Offset 
+
+%find onset time, see if there is another spike for 10 seconds afterwards, 
+%that is not light-triggered 
+%or an artifact
+
+offsetTimes = zeros(numel (locs_onset),1);
+
+
 
 
 
@@ -97,12 +145,15 @@ for i=1:numel(locs_onset)
         locs_spike_sample=locs_spike(locs_onset(i):locs_onset(i+1));
     end
     for j=1:numel(interSpikeInterval_sample)
-        if interSpikeInterval_sample (j) > 100000 
-            for k=1:size(artifact,1)
-                if locs_spike_sample(j)<artifact(k,1) || locs_spike_sample(j)>artifact(k,2)
-                offsetTimes(i) = interSpikeInterval_sample(j);
+        currentindex=end-j+1;
+        for k=1:numel(lighttrigger)
+            if(interSpikeInterval_sample (currentindex)-lighttrigger(k))<10000
+                islastspike=false;
                 break
             end
+        end
+        if (islastspike)
+            offsetTimes(i)=locs_spike(currentindex);
         end
     end
 end
@@ -138,40 +189,6 @@ duration = offsetTimes-onsetTimes;
 %putting it all into an array 
 SLE = [onsetTimes, offsetTimes, duration]
 
-%% Finding artifacts
-
-[pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*30, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
-
-%preallocate array
-artifactStart = zeros(numel(locs_artifact));
-artifactEnd = zeros(numel(locs_artifact));
-artifactDuration = zeros(numel(locs_artifact));
-
-artifacts = zeros(numel(locs_artifact));
-
-
-
-%For-Loop
-
-for i= 1:numel(locs_artifact);
-
-    clear pks_artifact_spikes pks_artifact_spikes
-    
-    timeSeries=locs_artifact(i)-10000:locs_artifact(i)+10000;
-
-    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(DiffLFP_normalizedFiltered(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
-
-    artifactSpikes=timeSeries(locs_artifact_spikes);
-
-    artifactStart(i) = artifactSpikes(1);
-    artifactEnd (i)= artifactSpikes(end);
-    artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
-        
-end
-
-    %putting it all into an array 
-    artifacts = [artifactStart, artifactEnd, artifactDuration];
-
 %% plot graph of normalized  data 
 figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -185,7 +202,8 @@ plot (t, LFP_normalized, 'k')
 hold on
 plot (t, lightpulse - 2)
 
-for i = 1:numel(locs_artifact) %plot artifacts in red
+%plot artifacts in red
+for i = 1:numel(locs_artifact) 
     plot (t(artifacts(i,1):artifacts(i,2)), LFP_normalized(artifacts(i,1):artifacts(i,2)), 'r')
 end
 
