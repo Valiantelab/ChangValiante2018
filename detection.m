@@ -101,9 +101,9 @@ end
     artifacts = [artifactStart, artifactEnd, artifactDuration];
 
     %remove artifact spiking from array of prominient spikes
-for i=1:size(artifact,1)
+for i=1:size(artifacts,1)
     for j=1:numel(locs_spike)
-        if locs_spike(j)>artifact(i,1) && locs_spike(j)<artifact(i,2) 
+        if locs_spike(j)>artifacts(i,1) && locs_spike(j)<artifacts(i,2) 
             locs_spike(j)=-1;
         end
     end
@@ -114,15 +114,19 @@ end
 
 %% Finding light-triggered spikes
 
+%Preallocate
+locs_spike(:,2)= 0;
+
+%Find spikes triggered by light
 for i=1:numel(P.range(:,1))
     range = P.range(i,1):P.range(i,1)+1000; 
     %use or function to combine 2 digital inputs    
     locs_spike(:,2)=or(locs_spike(:,2),ismember (locs_spike(:,1), range))
 end
-    
-        
 
-    
+%Store light-triggered spikes
+lightTriggeredEvents = locs_spike(locs_spike(:,2)>0, 1);
+                
 %% finding Offset 
 
 %find onset time, see if there is another spike for 10 seconds afterwards, 
@@ -131,8 +135,19 @@ end
 
 offsetTimes = zeros(numel (locs_onset),1);
 
+locs_offset = locs_onset - 1;
+locs_offset(1) = [];
 
+for i=1:numel(locs_offset);
+  
+    offsetTimes(i) = t(locs_spike(locs_offset(i)));
+       
+end
 
+%insert a point in offset array
+n=1
+insert = t(locs_spike(end))
+offsetTimes(end+1) = (insert);
 
 
 %Fred's stuff (broken)
