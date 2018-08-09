@@ -52,22 +52,47 @@ interSpikeInterval(n,:) = (0);
 %Find spikes following 10 s of silence (assume onset)
 [pks_onset, locs_onset] = findpeaks (interSpikeInterval, 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
 
+%insert first detected spike into onset array
+n=1;
+locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
+locs_onset(n) = n;
+    
 %% find onset times
 onsetTimes = zeros(numel (locs_onset),1);
 for i=1:numel(locs_onset)
-  
-    onsetTimes(i) = t(locs_spike(locs_onset(i)));
-       
+      onsetTimes(i) = t(locs_spike(locs_onset(i)));      
 end
 
-%insert first detected spike into onset array
-n=1;
-onsetTimes(n+1:end+1,:) = onsetTimes(n:end,:);
-onsetTimes(n,:) = t(locs_spike(1));
-    
-
 %% find offset times
+
+%find onset time, see if there is another spike for 10 seconds afterwards, 
+%that is not light-triggered 
+%or an artifact
+
 offsetTimes = zeros(numel (locs_onset),1);
+
+for i=1:numel(locs_onset)
+    for j = 1:numel(locs_spike);
+        if locs_spike(locs_onset(i)+1) - locs_spike(locs_onset(i)) > 100000
+            offsetTimes(i) = locs_onset(i)
+        else
+            locs_spike(locs_onset(i)+1+j) - locs_spike(locs_onset(i)+j) > 100000
+        end
+    end
+end
+
+
+for i=1:numel(locs_onset)
+    for j = 0:numel(locs_spike);
+        if locs_spike(locs_onset(i)+1+j) - locs_spike(locs_onset(i)+j) > 100000
+        end
+            offsetTimes(i) = locs_onset(i)+j                  
+    end
+    
+end
+        
+
+
 locs_offset = locs_onset - 1;
 
 for i=1:numel(locs_onset);
@@ -140,7 +165,7 @@ end
 
 %plot onset markers
 for i=1:numel(SLE(:,1))
-plot (t(locs_spike(SLE(i,1))), (LFP_normalized(SLE(i,1))), 'o')
+plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'o')
 end
 
 %plot offset markers
