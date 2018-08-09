@@ -41,6 +41,8 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %% Find prominient, distinct spikes in Derivative of filtered LFP
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
+%% Finding onset 
+
 %Find distance between spikes in data
 interSpikeInterval = diff(locs_spike);
 
@@ -52,18 +54,18 @@ interSpikeInterval(n,:) = (0);
 %Find spikes following 10 s of silence (assume onset)
 [pks_onset, locs_onset] = findpeaks (interSpikeInterval, 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
 
-%insert first detected spike into onset array
+%insert the first epileptiform event into array (not detected with algo)
 n=1;
 locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
 locs_onset(n) = n;
     
-%% find onset times
+% onset times (s)
 onsetTimes = zeros(numel (locs_onset),1);
 for i=1:numel(locs_onset)
       onsetTimes(i) = t(locs_spike(locs_onset(i)));      
 end
 
-%% find offset times
+%% find Offset 
 
 %find onset time, see if there is another spike for 10 seconds afterwards, 
 %that is not light-triggered 
@@ -71,12 +73,39 @@ end
 
 offsetTimes = zeros(numel (locs_onset),1);
 
+for i=1:size(artifact,1)
+    for j=1:numel(locs_spike)
+        if locs_spike(j)>artifact(i,1) && locs_spike(j)<artifact(i,2) 
+            locs_spike(j)=-1;
+        end
+    end
+    
+end
+%check to make sure it work
+locs_spike(locs_spike==-1)=[];
+
+
+
+%Fred's stuff (broken)
+
 for i=1:numel(locs_onset)
-    for j = 1:numel(locs_spike);
-        if locs_spike(locs_onset(i)+1) - locs_spike(locs_onset(i)) > 100000
-            offsetTimes(i) = locs_onset(i)
-        else
-            locs_spike(locs_onset(i)+1+j) - locs_spike(locs_onset(i)+j) > 100000
+    if (i+1)>numel(locs_onset)
+        interSpikeInterval_sample=interSpikeInterval(locs_onset(i):end);
+        locs_spike_sample=locs_spike(locs_onset(i):end);
+    else
+        interSpikeInterval_sample=interSpikeInterval(locs_onset(i):locs_onset(i+1));
+        locs_spike_sample=locs_spike(locs_onset(i):locs_onset(i+1));
+    end
+    for j=1:numel(interSpikeInterval_sample)
+        currentindex=end-j+1;
+        for k=1:numel(lighttrigger)
+            if(interSpikeInterval_sample (currentindex)-lighttrigger(k))<10000
+                islastspike=false;
+                break
+            end
+        end
+        if (islastspike)
+            offsetTimes(i)=locs_spike(currentindex);
         end
     end
 end
@@ -84,11 +113,11 @@ end
 
 for i=1:numel(locs_onset)
     for j = 0:numel(locs_spike);
-        if locs_spike(locs_onset(i)+1+j) - locs_spike(locs_onset(i)+j) > 100000
+        if locs_spike(locs_onset(i)+1) - locs_spike(locs_onset(i)) > 100000
+            offsetTimes(i) = locs_spike(locs_onset(i)+j)
         end
-            offsetTimes(i) = locs_onset(i)+j                  
+        offsetTimes(i) = locs_onset(i)+j  
     end
-    
 end
         
 
