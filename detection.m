@@ -42,7 +42,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
 %% Find prominient, distinct spikes in Derivative of filtered LFP
-[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 1000);
+[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
 %% Finding onset 
 
@@ -73,11 +73,12 @@ end
 [pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*30, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
 
 %preallocate array
-artifactStart = zeros(numel(locs_artifact));
-artifactEnd = zeros(numel(locs_artifact));
-artifactDuration = zeros(numel(locs_artifact));
+artifactStart = zeros(size(locs_artifact));
+artifactEnd = zeros(size(locs_artifact));
+artifactDuration = zeros(size(locs_artifact));
 
-artifacts = zeros(numel(locs_artifact),3);
+
+artifacts = zeros(size(locs_artifact,1),3);
 
 
 %Remove artifact spiking 
@@ -238,12 +239,19 @@ hold on
 
 %plot onset markers
 for i=1:numel(locs_onset)
-plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'x')
+plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
 end
  
+%% test
+time_onset=zeros(size(locs_onset))
+for i=1:numel(locs_onset)
+time=t(locs_spike(locs_onset(i)))
+time_onset(i)=time
+end
+
 %plot offset markers
 for i=1:numel(locs_onset)
-plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'o')
+plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
 end
 
 title ('Peaks (o) in Derivative of filtered LFP');
