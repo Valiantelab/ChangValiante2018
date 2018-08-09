@@ -42,7 +42,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
 %% Find prominient, distinct spikes in Derivative of filtered LFP
-[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 1000);
+[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
 %% Finding onset 
 
@@ -144,47 +144,59 @@ for i=1:numel(locs_offset);
        
 end
 
-%insert last spike as offset for the last event
-insert = t(locs_spike(end,1));
-offsetTimes(end) = (insert);
+%insert a point in offset array
+insert = t(locs_spike(end))
+offsetTimes(end+1) = (insert);
 
 
 %Fred's stuff (broken)
-% 
-% for i=1:numel(locs_onset)
-%     if (i+1)>numel(locs_onset)
-%         interSpikeInterval_sample=interSpikeInterval(locs_onset(i):end);
-%         locs_spike_sample=locs_spike(locs_onset(i):end);
-%     else
-%         interSpikeInterval_sample=interSpikeInterval(locs_onset(i):locs_onset(i+1));
-%         locs_spike_sample=locs_spike(locs_onset(i):locs_onset(i+1));
-%     end
-%     for j=1:numel(interSpikeInterval_sample)
-%         currentindex=end-j+1;
-%         for k=1:numel(lighttrigger)
-%             if(interSpikeInterval_sample (currentindex)-lighttrigger(k))<10000
-%                 islastspike=false;
-%                 break
-%             end
-%         end
-%         if (islastspike)
-%             offsetTimes(i)=locs_spike(currentindex);
-%         end
-%     end
-% end
-% 
-% 
-% for i=1:numel(locs_onset)
-%     for j = 0:numel(locs_spike);
-%         if locs_spike(locs_onset(i)+1) - locs_spike(locs_onset(i)) > 100000
-%             offsetTimes(i) = locs_spike(locs_onset(i)+j)
-%         end
-%         offsetTimes(i) = locs_onset(i)+j  
-%     end
-% end
-%         
+
+for i=1:numel(locs_onset)
+    if (i+1)>numel(locs_onset)
+        interSpikeInterval_sample=interSpikeInterval(locs_onset(i):end);
+        locs_spike_sample=locs_spike(locs_onset(i):end);
+    else
+        interSpikeInterval_sample=interSpikeInterval(locs_onset(i):locs_onset(i+1));
+        locs_spike_sample=locs_spike(locs_onset(i):locs_onset(i+1));
+    end
+    for j=1:numel(interSpikeInterval_sample)
+        currentindex=end-j+1;
+        for k=1:numel(lighttrigger)
+            if(interSpikeInterval_sample (currentindex)-lighttrigger(k))<10000
+                islastspike=false;
+                break
+            end
+        end
+        if (islastspike)
+            offsetTimes(i)=locs_spike(currentindex);
+        end
+    end
+end
 
 
+for i=1:numel(locs_onset)
+    for j = 0:numel(locs_spike);
+        if locs_spike(locs_onset(i)+1) - locs_spike(locs_onset(i)) > 100000
+            offsetTimes(i) = locs_spike(locs_onset(i)+j)
+        end
+        offsetTimes(i) = locs_onset(i)+j  
+    end
+end
+        
+
+
+locs_offset = locs_onset - 1;
+
+for i=1:numel(locs_onset);
+  
+    offsetTimes(i) = t(locs_spike(locs_offset(i)));
+       
+end
+
+%insert a point in offset array
+n=1
+insert = t(locs_spike(end))
+offsetTimes(end+1) = (insert);
 
 %% find epileptiform event duration
 duration = offsetTimes-onsetTimes;
