@@ -44,30 +44,6 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %% Find prominient, distinct spikes in Derivative of filtered LFP
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
 
-%% Finding onset 
-
-%Find distance between spikes in data
-interSpikeInterval = diff(locs_spike);
-
-%insert "0" into the start interSpikeInterval, to detect first spike;  
-n=1;
-interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
-interSpikeInterval(n,:) = (0);
-
-%Find spikes following 10 s of silence (assume onset)
-[pks_onset, locs_onset] = findpeaks (interSpikeInterval, 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
-
-%insert the first epileptiform event into array (not detected with algo)
-n=1;
-locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
-locs_onset(n) = n;
-    
-% onset times (s)
-onsetTimes = zeros(numel (locs_onset),1);
-for i=1:numel(locs_onset)
-      onsetTimes(i) = t(locs_spike(locs_onset(i)));      
-end
-
 %% Finding artifacts
 
 [pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*30, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
@@ -104,7 +80,7 @@ end
     %remove artifact spiking from array of prominient spikes
 for i=1:size(artifacts,1)
     for j=1:numel(locs_spike)
-        if locs_spike(j)>artifacts(i,1) && locs_spike(j)<artifacts(i,2) 
+        if locs_spike(j)>=artifacts(i,1) && locs_spike(j)<=artifacts(i,2) 
             locs_spike(j)=-1;
         end
     end
@@ -112,6 +88,30 @@ for i=1:size(artifacts,1)
 end
 
     locs_spike(locs_spike==-1)=[];
+    
+%% Finding onset 
+
+%Find distance between spikes in data
+interSpikeInterval = diff(locs_spike);
+
+%insert "0" into the start interSpikeInterval, to detect first spike;  
+n=1;
+interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
+interSpikeInterval(n,:) = (0);
+
+%Find spikes following 10 s of silence (assume onset)
+[pks_onset, locs_onset] = findpeaks (interSpikeInterval(:,1), 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
+
+%insert the first epileptiform event into array (not detected with algo)
+n=1;
+locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
+locs_onset(n) = n;
+    
+% onset times (s)
+onsetTimes = zeros(numel (locs_onset),1);
+for i=1:numel(locs_onset)
+      onsetTimes(i) = t(locs_spike(locs_onset(i)));      
+end
 
 %% Finding light-triggered spikes
 
@@ -241,6 +241,11 @@ hold on
 for i=1:numel(locs_onset)
 plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
 end
+
+%plot spikes (will work, with error message; index with artifact removed)
+for i=1:numel(locs_spike)
+plot (t(locs_spike(i)), (DiffLFP_normalizedFiltered(locs_spike(i))), 'x')
+end
  
 %% test
 time_onset=zeros(size(locs_onset))
@@ -253,6 +258,7 @@ end
 for i=1:numel(locs_onset)
 plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
 end
+
 
 title ('Peaks (o) in Derivative of filtered LFP');
 ylabel ('LFP (mV)');
