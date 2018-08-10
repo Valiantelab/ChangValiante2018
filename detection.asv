@@ -46,7 +46,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
 %% Finding artifacts
 
-[pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*40, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
+[pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*30, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
 
 %preallocate array
 artifactStart = zeros(size(locs_artifact));
@@ -100,7 +100,12 @@ interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
 interSpikeInterval(n,:) = (0);
 
 %Find spikes following 10 s of silence (assume onset)
-locs_onset = find (interSpikeInterval(:,1)>100000);
+interSpikeInterval (:,3) = interSpikeInterval(:,1)>100000
+locs_onset = interSpikeInterval((interSpikeInterval (:,3)>0),1)
+
+find interSpikeInterval(:,1)>100000
+
+[pks_onset, locs_onset] = findpeaks (interSpikeInterval(:,1), 'MinPeakHeight', 100000); %Spikes should be at least 10s apart 
 
 %insert the first epileptiform event into array (not detected with algo)
 n=1;
@@ -150,11 +155,48 @@ insert = t(locs_spike(end,1));
 offsetTimes(end) = (insert);
 
 
+%Fred's stuff (broken)
+% 
+% for i=1:numel(locs_onset)
+%     if (i+1)>numel(locs_onset)
+%         interSpikeInterval_sample=interSpikeInterval(locs_onset(i):end);
+%         locs_spike_sample=locs_spike(locs_onset(i):end);
+%     else
+%         interSpikeInterval_sample=interSpikeInterval(locs_onset(i):locs_onset(i+1));
+%         locs_spike_sample=locs_spike(locs_onset(i):locs_onset(i+1));
+%     end
+%     for j=1:numel(interSpikeInterval_sample)
+%         currentindex=end-j+1;
+%         for k=1:numel(lighttrigger)
+%             if(interSpikeInterval_sample (currentindex)-lighttrigger(k))<10000
+%                 islastspike=false;
+%                 break
+%             end
+%         end
+%         if (islastspike)
+%             offsetTimes(i)=locs_spike(currentindex);
+%         end
+%     end
+% end
+% 
+% 
+% for i=1:numel(locs_onset)
+%     for j = 0:numel(locs_spike);
+%         if locs_spike(locs_onset(i)+1) - locs_spike(locs_onset(i)) > 100000
+%             offsetTimes(i) = locs_spike(locs_onset(i)+j)
+%         end
+%         offsetTimes(i) = locs_onset(i)+j  
+%     end
+% end
+%         
+
+
+
 %% find epileptiform event duration
 duration = offsetTimes-onsetTimes;
 
 %putting it all into an array 
-SLE = [onsetTimes, offsetTimes, duration];
+SLE = [onsetTimes, offsetTimes, duration]
 
 %% plot graph of normalized  data 
 figure;
@@ -206,14 +248,22 @@ plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
 end
 
 %plot spikes (will work, with error message; index with artifact removed)
-for i=1:size(locs_spike,1)
-plot (t(locs_spike(i,1)), (DiffLFP_normalizedFiltered(locs_spike(i,1))), 'x')
+for i=1:numel(locs_spike)
+plot (t(locs_spike(i)), (DiffLFP_normalizedFiltered(locs_spike(i))), 'x')
 end
  
+%% test
+time_onset=zeros(size(locs_onset))
+for i=1:numel(locs_onset)
+time=t(locs_spike(locs_onset(i)))
+time_onset(i)=time
+end
+
 %plot offset markers
 for i=1:numel(locs_onset)
 plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
 end
+
 
 title ('Peaks (o) in Derivative of filtered LFP');
 ylabel ('LFP (mV)');
