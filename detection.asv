@@ -49,7 +49,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
 
 %% Detect epileptiform events
-[epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered);
+[epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered, Q(3)*1000, 1000);
 
 %% Finding event time 
 %Onset times (s)
@@ -67,7 +67,7 @@ epileptiform = [onsetTimes, offsetTimes, duration];
 %% Identify light-triggered Events
 
 %Find light-triggered spikes 
-triggeredSpikes = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
+triggeredSpikes = findTriggeredEvents(DiffLFP_normalizedFiltered, LED, 10000, Q(3)*1000, 1000);
 
 %Preallocate
 epileptiform(:,4)= 0;
@@ -124,7 +124,7 @@ reduce_plot (t, lightpulse - 1);
 
 %plot spikes (will work, with error message; index with artifact removed)
 for i=1:size(locs_spike,1)
-plot (t(locs_spike(i,1)), (DiffLFP_normalizedFiltered(locs_spike(i,1))), 'x')
+plot (t(locs_spike(i,1)), (AbsLFP_normalizedFiltered(locs_spike(i,1))), 'x')
 end
 
 title ('Overview of filtered LFP (bandpass: 1 to 100 Hz)');
