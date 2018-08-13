@@ -49,8 +49,10 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 % [pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 10000);
 
 %% Detect epileptiform events
-[epileptiform, artifacts] = detectEvents (DiffLFP_normalizedFiltered)
+[epileptiform, artifacts] = detectEvents (t, DiffLFP_normalizedFiltered)
 
+%% Find light-triggered spikes (events)
+triggeredEvents = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
 %% Classifier
 
 SLE = epileptiform(epileptiform(:,3)>=10,:);

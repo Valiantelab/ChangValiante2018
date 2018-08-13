@@ -57,7 +57,6 @@ offsetTimes = zeros(numel (locs_onset),1);
 locs_offset = locs_onset - 1;
 locs_offset(1) = [];    % there is no spike preceding the very 1st spike
 locs_offset(end) = locs_spike(end,1) %insert last spike as last event's offset
-
 for i=1:numel(locs_offset);
     offsetTimes(i) = time(locs_spike(locs_offset(i)));      
 end
