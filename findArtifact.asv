@@ -1,0 +1,52 @@
+function [ artifacts ] = findArtifact(LFP, minPeakHeight, minPeakDistance)
+
+%Program: Artifact Finder
+%Authors: Michael Chang and Liam Long 
+%Description: Input variables LFP (timeSeries data); minPeakheight (the
+%minimum height of the artifact); minPeakDistance (the minimum distance the
+%artifact should be apart). Output variables will be the artifact onset
+%(1st column); artifact offset (2nd column); artifact duration (3rd
+%column). The out put will be the point in the data (not the time). To find
+%the time, insert the point into the time vector. 
+
+
+%% Find the quantiles using function quartilesStat
+[mx, Q] = quartilesStat(LFP);
+
+%d efault values if minPeakHeight and minPeakDistance is not specified 
+if nargin<2
+    minPeakHeight = Q(3)*40;   %artifact amplitude >40x 3rd quartile 
+    minPeakDisance = 10000;    %artifact spikes >1
+end
+
+%% Finding artifacts
+[pks_artifact, locs_artifact] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDisance); 
+
+%preallocate array
+artifactStart = zeros(size(locs_artifact));
+artifactEnd = zeros(size(locs_artifact));
+artifactDuration = zeros(size(locs_artifact));
+artifacts = zeros(size(locs_artifact,1),3);
+
+%Remove artifact spiking 
+for i= 1:numel(locs_artifact);
+
+    clear pks_artifact_spikes pks_artifact_spikes
+    
+    timeSeries=locs_artifact(i)-10000:locs_artifact(i)+10000;
+
+    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(LFP(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
+
+    artifactSpikes=timeSeries(locs_artifact_spikes);
+
+    artifactStart(i) = artifactSpikes(1);
+    artifactEnd (i)= artifactSpikes(end);
+    artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
+        
+end
+
+    %putting it all into an array 
+    artifacts = [artifactStart, artifactEnd, artifactDuration];
+
+end
+

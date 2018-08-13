@@ -1,11 +1,9 @@
 %Program: Epileptiform Activity Detector 
-%Author: Michael Chang (michael.chang@live.ca) and Fred Chen; 
+%Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
 %Version 1.0
 
-
 %% Clear All
-
 close all
 clear all
 clc
@@ -35,49 +33,25 @@ LFP_normalized = LFP - LFP(1);
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
 LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);
 
+%Absolute value of the filtered data 
+AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
+
 %Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-%% Find prominient, distinct spikes in Derivative of filtered LFP
-[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 25*Q(1), 'MinPeakDistance', 10000);
+%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
+[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
+
+%% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
+[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 10000);
 
 %% Finding artifacts
+artifacts = findArtifact(DiffLFP_normalizedFiltered, Q(3)*40, 10000);
 
-[pks_artifact, locs_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*40, 'MinPeakDistance', 10000); %artifact should be 30x 3rd quartile 
-
-%preallocate array
-artifactStart = zeros(size(locs_artifact));
-artifactEnd = zeros(size(locs_artifact));
-artifactDuration = zeros(size(locs_artifact));
-
-
-artifacts = zeros(size(locs_artifact,1),3);
-
-
-%Remove artifact spiking 
-for i= 1:numel(locs_artifact);
-
-    clear pks_artifact_spikes pks_artifact_spikes
-    
-    timeSeries=locs_artifact(i)-10000:locs_artifact(i)+10000;
-
-    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(DiffLFP_normalizedFiltered(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
-
-    artifactSpikes=timeSeries(locs_artifact_spikes);
-
-    artifactStart(i) = artifactSpikes(1);
-    artifactEnd (i)= artifactSpikes(end);
-    artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
-        
-end
-
-    %putting it all into an array 
-    artifacts = [artifactStart, artifactEnd, artifactDuration];
-
-    %remove artifact spiking from array of prominient spikes
+%% remove artifact spiking (from array of prominient spikes)
 for i=1:size(artifacts,1)
     for j=1:numel(locs_spike)
         if locs_spike(j)>=artifacts(i,1) && locs_spike(j)<=artifacts(i,2) 
@@ -86,9 +60,9 @@ for i=1:size(artifacts,1)
     end
     
 end
-
+    %remove spikes that are artifacts
     locs_spike(locs_spike==-1)=[];
-    
+       
 %% Finding onset 
 
 %Find distance between spikes in data
@@ -107,7 +81,7 @@ n=1;
 locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
 locs_onset(n) = n;
     
-% onset times (s)
+%onset times (s)
 onsetTimes = zeros(numel (locs_onset),1);
 for i=1:numel(locs_onset)
       onsetTimes(i) = t(locs_spike(locs_onset(i)));      
@@ -149,12 +123,16 @@ end
 insert = t(locs_spike(end,1));
 offsetTimes(end) = (insert);
 
-
 %% find epileptiform event duration
 duration = offsetTimes-onsetTimes;
 
 %putting it all into an array 
-SLE = [onsetTimes, offsetTimes, duration];
+epileptiform = [onsetTimes, offsetTimes, duration];
+
+%% Classifier
+
+SLE = epileptiform(epileptiform(:,3)>=10,:);
+IIS = epileptiform(epileptiform(:,3)<10,:);
 
 %% plot graph of normalized  data 
 figure;
@@ -165,23 +143,23 @@ set(gcf, 'Position', get(0, 'Screensize'));
 lightpulse = LED > 1;
 
 subplot (3,1,1)
-plot (t, LFP_normalized, 'k')
+reduce_plot (t, LFP_normalized, 'k');
 hold on
-plot (t, lightpulse - 2)
+reduce_plot (t, lightpulse - 2);
 
 %plot artifacts in red
-for i = 1:numel(locs_artifact) 
-    plot (t(artifacts(i,1):artifacts(i,2)), LFP_normalized(artifacts(i,1):artifacts(i,2)), 'r')
+for i = 1:numel(artifacts(:,1)) 
+    reduce_plot (t(artifacts(i,1):artifacts(i,2)), LFP_normalized(artifacts(i,1):artifacts(i,2)), 'r');
 end
 
 %plot onset markers
-for i=1:numel(SLE(:,1))
-plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'o')
+for i=1:numel(epileptiform(:,1))
+reduce_plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'o');
 end
 
 %plot offset markers
 for i=1:numel(locs_onset)
-plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'x')
+reduce_plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'x');
 end
 
 title ('Overview of LFP (10000 points/s)');
@@ -189,32 +167,40 @@ ylabel ('LFP (mV)');
 xlabel ('Time (s)');
 
 subplot (3,1,2) 
-plot (t, LFP_normalizedFiltered, 'b')
+reduce_plot (t, AbsLFP_normalizedFiltered, 'b');
 hold on
-plot (t, lightpulse - 2)
+reduce_plot (t, lightpulse - 1);
+
+%plot spikes (will work, with error message; index with artifact removed)
+for i=1:size(locs_spike,1)
+plot (t(locs_spike(i,1)), (AbsLFP_normalizedFiltered(locs_spike(i,1))), 'x')
+end
+
 title ('Overview of filtered LFP (bandpass: 1 to 100 Hz)');
 ylabel ('LFP (mV)');
 xlabel ('Time (s)');
 
 subplot (3,1,3) 
-plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g')
+reduce_plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g');
 hold on
 
-%plot onset markers
-for i=1:numel(locs_onset)
-plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
-end
+% %plot onset markers
+% for i=1:numel(locs_onset)
+% plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
+% end
 
-%plot spikes (will work, with error message; index with artifact removed)
-for i=1:size(locs_spike,1)
-plot (t(locs_spike(i,1)), (DiffLFP_normalizedFiltered(locs_spike(i,1))), 'x')
-end
+% %plot spikes (will work, with error message; index with artifact removed)
+% for i=1:size(locs_spike,1)
+% plot (t(locs_spike(i,1)), (DiffLFP_normalizedFiltered(locs_spike(i,1))), 'x')
+% end
  
-%plot offset markers
-for i=1:numel(locs_onset)
-plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
-end
+% %plot offset markers
+% for i=1:numel(locs_onset)
+% plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
+% end
 
 title ('Peaks (o) in Derivative of filtered LFP');
-ylabel ('LFP (mV)');
+ylabel ('Derivative (mV)');
 xlabel ('Time (s)');
+
+
