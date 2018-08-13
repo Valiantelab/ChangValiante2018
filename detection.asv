@@ -42,8 +42,11 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
-[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
+% %% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
+% [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
+% 
+% %% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
+% [pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 10000);
 
 %% Finding artifacts
 artifacts = findArtifact(DiffLFP_normalizedFiltered, Q(3)*40, 10000);
@@ -125,9 +128,6 @@ duration = offsetTimes-onsetTimes;
 
 %putting it all into an array 
 epileptiform = [onsetTimes, offsetTimes, duration];
-
-%% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
-[pks_spike_2, locs_spike_2] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 10000);
 
 %% Classifier
 

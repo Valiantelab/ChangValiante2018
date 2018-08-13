@@ -2,10 +2,14 @@ function [ epileptiform, artifacts ] = detectEvents(LFP, minPeakHeight, minPeakD
 %UNTITLED4 Summary of this function goes here
 %   Input the filtered LFP you want to detect events from
 
+
+%% Find Light pulse
+[P] = pulse_seq(LED);
+
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(LFP);
 
-% Default values, if minPeakHeight and minPeakDistance is not specified 
+%Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
     minPeakHeight = Q(1)*20;   %artifact amplitude >40x 3rd quartile 
     minPeakDistance = 10000;    %artifact spikes seperated by .6 seconds
@@ -15,7 +19,7 @@ end
 [pks_spike, locs_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
 
 %% Finding artifacts (Calls function findArtifact.m)
-artifacts = findArtifact(DiffLFP_normalizedFiltered, Q(3)*40, 10000);
+artifacts = findArtifact(LFP, Q(3)*40, 10000);
 
 %% remove artifact spiking (from array of prominient spikes)
 for i=1:size(artifacts,1)
