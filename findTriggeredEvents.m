@@ -22,7 +22,7 @@ if nargin<3
     'Default Values used for finding Triggered events'
     samplingRate = 10000    %smapling rate per second (Frequency)
     minPeakHeight = Q(1)*20   %spike amplitude >40x 3rd quartile 
-    minPeakDistance = 10000    %spikes seperated by 1.0 seconds    
+    minPeakDistance = 1000    %spikes seperated by 1.0 seconds    
 end
 
 %% Find Light pulse

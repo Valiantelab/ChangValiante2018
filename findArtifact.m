@@ -17,7 +17,7 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, minPeakHeight, minPeakD
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
-    minPeakHeight = Q(3)*40;   %artifact amplitude >40x 3rd quartile 
+    minPeakHeight = (Q(3)*40)*3;   %artifact amplitude >40x 3rd quartile 
     minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
 end
 

@@ -42,17 +42,45 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-% %% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
-% [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
-% 
-% %% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
-% [pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 10000);
+%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
+[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
+
+%% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
+%[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
 
 %% Detect epileptiform events
-[epileptiform, artifacts] = detectEvents (t, DiffLFP_normalizedFiltered)
+[epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered);
 
-%% Find light-triggered spikes (events)
-triggeredEvents = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
+%% Finding event time 
+%Onset times (s)
+onsetTimes = epileptiformLocation(:,1)/frequency; %frequency is your sampling rate
+
+%Offset Times (s)
+offsetTimes = epileptiformLocation(:,2)/frequency; 
+
+%Duration of Epileptiform event 
+duration = offsetTimes-onsetTimes;
+
+%putting it all into an array 
+epileptiform = [onsetTimes, offsetTimes, duration];
+
+%% Identify light-triggered Events
+
+%Find light-triggered spikes 
+triggeredSpikes = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
+
+%Preallocate
+epileptiform(:,4)= 0;
+
+%Find light-triggered events 
+for i=1:size(epileptiform,1) 
+    %use the "or" function to combine 2 digital inputs    
+    epileptiform(i,4)=ismember (epileptiformLocation(i,1), triggeredSpikes);
+end
+
+%Store light-triggered events (s)
+triggeredEvents = epileptiform(epileptiform(:,4)>0, 1);
+
 %% Classifier
 
 SLE = epileptiform(epileptiform(:,3)>=10,:);
@@ -78,12 +106,12 @@ end
 
 %plot onset markers
 for i=1:numel(epileptiform(:,1))
-reduce_plot (t(locs_spike(locs_onset(i))), (LFP_normalized(locs_onset(i))), 'o');
+reduce_plot ((onsetTimes(i)), (LFP_normalized(epileptiformLocation(i))), 'o');
 end
 
 %plot offset markers
-for i=1:numel(locs_onset)
-reduce_plot ((offsetTimes(i)), (LFP_normalized(locs_onset(i))), 'x');
+for i=1:numel(epileptiform(:,2))
+reduce_plot ((offsetTimes(i)), (LFP_normalized(epileptiformLocation(i,2))), 'x');
 end
 
 title ('Overview of LFP (10000 points/s)');
@@ -112,12 +140,12 @@ hold on
 % for i=1:numel(locs_onset)
 % plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
 % end
-
+% 
 % %plot spikes (will work, with error message; index with artifact removed)
 % for i=1:size(locs_spike,1)
 % plot (t(locs_spike(i,1)), (DiffLFP_normalizedFiltered(locs_spike(i,1))), 'x')
 % end
- 
+%  
 % %plot offset markers
 % for i=1:numel(locs_onset)
 % plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
