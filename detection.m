@@ -46,10 +46,10 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
 
 %% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
-%[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
+[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
 
 %% Detect epileptiform events
-[epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered);
+[epileptiformLocation, artifacts] = detectEvents (AbsLFP_normalizedFiltered, Q(3)*1000, 1000);
 
 %% Finding event time 
 %Onset times (s)
@@ -67,14 +67,14 @@ epileptiform = [onsetTimes, offsetTimes, duration];
 %% Identify light-triggered Events
 
 %Find light-triggered spikes 
-triggeredSpikes = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
+triggeredSpikes = findTriggeredEvents(AbsLFP_normalizedFiltered, LED, 10000, Q(3)*1000, 1000);
 
 %Preallocate
 epileptiform(:,4)= 0;
 
 %Find light-triggered events 
 for i=1:size(epileptiform,1) 
-    %use the "or" function to combine 2 digital inputs    
+    %use the "ismember" function 
     epileptiform(i,4)=ismember (epileptiformLocation(i,1), triggeredSpikes);
 end
 
@@ -82,7 +82,6 @@ end
 triggeredEvents = epileptiform(epileptiform(:,4)>0, 1);
 
 %% Classifier
-
 SLE = epileptiform(epileptiform(:,3)>=10,:);
 IIS = epileptiform(epileptiform(:,3)<10,:);
 
