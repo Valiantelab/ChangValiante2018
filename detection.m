@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 1.0
+%Version 2.0
 
 %% Clear All
 close all
@@ -68,7 +68,12 @@ AbsLFP_normalizedFilteredBaseline = AbsLFP_normalizedFiltered; %Rename
 sigma = std(AbsLFP_normalizedFilteredBaseline);
 
 %test figure
-%figure; plot (AbsLFP_normalizedFilteredBaseline)
+figure; 
+subplot (2,1,1)
+plot(AbsLFP_normalizedFiltered);
+
+subplot (2,1,2)
+plot(AbsLFP_normalizedFilteredBaseline);
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
 %Absolute value of the filtered data 
