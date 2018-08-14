@@ -92,7 +92,7 @@ epileptiform = [onsetTimes, offsetTimes, duration];
 
 %% Identify light-triggered Events
 %Find light-triggered spikes 
-triggeredSpikes = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
+triggeredSpikes = findTriggeredEvents(AbsLFP_normalizedFiltered, LED);
 
 %Preallocate
 epileptiform(:,4)= 0;
