@@ -7,15 +7,11 @@ function [ epileptiformLocation, artifactsLocation ] = detectEvents(LFP, minPeak
 %   series and each spike is seperated by 1 second, unless otherwise
 %   specified.
 
-% LFP = AbsLFP_normalizedFiltered;
-% minPeakHeight = Q(3)*1000;
-% minPeakDistance = 1000;
-
 %Find the quantiles using function quartilesStat
 [mx, Q] = quartilesStat(LFP);
 
 %Default values, if minPeakHeight and minPeakDistance is not specified 
-if nargin<2
+if nargin<3
     minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
     minPeakDistance = 1000;    %spikes seperated by 0.1 seconds
 end
@@ -24,7 +20,7 @@ end
 [pks_spike, locs_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
 
 %% Finding artifacts (Calls function findArtifact.m)
-artifactsLocation = findArtifact(LFP, Q(3)*40*3, 10000);
+artifactsLocation = findArtifact(LFP);
 
 %% remove artifact spiking (from array of prominient spikes)
 for i=1:size(artifactsLocation,1)

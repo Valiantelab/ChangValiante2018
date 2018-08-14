@@ -38,8 +38,8 @@ AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
 %Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
-% %Find the quantiles using function quartilesStat
-% [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
+%Find the quantiles using function quartilesStat
+[mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
 % %% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
 % [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
@@ -48,7 +48,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 % [pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
-[epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered);
+[epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered, 20*Q(1), 10000);
 
 %remove potential events
 for i = 1:size(epileptiformLocation,1)
@@ -68,6 +68,9 @@ AbsLFP_normalizedFilteredBaseline = AbsLFP_normalizedFiltered; %Rename
 sigma = std(AbsLFP_normalizedFilteredBaseline);
 
 %test figure
+%Absolute value of the filtered data 
+AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
+
 figure; 
 subplot (2,1,1)
 plot(AbsLFP_normalizedFiltered);
@@ -76,9 +79,6 @@ subplot (2,1,2)
 plot(AbsLFP_normalizedFilteredBaseline);
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
-%Absolute value of the filtered data 
-AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
-
 %Detect events
 [epileptiformLocation, artifacts] = detectEvents (AbsLFP_normalizedFiltered, 6*sigma, 10000);
 
