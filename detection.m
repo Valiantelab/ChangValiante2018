@@ -9,7 +9,6 @@ clear all
 clc
 
 %% Load .abf and excel data
-
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'F:\');%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
                                                                                          
@@ -39,17 +38,44 @@ AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
 %Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
 
-%Find the quantiles using function quartilesStat
-[mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
+% %Find the quantiles using function quartilesStat
+% [mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
 
-%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
-[pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
+% %% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
+% [pks_spike, locs_spike] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', 20*Q(1), 'MinPeakDistance', 10000);
+% 
+% %% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
+% [pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
 
-%% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
-%[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
-
-%% Detect epileptiform events
+%% Detect potential events (epileptiform/artifacts) | Derivative Values
 [epileptiformLocation, artifacts] = detectEvents (DiffLFP_normalizedFiltered);
+
+%remove potential events
+for i = 1:size(epileptiformLocation,1)
+AbsLFP_normalizedFiltered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = [-1];
+end
+
+%remove artifacts
+for i = 1:size(artifacts,1)
+AbsLFP_normalizedFiltered (artifacts(i,1):artifacts(i,2)) = [-1];
+end
+
+%Isolate baseline recording
+AbsLFP_normalizedFiltered (AbsLFP_normalizedFiltered == -1) = [];
+AbsLFP_normalizedFilteredBaseline = AbsLFP_normalizedFiltered; %Rename
+
+%Characterize baseline features
+sigma = std(AbsLFP_normalizedFilteredBaseline);
+
+%test figure
+%figure; plot (AbsLFP_normalizedFilteredBaseline)
+
+%% Detect events (epileptiform/artifacts) | Absolute Values
+%Absolute value of the filtered data 
+AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
+
+%Detect events
+[epileptiformLocation, artifacts] = detectEvents (AbsLFP_normalizedFiltered, 6*sigma, 10000);
 
 %% Finding event time 
 %Onset times (s)
@@ -65,7 +91,6 @@ duration = offsetTimes-onsetTimes;
 epileptiform = [onsetTimes, offsetTimes, duration];
 
 %% Identify light-triggered Events
-
 %Find light-triggered spikes 
 triggeredSpikes = findTriggeredEvents(DiffLFP_normalizedFiltered, LED);
 
@@ -86,6 +111,10 @@ SLE = epileptiform(epileptiform(:,3)>=10,:);
 IIS = epileptiform(epileptiform(:,3)<10,:);
 
 %% plot graph of normalized  data 
+
+% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
+[pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', 6*sigma, 'MinPeakDistance', 1000); 
+
 figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
 set(gcf,'Name','Overview of Data'); %select the name you want
