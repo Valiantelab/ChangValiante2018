@@ -1,4 +1,4 @@
-function [ epileptiformLocation, artifactsLocation ] = detectEvents(LFP, minPeakHeight, minPeakDistance)
+function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, minPeakHeight, minPeakDistance)
 %detectEvents is a function to detect the location where events occur
 %(i.e., epileptiform events, ictal events, interictal spikes, etc.)
 %   This function will take the time series (i.e., LFP) to analyze for
