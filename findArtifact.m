@@ -11,7 +11,8 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, multiple, sigma, averag
 %Output variables will be artifacts (matrix): the artifact onset (1st column);
 %artifact offset (2nd column); artifact duration (3rd %column). The output
 %will be the point in the data (not the time) and locs_artifact. To find the time, insert
-%the point into the time vector. 
+%the point into the time vector. Please note, Sigma is any characteristic
+%of the recording (std dev, or quartile, or mean, etc).
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
 [mx, Q] = quartilesStat(LFP);   %Quartiles
@@ -23,9 +24,9 @@ end
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
-    avg = mean(LFP);                %Average
+    average = mean(LFP);                %Average
     sigma = std(LFP);               %Standard Deviation
-    minPeakHeight = avg+(sigma*100);   %artifact amplitude >120x 3rd quartile 
+    minPeakHeight = average+(sigma*100);   %artifact amplitude >120x 3rd quartile 
     minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
 end
 
