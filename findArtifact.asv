@@ -18,16 +18,21 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, multiple, sigma, averag
 
 % Default values, if multiple, sigma, and average are specified 
 if nargin>3
-    minPeakHeight = average+(multiple*sigma)    %The minimum peak height
+    minPeakHeight = average+(multiple*sigma)
 end
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
     avg = mean(LFP);                %Average
     sigma = std(LFP);               %Standard Deviation
+    minPeakHeight = avg+(sigma*100);    %The Minimum Peak Height
+
     minPeakHeight = avg+(sigma*100);   %artifact amplitude >120x 3rd quartile 
     minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
 end
+
+
+
 
 %% Finding potential artifacts
 [pks_artifact, locs_artifact_potential, width] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance); 
