@@ -1,13 +1,12 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 2.0
+%Version 3.0
 
 %% Clear All
 close all
 clear all
 clc
-
 
 %% GUI to set thresholds
 %Settings, request for user input on threshold
@@ -15,7 +14,6 @@ titleInput = 'Specify Detection Thresholds';
 prompt1 = 'Epileptiform Spike Threshold: average + (6 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)'
-
 prompt = {prompt1, prompt2, prompt3};
 dims = [1 70];
 definput = {'6', '100', '0'};
@@ -39,47 +37,25 @@ t = t';
 LFP = x(:,1); 
 LED = x(:,2); 
 
-%% normalize the LFP data
-LFP_normalized = LFP - LFP(1);
+%% Data Processing 
+%Center the LFP data
+LFP_normalized = LFP - LFP(1);  %signal centered at 0, y-axis
+
+%Bandpass butter filter [1 - 100 Hz]
+[b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
+LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);     % Filtered signal
+
+%Absolute value of the filtered data
+AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);       %1st derived signal
+
+%Derivative of the filtered data (absolute value)
+DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived signal
 
 %% Find Light pulse
 [P] = pulse_seq(LED);
 
-%% Data Processing 
-%Bandpass butter filter [1 - 100 Hz]
-[b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
-LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);
-
-%Absolute value of the filtered data 
-AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
-
-%Derivative of the filtered data (absolute value)
-DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));
-
-%Find the quantiles using function quartilesStat
-[mx, Q] = quartilesStat(DiffLFP_normalizedFiltered);
-
-%Average
-avg = mean(DiffLFP_normalizedFiltered);
-
-%Std Dev
-sigma = std(DiffLFP_normalizedFiltered);
-
-%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
-%[pks_spike, locs_spike, w] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(1)*str2num(threshold_multiple{3}), 'MinPeakDistance', 10000);
-%
-% %% Find prominient, distinct spikes in (absolute) filtered LFP (2nd search)
-% [pks_spike, locs_spike] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*1000, 'MinPeakDistance', 1000); 
-
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
 [epileptiformLocation, artifacts, locs_spike_1st] = detectEvents (DiffLFP_normalizedFiltered, frequency);
-
-%testing for artifact location
-%[artifacts_1st, locs_artifact_1st] = findArtifact(DiffLFP_normalizedFiltered);
-
-% %testing finding artifact
-% [pks_artifact, locs_artifact, w_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*120, 'MinPeakDistance', 6000); 
-
 
 %remove potential events
 for i = 1:size(epileptiformLocation,1)
@@ -99,42 +75,13 @@ AbsLFP_normalizedFilteredBaseline = AbsLFP_normalizedFiltered; %Rename
 avg = mean(AbsLFP_normalizedFilteredBaseline); %Average
 sigma = std(AbsLFP_normalizedFilteredBaseline); %Standard Deviation
 
-%test figure
-%Absolute value of the filtered data 
+%% Detect events (epileptiform/artifacts) | Absolute Values
+
+%Recreate absolute values of the filtered data 
 AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
 
-figure; 
-subplot (2,1,1)
-plot(AbsLFP_normalizedFiltered);
-
-subplot (2,1,2)
-plot(AbsLFP_normalizedFilteredBaseline);
-
-%% Detect events (epileptiform/artifacts) | Absolute Values
 %Detect events
 [epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, avg+(str2num(threshold_multiple{1})*sigma), distanceSpike*frequency, avg+(str2num(threshold_multiple{2})*sigma), distanceArtifact*frequency);
-
-%testing for artifact location
-%[artifacts_2nd, locs_artifact_2nd] = findArtifact(AbsLFP_normalizedFiltered, str2num(threshold_multiple{2}), sigma, avg, 6000);
-
-% %testing finding artifact
-% [pks_artifact, locs_artifact, w_artifact_abs] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*120, 'MinPeakDistance', 6000); 
-
-
-%Find the quantiles using function quartilesStat
-[mx, Q] = quartilesStat(AbsLFP_normalizedFilteredBaseline);
-
-%Average
-avg = mean(AbsLFP_normalizedFilteredBaseline);
-
-%Std Dev
-sigma_baseline = std(AbsLFP_normalizedFilteredBaseline);
-
-%Std Dev
-sigma_original = std(AbsLFP_normalizedFiltered);
-
-%test, minimum threshold height for artifact
- minPeakHeight = (Q(3)*40)*3; 
 
 %% Finding event time 
 %Onset times (s)
