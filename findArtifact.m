@@ -19,7 +19,7 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, multiple, sigma, averag
 
 % Default values, if multiple, sigma, and average are specified 
 if nargin>3
-    minPeakHeight = average+(multiple*sigma)    %The minimum peak height
+    minPeakHeight = average+(multiple*sigma);    %The minimum peak height
 end
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
