@@ -18,7 +18,7 @@ prompt = {prompt1, prompt2, prompt3};
 dims = [1 70];
 definput = {'6', '100', '0'};
 opts = 'on';
-threshold_multiple = inputdlg(prompt,titleInput,dims,definput, opts);
+threshold_multiple = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
 %setting on distance between spikes, hard coded
 distanceSpike = 1;  %distance between spikes (seconds)
@@ -72,16 +72,25 @@ AbsLFP_normalizedFiltered (AbsLFP_normalizedFiltered == -1) = [];
 AbsLFP_normalizedFilteredBaseline = AbsLFP_normalizedFiltered; %Rename
 
 %Characterize baseline features from absolute value of the filtered data 
-avg = mean(AbsLFP_normalizedFilteredBaseline); %Average
-sigma = std(AbsLFP_normalizedFilteredBaseline); %Standard Deviation
+avgBaseline = mean(AbsLFP_normalizedFilteredBaseline); %Average
+sigmaBaseline = std(AbsLFP_normalizedFilteredBaseline); %Standard Deviation
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
 
-%Recreate absolute values of the filtered data 
-AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);
+%Recreate the Absolute filtered LFP (1st derived signal) vector
+AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered); %the LFP analyzed
+
+%Define thresholds for detection, using inputs from GUI
+minPeakHeight = avgBaseline+(threshold_multiple(1)*sigmaBaseline);      %threshold for epileptiform spike detection
+minPeakDistance = distanceSpike*frequency;                              %minimum distance spikes must be apart
+minArtifactHeight = avgBaseline+(threshold_multiple(2)*sigmaBaseline);  %threshold for artifact spike detection
+minArtifactDistance = distanceArtifact*frequency;                       %minimum distance artifact spikes must be apart
 
 %Detect events
-[epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, avg+(str2num(threshold_multiple{1})*sigma), distanceSpike*frequency, avg+(str2num(threshold_multiple{2})*sigma), distanceArtifact*frequency);
+[epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
+
+%% Determine exact onset and offset times
+
 
 %% Finding event time 
 %Onset times (s)
@@ -93,7 +102,7 @@ offsetTimes = epileptiformLocation(:,2)/frequency;
 %Duration of Epileptiform event 
 duration = offsetTimes-onsetTimes;
 
-%putting it all into an array 
+%putting it all into an matrix 
 epileptiform = [onsetTimes, offsetTimes, duration];
 
 %% Identify light-triggered Events
@@ -118,7 +127,7 @@ IIS = epileptiform(epileptiform(:,3)<10,:);
 
 %% plot graph of normalized  data 
 
-if str2num(threshold_multiple{3}) == 1
+if threshold_multiple(3) == 1
 
 figHandle = figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
