@@ -1,4 +1,4 @@
-function [ artifacts, locs_artifact] = findArtifact(LFP, multiple, sigma, average, minPeakDistance)
+function [ artifacts, locs_artifact] = findArtifact(LFP, frequency, minPeakHeight, minPeakDistance)
 
 %Program: Artifact Finder
 %Authors: Michael Chang (michael.chang@live.ca) and Liam Long
@@ -15,15 +15,18 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, multiple, sigma, averag
 %of the recording (std dev, or quartile, or mean, etc).
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
-[mx, Q] = quartilesStat(LFP);   %Quartiles
-
-% Default values, if multiple, sigma, and average are specified 
-if nargin>3
-    minPeakHeight = average+(multiple*sigma);    %The minimum peak height
-end
+[mx, Q] = quartilesStat(LFP);   %Quartiles, used to detect artifacts on the minor scale
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
+    frequency = 10000;       %10kHz sampling frequency
+    average = mean(LFP);                %Average
+    sigma = std(LFP);               %Standard Deviation
+    minPeakHeight = average+(sigma*100);   %artifact amplitude >120x 3rd quartile 
+    minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
+end
+
+if nargin<3
     average = mean(LFP);                %Average
     sigma = std(LFP);               %Standard Deviation
     minPeakHeight = average+(sigma*100);   %artifact amplitude >120x 3rd quartile 

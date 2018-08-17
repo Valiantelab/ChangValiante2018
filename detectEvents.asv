@@ -1,4 +1,4 @@
-function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, minPeakHeight, minPeakDistance, , averageBaselinesigmaBaseline)
+function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance)
 %detectEvents is a function to detect the location where events occur
 %(i.e., epileptiform events, ictal events, interictal spikes, etc.)
 %   This function will take the time series (i.e., LFP) to analyze for
@@ -11,18 +11,25 @@ function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(
 [mx, Q] = quartilesStat(LFP);   %Quartiles
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
-if nargin<2
-    averageBaseline = mean(LFP);                %Average
-    sigmaBaseline = std(LFP);               %Standard Deviation
+if nargin=1
+    frequency = 10
+    minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
+    minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
+    minArtifactHeight = mean(LFP) + (100*std(LFP))
+    minArtifactDistance = 0.6 * frequency;
+end
+
+if nargin>2 && nargin<4
     minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
     minPeakDistance = 1000;    %spikes seperated by 0.1 seconds
 end
+
 
 %% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
 [pks_spike, locs_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
 
 %% Finding artifacts (Calls function findArtifact.m)
-artifactsLocation = findArtifact(LFP, 100, sigmaBaseline, averageBaseline, 6000);
+artifactsLocation = findArtifact(LFP, minArtifactHeight, minArtifactDistance);
 
 %% remove artifact spiking (from array of prominient spikes)
 for i=1:size(artifactsLocation,1)

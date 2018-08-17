@@ -1,4 +1,4 @@
-function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, minPeakHeight, minPeakDistance)
+function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance)
 %detectEvents is a function to detect the location where events occur
 %(i.e., epileptiform events, ictal events, interictal spikes, etc.)
 %   This function will take the time series (i.e., LFP) to analyze for
@@ -7,20 +7,31 @@ function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(
 %   series and each spike is seperated by 1 second, unless otherwise
 %   specified.
 
-%Find the quantiles using function quartilesStat
-[mx, Q] = quartilesStat(LFP);
+%% Calculate statistics of Time Serise (i.e., LFP recording)
+[mx, Q] = quartilesStat(LFP);   %Quartiles
 
-%Default values, if minPeakHeight and minPeakDistance is not specified 
-if nargin<3
+% Default values, if minPeakHeight and minPeakDistance is not specified 
+if nargin<2
+    frequency = 10000   %10kHz sampling frequency
     minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
-    minPeakDistance = 1000;    %spikes seperated by 0.1 seconds
+    minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
+    minArtifactHeight = mean(LFP) + (100*std(LFP))
+    minArtifactDistance = 0.6 * frequency;
 end
+
+if nargin<3 
+    minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
+    minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
+    minArtifactHeight = mean(LFP) + (100*std(LFP));
+    minArtifactDistance = 0.6 * frequency;
+end
+
 
 %% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
 [pks_spike, locs_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
 
 %% Finding artifacts (Calls function findArtifact.m)
-artifactsLocation = findArtifact(LFP);
+artifactsLocation = findArtifact(LFP, frequency, minArtifactHeight, minArtifactDistance);
 
 %% remove artifact spiking (from array of prominient spikes)
 for i=1:size(artifactsLocation,1)

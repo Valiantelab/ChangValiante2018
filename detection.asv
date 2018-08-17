@@ -10,21 +10,16 @@ clc
 
 
 %% GUI to set thresholds
-%Settings, request for user input on threshold
-titleInput = 'Specify Detection Thresholds';
+
 prompt1 = 'Epileptiform Spike Threshold: average + (6 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
-prompt3 = 'Figure: Yes (1) or No (0)'
 
-prompt = {prompt1, prompt2, prompt3};
-dims = [1 70];
-definput = {'6', '100', '0'};
+prompt = {prompt1, prompt2};
+title = 'Specify the Thresholds for Event Detection';
+dims = [1 140];
+definput = {'6', '100'};
 opts = 'on';
-threshold_multiple = inputdlg(prompt,titleInput,dims,definput, opts);
-
-%setting on distance between spikes, hard coded
-distanceSpike = 1;  %distance between spikes (seconds)
-distanceArtifact = 0.6; %distance between artifacts (seconds)
+threshold_multiple = inputdlg(prompt,title,dims,definput, opts);
 
 %% Load .abf and excel data
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
@@ -75,7 +70,7 @@ sigma = std(DiffLFP_normalizedFiltered);
 [epileptiformLocation, artifacts, locs_spike_1st] = detectEvents (DiffLFP_normalizedFiltered, frequency);
 
 %testing for artifact location
-%[artifacts_1st, locs_artifact_1st] = findArtifact(DiffLFP_normalizedFiltered);
+[artifacts_1st, locs_artifact_1st] = findArtifact(DiffLFP_normalizedFiltered);
 
 % %testing finding artifact
 % [pks_artifact, locs_artifact, w_artifact] = findpeaks (DiffLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*120, 'MinPeakDistance', 6000); 
@@ -112,10 +107,10 @@ plot(AbsLFP_normalizedFilteredBaseline);
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
 %Detect events
-[epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, avg+(str2num(threshold_multiple{1})*sigma), distanceSpike*frequency, avg+(str2num(threshold_multiple{2})*sigma), distanceArtifact*frequency);
+[epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, avg, sigma, avg+(str2num(threshold_multiple{1})*sigma), 10000);
 
 %testing for artifact location
-%[artifacts_2nd, locs_artifact_2nd] = findArtifact(AbsLFP_normalizedFiltered, str2num(threshold_multiple{2}), sigma, avg, 6000);
+[artifacts_2nd, locs_artifact_2nd] = findArtifact(AbsLFP_normalizedFiltered, str2num(threshold_multiple{2}), sigma, avg, 6000);
 
 % %testing finding artifact
 % [pks_artifact, locs_artifact, w_artifact_abs] = findpeaks (AbsLFP_normalizedFiltered, 'MinPeakHeight', Q(3)*120, 'MinPeakDistance', 6000); 
@@ -171,11 +166,9 @@ IIS = epileptiform(epileptiform(:,3)<10,:);
 
 %% plot graph of normalized  data 
 
-if str2num(threshold_multiple{3}) == 1
-
-figHandle = figure;
+figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-set(gcf,'Name', sprintf ('Overview of %s', FileName)); %select the name you want
+set(gcf,'Name','Overview of Data'); %select the name you want
 set(gcf, 'Position', get(0, 'Screensize'));
 
 lightpulse = LED > 1;
@@ -232,10 +225,10 @@ for i=1:size(locs_spike_1st,1)
 plot (t(locs_spike_1st(i,1)), (DiffLFP_normalizedFiltered(locs_spike_1st(i,1))), 'x')
 end
 
-% %plot artifacts, found in the 1st search
-% for i=1:size(locs_artifact_1st(: ,1))
-% plot (t(locs_artifact_1st(i,1)), (DiffLFP_normalizedFiltered(locs_artifact_1st(i,1))), 'o', 'MarkerSize', 12)
-% end
+%plot artifacts, found in the 1st search
+for i=1:size(locs_artifact_1st(: ,1))
+plot (t(locs_artifact_1st(i,1)), (DiffLFP_normalizedFiltered(locs_artifact_1st(i,1))), 'o', 'MarkerSize', 12)
+end
 
 % %plot offset markers
 % for i=1:numel(locs_onset)
@@ -246,8 +239,4 @@ title ('Peaks (o) in Derivative of filtered LFP');
 ylabel ('Derivative (mV)');
 xlabel ('Time (s)');
 
-saveas(figHandle,sprintf('%s.png', FileName), 'png');
-
-else
-end
 
