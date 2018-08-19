@@ -34,8 +34,8 @@ t = (0:(length(x)- 1))/frequency;
 t = t';
 
 %% Seperate signals from .abf files
-LFP = x(:,1); 
-LED = x(:,2); 
+LFP = x(:,1);   %original LFP signal
+LED = x(:,2);   %light pulse signal
 
 %% Data Processing 
 %Center the LFP data
@@ -50,6 +50,11 @@ AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);       %1st derived sign
 
 %Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived signal
+
+%Lowpass butter filter [2Hz]
+fc = 2; % Cut off frequency
+[b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
+LFP_normalizedLowPassFiltered = filtfilt(b,a,LFP_normalized); % Will be the filtered signal
 
 %% Find Light pulse
 [P] = pulse_seq(LED);
@@ -89,6 +94,132 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %Detect events
 [epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
+%% Determine exact onset and offset times | LFP, low-pass filtered 
+
+%Need to write a function to 'crawl' and find exact onset and offset times
+
+% for i = 1:size(epileptiformLocation,1)
+%     epileptiformLocation(i,1)
+%     
+
+diffLFP_normalized = diff(LFP_normalizedFiltered);
+
+%%
+
+figure;
+subplot (2,1,1)
+plot(LFP_normalizedLowPassFiltered(time1:time2))
+subplot (2,1,2)
+plot(LFP_normalized(time1:time2))
+
+
+%test analysis - power analysis on filtered LFP
+
+%settings, variables
+i=2
+onsetSLE = single(SLE(i,1)*10000);
+offsetSLE = single(SLE(i,2)*10000);
+
+onsetBaseline = single(time1-50000);
+offsetBaseline = single(time2+50000);
+
+%
+onsetSLE = (SLE(i,1)*10000);
+offsetSLE = (SLE(i,2)*10000);
+
+onsetBaseline = (time1-50000);
+offsetBaseline = (time2+50000);
+%
+
+onsetContext = onsetBaseline:onsetSLE;
+offsetContext = offsetBaseline:offsetSLE;
+
+%variables for plotting
+data1=DiffLFP_normalizedFiltered;
+
+%calculating the power of the data
+powerAnalysis = (data1(onsetContext)).^2;
+data2=powerAnalysis;    %plotting purposes
+
+%Lowpass butter filter [2Hz]
+fc = 35; % Cut off frequency
+[b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
+powerAnalysisLowPassFiltered = filtfilt(b,a,powerAnalysis); % Will be the filtered signal
+data2 = powerAnalysisLowPassFiltered;
+
+%test plot
+figure;
+subplot (2,1,1)
+plot(data1(onsetContext))
+subplot (2,1,2)
+plot(data2)
+
+[pks, locs, w] = findpeaks(data2);
+max(pks)
+numel(pks)
+
+figure
+plot(data2/10000)
+hold on
+plot (data2(locs), 'x', 'color', 'r')
+
+[pks, locs] = findpeaks (data2);
+
+
+%% Plot detected SLEs 
+
+data1 = LFP_normalized;
+data1 = diffLFP_normalized;
+data2 = AbsLFP_normalizedFiltered;
+ 
+data1 = DiffLFP_normalizedFiltered;
+data2 = LFP_normalizedLowPassFiltered;
+
+for i = 1:size(SLE,1)
+    figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));   
+   
+    time1 = single(SLE(i,1)*10000);
+    time2= single(SLE(i,2)*10000);
+    rangeSLE = (time1:time2);
+    rangeOverview = (time1-50000:time2+50000);
+    
+    subplot (2,1,1)
+    %overview
+    plot (t(rangeOverview),data1(rangeOverview))
+    hold on
+    %SLE
+    plot (t(rangeSLE),data1(rangeSLE))
+    %onset/offset markers
+    plot (t(time1), data1(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset
+    plot (t(time2), data1(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset
+    %Labels
+    title ('Derivative of Filtered LFP');
+    ylabel ('mV');
+    xlabel ('Time (sec)');
+
+
+    subplot (2,1,2)
+    %overview
+    plot (t(rangeOverview),data2(rangeOverview))
+    hold on
+    %SLE
+    plot (t(rangeSLE),data2(rangeSLE))
+    %onset/offset markers
+    plot (t(time1), data2(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset
+    plot (t(time2), data2(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset
+    %Labels
+    title ('Absolute Derivative of Filtered LFP');
+    ylabel ('mV');
+    xlabel ('Time (sec)');
+end
+
+
+
+
+
 %% Finding event time 
 %Onset times (s)
 onsetTimes = epileptiformLocation(:,1)/frequency; %frequency is your sampling rate
@@ -124,7 +255,7 @@ IIS = epileptiform(epileptiform(:,3)<10,:);
 
 %% plot graph of normalized  data 
 
-if str2num(threshold_multiple(3)) == 1
+if threshold_multiple(3) == 1
 
 figHandle = figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
