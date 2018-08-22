@@ -39,22 +39,30 @@ LED = x(:,2);   %light pulse signal
 
 %% Data Processing 
 %Center the LFP data
-LFP_normalized = LFP - LFP(1);  %signal centered at 0, y-axis
+LFP_normalized = LFP - LFP(1);                                      %centered signal at 0, y-axis
+
+% %Lowpass butter filter [2Hz]
+% fc = 2; % Cut off frequency
+% [b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
+% LFP_normalizedLowPassFiltered = filtfilt(b,a,LFP_normalized); % Will be the filtered signal
 
 %Bandpass butter filter [1 - 100 Hz]
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
-LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);     % Filtered signal
+LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);             %Filtered signal
 
 %Absolute value of the filtered data
-AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);       %1st derived signal
+AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);            %1st derived signal
 
 %Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived signal
 
+%Power of the derivative of the filtered data (absolute values)     
+powerFeature = (DiffLFP_normalizedFiltered).^2;                     %3rd derived signal
+
 %Lowpass butter filter [2Hz]
-fc = 2; % Cut off frequency
-[b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
-LFP_normalizedLowPassFiltered = filtfilt(b,a,LFP_normalized); % Will be the filtered signal
+fc = 15; % Cut off frequency
+[b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
+powerAnalysisLowPassFiltered = filtfilt(b,a,powerFeature); %filtered signal
 
 %% Find Light pulse
 [P] = pulse_seq(LED);
@@ -94,9 +102,10 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %Detect events
 [epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
-%% Determine exact onset and offset times | LFP, low-pass filtered 
+%% Determine exact onset and offset times | Power Feature
 
-%Need to write a function to 'crawl' and find exact onset and offset times
+%Need to write a function to determine when power increases, that's the
+%point of seizure onset
 
 % for i = 1:size(epileptiformLocation,1)
 %     epileptiformLocation(i,1)
@@ -117,6 +126,10 @@ plot(LFP_normalized(time1:time2))
 
 %settings, variables
 i=2
+
+time1 = single(SLE(i,1)*10000);
+time2= single(SLE(i,2)*10000);
+
 onsetSLE = single(SLE(i,1)*10000);
 offsetSLE = single(SLE(i,2)*10000);
 
@@ -142,7 +155,7 @@ powerAnalysis = (data1(onsetContext)).^2;
 data2=powerAnalysis;    %plotting purposes
 
 %Lowpass butter filter [2Hz]
-fc = 35; % Cut off frequency
+fc = 15; % Cut off frequency
 [b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
 powerAnalysisLowPassFiltered = filtfilt(b,a,powerAnalysis); % Will be the filtered signal
 data2 = powerAnalysisLowPassFiltered;
@@ -174,6 +187,14 @@ data2 = AbsLFP_normalizedFiltered;
  
 data1 = DiffLFP_normalizedFiltered;
 data2 = LFP_normalizedLowPassFiltered;
+
+data2 = (DiffLFP_normalizedFiltered).^2;
+
+%Lowpass butter filter [2Hz]
+fc = 28; % Cut off frequency
+[b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
+powerAnalysisLowPassFiltered = filtfilt(b,a,data1); % Will be the filtered signal
+data2 = powerAnalysisLowPassFiltered;
 
 for i = 1:size(SLE,1)
     figure;
