@@ -59,10 +59,15 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived
 %Power of the derivative of the filtered data (absolute values)     
 powerFeature = (DiffLFP_normalizedFiltered).^2;                     %3rd derived signal
 
-%Lowpass butter filter [2Hz]
-fc = 15; % Cut off frequency
+%Lowpass butter filter [2 Hz]
+fc = 2; % Cut off frequency
 [b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
 powerFeatureLowPassFiltered = filtfilt(b,a,powerFeature); %filtered signal
+
+%Lowpass butter filter [25 Hz]
+fc = 25; % Cut off frequency
+[b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
+powerFeatureLowPassFiltered25 = filtfilt(b,a,powerFeature); %filtered signal
 
 %% Find Light pulse
 [P] = pulse_seq(LED);
@@ -161,11 +166,12 @@ end
 
 
 
-%% Scanning Low-Pass Filtered LFP signal for more accurate onset/offset times
+%% Scanning Low-Pass Filtered Power signal for more accurate onset/offset times
 
+%testing for 25 hz low pass filter
 for i = 1:size(SLE,1)
     
-    %SLE onset and offset times 
+    %Rough SLE onset and offset times,  
     onsetSLE = int64((SLE(i,1)*10000));
     offsetSLE = int64((SLE(i,2))*10000);
 
@@ -179,37 +185,51 @@ for i = 1:size(SLE,1)
     onsetContext = int64(onsetBaselineStart:onsetBaselineEnd);
     offsetContext = int64(offsetBaselineStart:offsetBaselineEnd);
     
-    %Locating accurate onset time | Power onset   
+    %Initial spike should be 1/3 the maximum prominance to be considered the onset 
+    prominence = max(powerFeatureLowPassFiltered25(onsetContext))/3;
     
-    prominence = max(powerFeatureLowPassFiltered(onsetContext))/2;
+    %Locating potential onset points  
+    [onset_pks, onset_locs, width_spike] = findpeaks(powerFeatureLowPassFiltered25(onsetContext), 'MinPeakProminence', prominence);
+       
+       
+    %First spike is the onset
+    SLEonset_final(i,1) = t(onsetContext(onset_locs(1)));
     
-    [onset_pks, onset_locs, width] = findpeaks(powerFeatureLowPassFiltered(onsetContext), 'MinPeakProminence', prominence);
-    
-%     [powerMax, indexOnset] = max((powerFeatureLowPassFiltered(onsetContext)))
-%     SLEonset(i,1) = t(onsetContext(indexOnset))
-%     
-%     meanOnsetBaseline = mean(powerFeatureLowPassFiltered(onsetContext));
-%     OnsetLocation = powerFeatureLowPassFiltered(onsetContext) > meanOnsetBaseline;
-% 
+%     %Correction Factor
+%     correctionFactor(i,1) = (width_spike(1)/2)/10000;   
+%    
 %     %Locating accurate onset time 
-%     indexOnset = find(OnsetLocation, 1);       
-%     SLEonset(i,1) = t(onsetContext(indexOnset));
-        
-    %Locating accurate offset time | peak finder | you also go to make sure it's not light-triggered  
+%     SLEonset_final(i,1) = SLEonset(i,1) - correctionFactor(i,1);
+     
     
-    %make sure it's not light triggered
-    %[Place Holder]
+    %Test plot onset
+    figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));   
+    subplot (2,1,1)
+    plot(t(onsetContext),LFP_normalized(onsetContext))
+    hold on
+    plot(t(onsetSLE), LFP_normalized(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
+    plot(SLEonset(i,1), LFP_normalized(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14) 
+    plot(t(onsetContext(onset_locs)), LFP_normalized(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+    %Labels
+    title ('LFP normalized');
+    ylabel ('mV');
+    xlabel ('Time (sec)');
     
-    %find the last spike    
-    meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext));
-    OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline;
+    subplot (2,1,2)
+    plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
+    hold on
+    plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+    plot(SLEonset(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)
+    plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+    %Labels
+    title ('Power, Low Pass Filtered (2 Hz)');
+    ylabel ('mV');
+    xlabel ('Time (sec)');
     
-    %Locating accurate offset time 
-    indexOffset = find(OffsetLocation, 1, 'last');       
-    SLEoffset(i,1) = t(offsetContext(indexOffset));
-
-
-    %Figures
+    
     %Test plot onset
     figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -236,8 +256,24 @@ for i = 1:size(SLE,1)
     title ('Power, Low Pass Filtered (2 Hz)');
     ylabel ('mV');
     xlabel ('Time (sec)');
-
 end
+
+    
+     
+
+
+    %Locating accurate offset time | peak finder | you also go to make sure it's not light-triggered  
+    
+    %make sure it's not light triggered
+    %[Place Holder]
+    
+    %find the last spike    
+    meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext));
+    OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline;
+    
+    %Locating accurate offset time 
+    indexOffset = find(OffsetLocation, 1, 'last');       
+    SLEoffset(i,1) = t(offsetContext(indexOffset));
 
     
     %test plot offset
