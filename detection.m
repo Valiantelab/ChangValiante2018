@@ -118,11 +118,11 @@ offsetTimes = epileptiformLocation(:,2)/frequency;
 duration = offsetTimes-onsetTimes;
 
 %putting it all into an matrix 
-epileptiform = [onsetTimes, offsetTimes, duration];
+epileptiformTime = [onsetTimes, offsetTimes, duration];
 
 %% Classifier
-SLE = epileptiform(epileptiform(:,3)>=10,:);
-IIS = epileptiform(epileptiform(:,3)<10,:);
+SLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
+IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
 
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scanning Low-Pass Filtered Power signal for more accurate onset/offset times
@@ -194,23 +194,28 @@ data1 = LFP_normalized;
 data2 = powerFeature;
 
 for i = 1:size(SLE_final,1)
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-   
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%    
     time1 = single(SLE_final(i,1)*10000);
     time2= single(SLE_final(i,2)*10000);
     rangeSLE = (time1:time2);
+    SLE_Vector{i,1} = rangeSLE;   %store the datarange for SLEs
+
     if time1>50001
         rangeOverview = (time1-50000:time2+50000);
     else
         rangeOverview = (1:time2+50000);
     end
     
+    SLE_Vector{i,2} = rangeOverview;   %store the SLE vectors
+ 
+end
 
     
-%     subplot (2,1,1)
+    subplot (2,1,1)
     %overview
     plot (t(rangeOverview),data1(rangeOverview))
     hold on
@@ -225,19 +230,19 @@ for i = 1:size(SLE_final,1)
     xlabel ('Time (sec)');
 
 
-%     subplot (2,1,2)
-%     %overview
-%     plot (t(rangeOverview),data2(rangeOverview))
-%     hold on
-%     %SLE
-%     plot (t(rangeSLE),data2(rangeSLE))
-%     %onset/offset markers
-%     plot (t(time1), data2(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset
-%     plot (t(time2), data2(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset
-%     %Labels
-%     title ('Absolute Derivative of Filtered LFP');
-%     ylabel ('mV');
-%     xlabel ('Time (sec)');
+    subplot (2,1,2)
+    %overview
+    plot (t(rangeOverview),data2(rangeOverview))
+    hold on
+    %SLE
+    plot (t(rangeSLE),data2(rangeSLE))
+    %onset/offset markers
+    plot (t(time1), data2(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset
+    plot (t(time2), data2(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset
+    %Labels
+    title ('Absolute Derivative of Filtered LFP');
+    ylabel ('mV');
+    xlabel ('Time (sec)');
 end
 
 
@@ -248,16 +253,16 @@ end
 % triggeredSpikes = findTriggeredEvents(AbsLFP_normalizedFiltered, LED);
 % 
 % %Preallocate
-% epileptiform(:,4)= 0;
+% epileptiformTime(:,4)= 0;
 % 
 % %Find light-triggered events 
-% for i=1:size(epileptiform,1) 
+% for i=1:size(epileptiformTime,1) 
 %     %use the "ismember" function 
-%     epileptiform(i,4)=ismember (epileptiformLocation(i,1), triggeredSpikes);
+%     epileptiformTime(i,4)=ismember (epileptiformLocation(i,1), triggeredSpikes);
 % end
 % 
 % %Store light-triggered events (s)
-% triggeredEvents = epileptiform(epileptiform(:,4)>0, 1);
+% triggeredEvents = epileptiformTime(epileptiformTime(:,4)>0, 1);
 
 
 
@@ -283,12 +288,12 @@ for i = 1:numel(artifacts(:,1))
 end
 
 %plot onset markers
-for i=1:numel(epileptiform(:,1))
+for i=1:numel(epileptiformTime(:,1))
 reduce_plot ((onsetTimes(i)), (LFP_normalized(epileptiformLocation(i))), 'o');
 end
 
 %plot offset markers
-for i=1:numel(epileptiform(:,2))
+for i=1:numel(epileptiformTime(:,2))
 reduce_plot ((offsetTimes(i)), (LFP_normalized(epileptiformLocation(i,2))), 'x');
 end
 
@@ -301,7 +306,7 @@ reduce_plot (t, AbsLFP_normalizedFiltered, 'b');
 hold on
 reduce_plot (t, lightpulse - 1);
 
-%plot spikes (will work, with error message; index with artifact removed)
+%plot spikes (artifact removed)
 for i=1:size(locs_spike_2nd,1)
 plot (t(locs_spike_2nd(i,1)), (DiffLFP_normalizedFiltered(locs_spike_2nd(i,1))), 'x')
 end
@@ -343,3 +348,4 @@ saveas(figHandle,sprintf('%s.png', FileName), 'png');
 else
 end
 
+'successfully completed. Thank you for choosing to use The Epileptiform Detector'

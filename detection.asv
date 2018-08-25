@@ -157,32 +157,32 @@ for i = 1:size(SLE,1)
     SLEoffset_final(i,1) = t(offsetContext(indexOffset)); 
     
     
-    %Test plot onset
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-    subplot (2,1,1)
-    plot(t(onsetContext),LFP_normalized(onsetContext))
-    hold on
-    plot(t(onsetSLE), LFP_normalized(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
-    plot(SLEonset_final(i,1), LFP_normalized(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
-    plot(t(onsetContext(onset_locs)), LFP_normalized(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-    %Labels
-    title ('LFP normalized');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    
-    subplot (2,1,2)
-    plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
-    hold on
-    plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(SLEonset_final(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
-    plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-    %Labels
-    title ('Power, Low Pass Filtered (2 Hz)');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
+%     %Test plot onset
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%     subplot (2,1,1)
+%     plot(t(onsetContext),LFP_normalized(onsetContext))
+%     hold on
+%     plot(t(onsetSLE), LFP_normalized(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
+%     plot(SLEonset_final(i,1), LFP_normalized(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), LFP_normalized(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+%     %Labels
+%     title ('LFP normalized');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+%     
+%     subplot (2,1,2)
+%     plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
+%     hold on
+%     plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+%     plot(SLEonset_final(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+%     %Labels
+%     title ('Power, Low Pass Filtered (2 Hz)');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
     
 end
 
@@ -192,38 +192,38 @@ SLE_final = [SLEonset_final, SLEoffset_final];  %final list of SLEs, need to fil
 %define variables
 data1 = LFP_normalized;
 data2 = powerFeature;
-
-for i = 1:size(SLE_final,1)
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-   
-    time1 = single(SLE_final(i,1)*10000);
-    time2= single(SLE_final(i,2)*10000);
-    rangeSLE = (time1:time2);
-    if time1>50001
-        rangeOverview = (time1-50000:time2+50000);
-    else
-        rangeOverview = (1:time2+50000);
-    end
-    
-
-    
-%     subplot (2,1,1)
-    %overview
-    plot (t(rangeOverview),data1(rangeOverview))
-    hold on
-    %SLE
-    plot (t(rangeSLE),data1(rangeSLE))
-    %onset/offset markers
-    plot (t(time1), data1(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset
-    plot (t(time2), data1(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset
-    %Labels
-    title ('Derivative of Filtered LFP');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-
+% 
+% for i = 1:size(SLE_final,1)
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%    
+%     time1 = single(SLE_final(i,1)*10000);
+%     time2= single(SLE_final(i,2)*10000);
+%     rangeSLE = (time1:time2);
+%     if time1>50001
+%         rangeOverview = (time1-50000:time2+50000);
+%     else
+%         rangeOverview = (1:time2+50000);
+%     end
+%     
+% 
+%     
+% %     subplot (2,1,1)
+%     %overview
+%     plot (t(rangeOverview),data1(rangeOverview))
+%     hold on
+%     %SLE
+%     plot (t(rangeSLE),data1(rangeSLE))
+%     %onset/offset markers
+%     plot (t(time1), data1(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset
+%     plot (t(time2), data1(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset
+%     %Labels
+%     title ('Derivative of Filtered LFP');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+% 
 
 %     subplot (2,1,2)
 %     %overview

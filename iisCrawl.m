@@ -29,16 +29,16 @@ for i = 1:size(IIS,1)
     
     %Locating the offset time
     meanOffsetBaseline = mean(LFP_normalizedLowPassFiltered(offsetContext)); %IIS ends when signal returned to half the mean power of signal
-    OffsetLocation = LFP_normalizedLowPassFiltered(offsetContext) > meanOffsetBaseline/1.5; 
+    OffsetLocation = LFP_normalizedLowPassFiltered(offsetContext) > meanOffsetBaseline/1; 
     indexOffset = find(OffsetLocation, 1, 'last'); %Last point is the offset     
     IISoffset_final(i,1) = t(offsetContext(indexOffset)); 
     
-    %locating the offset time (test)
-    offsetThreshold = (LFP_normalizedLowPassFiltered(onsetContext(1))); %IIS ends when signal returned to half the mean power of signal
-    OffsetLocation = LFP_normalizedLowPassFiltered(offsetContext) > offsetThreshold; 
-    indexOffset_test = find(OffsetLocation, 1, 'last'); %Last point is the offset     
-    IISoffset_test(i,1) = t(offsetContext(indexOffset_test)); 
-    
+%     %locating the offset time (test)
+%     offsetThreshold = (LFP_normalizedLowPassFiltered(onsetContext(1))); %IIS ends when signal returned to half the mean power of signal
+%     OffsetLocation = LFP_normalizedLowPassFiltered(offsetContext) > offsetThreshold; 
+%     indexOffset_test = find(OffsetLocation, 1, 'last'); %Last point is the offset     
+%     IISoffset_test(i,1) = t(offsetContext(indexOffset_test)); 
+%     
     
     %plot onset
     figure;
@@ -78,13 +78,11 @@ for i = 1:size(IIS,1)
     hold on
     plot(t(offsetIIS), LFP_normalized(offsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)     %initial detection as offset
     plot(IISoffset_final(i,1), LFP_normalized(offsetContext(indexOffset)), 'o', 'color', 'green', 'MarkerSize', 14)
-    plot(IISoffset_test(i,1), LFP_normalized(offsetContext(indexOffset_test)), 'o', 'color', 'red', 'MarkerSize', 14)
     subplot (2,1,2) %feature extraction
     plot(t(offsetContext), LFP_normalizedLowPassFiltered(offsetContext))
     hold on
     plot(t(offsetIIS), LFP_normalizedLowPassFiltered(offsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)   %initial detection as offset
     plot(IISoffset_final(i,1), LFP_normalizedLowPassFiltered(offsetContext(indexOffset)), 'o', 'color', 'green', 'MarkerSize', 14)
-    plot(IISoffset_test(i,1), LFP_normalizedLowPassFiltered(offsetContext(indexOffset_test)), 'o', 'color', 'red', 'MarkerSize', 14)
     
 end
 
