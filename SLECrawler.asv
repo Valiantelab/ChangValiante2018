@@ -82,20 +82,22 @@ for i = 1:size(SLE,1)
     [onset_pks, onset_locs] = findpeaks(powerFeatureLowPassFiltered25(onsetContext), 'MinPeakProminence', prominence);     
     SLEonset_final(i,1) = t(onsetContext(onset_locs(1))); %The onset time, the first spike (increase in power) is the onset   
    
-    %Locating the offset time    
+    %Locating the offset time
+    %make sure it's not light triggered
+    %[Place Holder]
+    
     meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext)); %SLE ends when signal returned to half the mean power of signal
     OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
     offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
+    SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %the offset time
     
-    %make sure it's not light triggered
-    lastBurstEvent = offsetSLE:offset_loc; %the duration of the last burst
-    lightTriggered = intersect(lastBurstEvent, lightTriggeredZonesCombined); %check if last burst event is due to a light trigger
-    TF = isempty(lightTriggered);
-    if TF == 1
-        SLEoffset_final(i,1) = t(offsetContext(offset_loc)); 
-    else
-        SLEoffset_final(i,1) = SLE(i,2);
-    end  
+    
+    lightTriggeredRange = offsetSLE:offset_loc; %the duration of the last burst
+    light-triggered = intersect(lightTriggeredRange, lightTriggeredZonesCombined) %check if it is due to a light trigger
+    if
+        light-triggered = isempty(
+    
+    
 
     %% plotting the onset and offsets detected for trouble shooting purposes (uncomment to use)
     

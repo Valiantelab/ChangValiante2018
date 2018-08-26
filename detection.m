@@ -59,9 +59,6 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived
 % %Power of the derivative of the filtered data (absolute values)     
 % powerFeature = (DiffLFP_normalizedFiltered).^2;                     %3rd derived signal
 
-%% Find Light pulse
-[P] = pulse_seq(LED);
-
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
 [epileptiformLocation, artifacts, locs_spike_1st] = detectEvents (DiffLFP_normalizedFiltered, frequency);
 
@@ -97,6 +94,7 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %Detect events
 [epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
+
 %% Finding event time 
 %Onset times (s)
 onsetTimes = epileptiformLocation(:,1)/frequency; %frequency is your sampling rate
@@ -116,53 +114,10 @@ IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
 
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, SLE);
-
-%% Identify light-triggered Events
-
-onsetDelay = 0.1; %seconds after light pulse is on
-
-lightPulseOnset = P.range(:,1)/frequency;
-
-%Find light pulses
-clear lightTriggeredRange lightTriggeredZone
-for i = 1:numel(P.range(:,1))
-    lightTriggeredRange = (P.range(i,1):P.range(i,1)+(onsetDelay*frequency));
-    lightTriggeredZone{i} = lightTriggeredRange; 
-end
-
-%Combine all ranges where light pulses can initiate
-lightTriggeredZonesCombined = cat(2, lightTriggeredZone{:});  %2 is vertcat
-   
-%Preallocate
-SLE_final(:,4)= 0;
-
-%SLE light-triggerd if it starts within 100 ms of light pulse 
-for i=1:size(SLE_final,1) 
-    %use the "ismember" function 
-    SLE_final(i,4)=ismember (int64(SLE_final(i,1)*frequency), lightTriggeredZonesCombined);
-end
+SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, 0.1);
 
 %Store light-triggered events (s)
 triggeredEvents = SLE_final(SLE_final(:,4)>0, 1);
-
-%% Identify light-triggered Events (original)
-% 
-% %Find light-triggered spikes 
-% triggeredSpikes = findTriggeredEvents(AbsLFP_normalizedFiltered, LED);
-% 
-% %Preallocate
-% epileptiformTime(:,4)= 0;
-% 
-% %Find light-triggered events 
-% for i=1:size(epileptiformTime,1) 
-%     %use the "ismember" function 
-%     epileptiformTime(i,4)=ismember (epileptiformLocation(i,1), triggeredSpikes);
-% end
-% 
-% %Store light-triggered events (s)
-% triggeredEvents = epileptiformTime(epileptiformTime(:,4)>0, 1);
-
 
 %% plot graph of normalized  data 
 
