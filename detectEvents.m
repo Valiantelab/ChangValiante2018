@@ -80,8 +80,18 @@ for i=1:numel(locs_offset);
     offsetLocation(i) = locs_spike(locs_offset(i));      
 end
 
+%% Duration
+%Duration of Epileptiform event 
+duration = offsetLocation-onsetLocation;
+
 %% Putting onset and offset locations into an array
-epileptiformLocation = [onsetLocation, offsetLocation];
+epileptiformLocation = [onsetLocation, offsetLocation, duration];
+
+%% Classifier (initial)
+SLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
+IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
 
 end
+
+
 

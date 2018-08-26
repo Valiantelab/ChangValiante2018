@@ -1,3 +1,94 @@
+function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance)
+%detectEvents is a function to detect the location where events occur
+%(i.e., epileptiform events, ictal events, interictal spikes, etc.)
+%   This function will take the time series (i.e., LFP) to analyze for
+%   major events. It will report the onset and offset of these events based
+%   on the default criteria that spikes are 20x 1st quartile in the time
+%   series and each spike is seperated by 1 second, unless otherwise
+%   specified.
+
+%% Calculate statistics of Time Serise (i.e., LFP recording)
+[mx, Q] = quartilesStat(LFP);   %Quartiles
+
+% Default values, if minPeakHeight and minPeakDistance is not specified 
+if nargin<2
+    frequency = 10000   %10kHz sampling frequency
+    minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
+    minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
+    minArtifactHeight = mean(LFP) + (100*std(LFP))
+    minArtifactDistance = 0.6 * frequency;
+end
+
+if nargin<3 
+    minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
+    minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
+    minArtifactHeight = mean(LFP) + (100*std(LFP));
+    minArtifactDistance = 0.6 * frequency;
+end
+
+
+%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
+[pks_spike, locs_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
+
+%% Finding artifacts (Calls function findArtifact.m)
+artifactsLocation = findArtifact(LFP, frequency, minArtifactHeight, minArtifactDistance);
+
+%% remove artifact spiking (from array of prominient spikes)
+for i=1:size(artifactsLocation,1)
+    for j=1:numel(locs_spike)
+        if locs_spike(j)>=artifactsLocation(i,1) && locs_spike(j)<=artifactsLocation(i,2) 
+            locs_spike(j)=-1;
+        end
+    end    
+end
+    %remove spikes that are artifacts
+    locs_spike(locs_spike==-1)=[];
+       
+%% Finding onset 
+%Find distance between spikes in data
+interSpikeInterval = diff(locs_spike);
+
+%insert "0" into the start interSpikeInterval; allows index to correspond 
+n=1;
+interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
+interSpikeInterval(n,:) = (0);
+
+%Find spikes following 10 s of silence (assume onset)
+locs_onset = find (interSpikeInterval(:,1)>100000);
+
+%insert the first epileptiform event into array (not detected with algo)
+n=1;
+locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
+locs_onset(n) = n;   
+
+%Onset location
+onsetLocation = zeros(numel (locs_onset),1);
+for i=1:numel(locs_onset)
+      onsetLocation(i) = locs_spike(locs_onset(i));      
+end
+
+%% finding Offset 
+%should not be a light-triggered spike or an artifact
+
+locs_offset = locs_onset - 1;
+locs_offset(1) = [];    % there is no spike preceding the very 1st spike
+locs_offset(end+1) = size(locs_spike,1); %insert last spike as last event's offset
+
+%Offset location
+offsetLocation = zeros(numel (locs_onset),1);
+for i=1:numel(locs_offset);
+    offsetLocation(i) = locs_spike(locs_offset(i));      
+end
+
+%% Duration
+%Duration of Epileptiform event 
+duration = offsetLocation-onsetLocation;
+
+%% Putting onset and offset locations into an array
+epileptiformLocation = [onsetLocation, offsetLocation, duration];
+
+end
+
 function [SLE_final] = SLECrawler(filteredLFP, SLETimes, frequency, LED, onsetDelay)
 %'SLE Crawl' function detects exact onset and offset time of ictal event
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
@@ -8,10 +99,7 @@ function [SLE_final] = SLECrawler(filteredLFP, SLETimes, frequency, LED, onsetDe
 %   spike) to be the seizure onset and the point where all spiking activity
 %   (power) ends to be the offset. This function can also determine if the
 %   SLE is light-triggered and also ensures that the last spike is not  
-%   induced by a light pulse. Author: Michael Chang (michael.chang@live.ca)
-%   Additional Notes: The default onset delay is 130 ms (or 100 ms after a
-%   30 ms light pulse). The threshold for offset detection is
-%   'meanOffsetBaseline/2'
+%   induced by a light pulse. Author: Michael Chang (michael.chang@live.ca).
 
    
 %% Setting initial variables
@@ -22,7 +110,7 @@ SLE = SLETimes;
 %Default values, if frequenct is not specified 
 if nargin<4
     frequency = 10000;      % 10kHz is default sampling frequency    
-    onsetDelay = 0.13;       % seconds after light pusle onset
+    onsetDelay = 0.1;       % seconds after light pusle onset
 end
 
 %create time vector
@@ -89,37 +177,45 @@ for i = 1:size(SLE,1)
     meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext)); %SLE ends when signal returned to half the mean power of signal
     OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
     offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
-    offsetSLE_2 = (offsetContext(offset_loc));  %detecting the new offset location 
+    offsetSLE_2 = (offsetContext(offset_loc));
     
-    %make sure last spike is not light triggered
+    %make sure it's not light triggered
     lastBurstEvent = offsetSLE:offsetSLE_2; %the duration of the last burst
     lightTriggered = intersect(lastBurstEvent, lightTriggeredZonesCombined); %check if last burst event is due to a light trigger
     TF = isempty(lightTriggered);
     if TF == 1
-        SLEoffset_final(i,1) = t(offsetContext(offset_loc));         
-    else   %if it is light triggered find the preceding spike that occured        
-        %find index of new SLE offset
-        offsetIndex = find(locs_spike == SLE(i,2)*frequency); %find the preceding spike, using data from previous 'detectEvent function' in abs LFP
-        SLEoffset_final(i,1) = locs_spike(offsetIndex-1)/frequency; %take the preceeding spike as the new offset
+        SLEoffset_final(i,1) = t(offsetContext(offset_loc)); 
+    else
         
-        %find location of new SLE offset
-        offsetSLE = int64(locs_spike(offsetIndex-1));  %approximate position of last spike
+        %Approximate (initially determined) SLE onset and offset times  
+        offsetSLE = int64(SLE(i,2)*frequency);  %convert into a position
 
-        %SLE "context" (a.k.a. baseline)
+        %Increase SLE "context" (a.k.a. baseline)
+        onsetBaselineStart = (onsetSLE-(1*frequency));
+        onsetBaselineEnd = (onsetSLE+(0.5*frequency));
         offsetBaselineStart = (offsetSLE-(0.5*frequency));
         offsetBaselineEnd = (offsetSLE+(1*frequency));
 
         %Range of LFP to scan 
-        offsetContext = int64(offsetBaselineStart:offsetBaselineEnd);
+        onsetContext = int64(onsetBaselineStart:onsetBaselineEnd);
+        offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
 
-        %Locating the new offset time    
+        %Locating the onset time
+        prominence = max(powerFeatureLowPassFiltered25(onsetContext))/3; %SLE onset where spike prominience > 1/3 the maximum amplitude
+        [onset_pks, onset_locs] = findpeaks(powerFeatureLowPassFiltered25(onsetContext), 'MinPeakProminence', prominence);     
+        SLEonset_final(i,1) = t(onsetContext(onset_locs(1))); %The onset time, the first spike (increase in power) is the onset   
+
+        %Locating the offset time    
         meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext)); %SLE ends when signal returned to half the mean power of signal
         OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
         offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
-        SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detect new offset time    
+        offsetSLE_2 = (offsetContext(offset_loc));
+
+        
+        SLEoffset_final(i,1) = SLE(i,2);
     end  
 
-    %% plotting the onset and offsets detected, troubleshooting purposes (uncomment to use)
+    %% plotting the onset and offsets detected for trouble shooting purposes (uncomment to use)
     
 %     %Test plot onset
 %     figure;
@@ -161,7 +257,6 @@ SLE_final(:,4)= 0;
 for i=1:size(SLE_final,1) 
     %use the "ismember" function 
     SLE_final(i,4)=ismember (int64(SLE_final(i,1)*frequency), lightTriggeredZonesCombined);
-
 end
 
 %% Light pulse detect algorithm by Taufik A. Valiante
@@ -186,6 +281,7 @@ else
 
     P = struct_from_list('range', range, 'dur', dur, 'isi', isi);
 end
+
 
 
 

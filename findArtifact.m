@@ -51,12 +51,16 @@ for i= 1:numel(locs_artifact);
     timeSeries=locs_artifact(i)-6000:locs_artifact(i)+6000;
 
     [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(LFP(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
+    TF = isempty(locs_artifact_spikes);
+    if TF == 1 
+        return
+    else            
+        artifactSpikes=timeSeries(locs_artifact_spikes);
 
-    artifactSpikes=timeSeries(locs_artifact_spikes);
-
-    artifactStart(i) = artifactSpikes(1);
-    artifactEnd (i)= artifactSpikes(end);
-    artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
+        artifactStart(i) = artifactSpikes(1);
+        artifactEnd (i)= artifactSpikes(end);
+        artifactDuration(i) = artifactSpikes(end)-artifactSpikes(1);
+    end  
         
 end
 

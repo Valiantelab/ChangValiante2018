@@ -94,19 +94,8 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %Detect events
 [epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
-
 %% Finding event time 
-%Onset times (s)
-onsetTimes = epileptiformLocation(:,1)/frequency; %frequency is your sampling rate
-
-%Offset Times (s)
-offsetTimes = epileptiformLocation(:,2)/frequency; 
-
-%Duration of Epileptiform event 
-duration = offsetTimes-onsetTimes;
-
-%putting it all into an matrix 
-epileptiformTime = [onsetTimes, offsetTimes, duration];
+epileptiformTime = [epileptiformLocation/frequency];
 
 %% Classifier
 SLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
