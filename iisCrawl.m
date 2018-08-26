@@ -41,49 +41,49 @@ for i = 1:size(IIS,1)
 %     
     
     %plot onset
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('IIS onset #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-    subplot (2,1,1)
-    plot(t(onsetContext),LFP_normalized(onsetContext))
-    hold on
-    plot(t(onsetIIS), LFP_normalized(onsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
-    plot(IISonset_final(i,1), LFP_normalized(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
-    plot(t(onsetContext(onset_locs)), LFP_normalized(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-    %Labels
-    title ('LFP normalized');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    
-    subplot (2,1,2)
-    plot(t(onsetContext), LFP_normalizedLowPassFiltered(onsetContext))
-    hold on
-    plot(t(onsetIIS), LFP_normalizedLowPassFiltered(onsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(IISonset_final(i,1), LFP_normalizedLowPassFiltered(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
-    plot(t(onsetContext(onset_locs)), LFP_normalizedLowPassFiltered(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-    %Labels
-    title ('Power, Low Pass Filtered (2 Hz)');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    
-    
-    %plot offset
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('IIS offset #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-    subplot (2,1,1) %LFP overview
-    plot(t(offsetContext),LFP_normalized(offsetContext))
-    hold on
-    plot(t(offsetIIS), LFP_normalized(offsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)     %initial detection as offset
-    plot(IISoffset_final(i,1), LFP_normalized(offsetContext(indexOffset)), 'o', 'color', 'green', 'MarkerSize', 14)
-    subplot (2,1,2) %feature extraction
-    plot(t(offsetContext), LFP_normalizedLowPassFiltered(offsetContext))
-    hold on
-    plot(t(offsetIIS), LFP_normalizedLowPassFiltered(offsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)   %initial detection as offset
-    plot(IISoffset_final(i,1), LFP_normalizedLowPassFiltered(offsetContext(indexOffset)), 'o', 'color', 'green', 'MarkerSize', 14)
-    
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('IIS onset #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%     subplot (2,1,1)
+%     plot(t(onsetContext),LFP_normalized(onsetContext))
+%     hold on
+%     plot(t(onsetIIS), LFP_normalized(onsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
+%     plot(IISonset_final(i,1), LFP_normalized(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), LFP_normalized(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+%     %Labels
+%     title ('LFP normalized');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+%     
+%     subplot (2,1,2)
+%     plot(t(onsetContext), LFP_normalizedLowPassFiltered(onsetContext))
+%     hold on
+%     plot(t(onsetIIS), LFP_normalizedLowPassFiltered(onsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+%     plot(IISonset_final(i,1), LFP_normalizedLowPassFiltered(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), LFP_normalizedLowPassFiltered(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+%     %Labels
+%     title ('Power, Low Pass Filtered (2 Hz)');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+%     
+%     
+%     %plot offset
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('IIS offset #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%     subplot (2,1,1) %LFP overview
+%     plot(t(offsetContext),LFP_normalized(offsetContext))
+%     hold on
+%     plot(t(offsetIIS), LFP_normalized(offsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)     %initial detection as offset
+%     plot(IISoffset_final(i,1), LFP_normalized(offsetContext(indexOffset)), 'o', 'color', 'green', 'MarkerSize', 14)
+%     subplot (2,1,2) %feature extraction
+%     plot(t(offsetContext), LFP_normalizedLowPassFiltered(offsetContext))
+%     hold on
+%     plot(t(offsetIIS), LFP_normalizedLowPassFiltered(offsetIIS), 'x', 'color', 'red', 'MarkerSize', 12)   %initial detection as offset
+%     plot(IISoffset_final(i,1), LFP_normalizedLowPassFiltered(offsetContext(indexOffset)), 'o', 'color', 'green', 'MarkerSize', 14)
+%     
 end
 
 IIS_final = [IISonset_final, IISoffset_final];  %final list of IISs, need to filter out artifacts
