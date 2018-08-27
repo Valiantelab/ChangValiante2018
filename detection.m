@@ -21,7 +21,7 @@ opts = 'on';
 threshold_multiple = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
 %setting on distance between spikes, hard coded
-distanceSpike = 1;  %distance between spikes (seconds)
+distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
 
 %% Load .abf and excel data
@@ -81,7 +81,6 @@ avgBaseline = mean(AbsLFP_normalizedFilteredBaseline); %Average
 sigmaBaseline = std(AbsLFP_normalizedFilteredBaseline); %Standard Deviation
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
-
 %Recreate the Absolute filtered LFP (1st derived signal) vector
 AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered); %the LFP analyzed
 
@@ -98,12 +97,50 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 epileptiformTime = [epileptiformLocation/frequency];
 
 %% Classifier
-SLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
-IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
+putativeSLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
+% IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
+
+%% Spiking Frequency Classifier
+data1 = AbsLFP_normalizedFiltered; %Time series to be plotted 
+
+for i = 1:size(putativeSLE,1)
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));   
+   
+    onsetTime = single(putativeSLE(i,1)*10000);
+    offsetTime = single(putativeSLE(i,2)*10000);
+    sleVector = (onsetTime:offsetTime);  %SLE Vector  
+    SLE_vector{i} = sleVector;  %store SLE vector
+    
+    if onsetTime >= 50001
+        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
+    else
+        backgroundVector = (1:offsetTime+50000);
+    end
+        
+    plot (t(backgroundVector),data1(backgroundVector))
+    hold on
+    plot (t(sleVector),data1(sleVector))     %SLE
+    plot (t(onsetTime), data1(onsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+    plot (t(offsetTime), data1(offsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+    
+    locs_spike
+    %plot spikes (artifact removed)
+    for i=1:size(locs_spike_2nd,1)
+    plot (t(locs_spike_2nd(i,1)), (DiffLFP_normalizedFiltered(locs_spike_2nd(i,1))), 'x')
+    end
+
+    title (sprintf('Absolute Filtered LFP Recording, SLE #%d', i));
+    ylabel ('mV');
+    xlabel ('Time (sec)');
+   
+end
 
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, 0.13, locs_spike_2nd);
+SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE, frequency, LED, 0.13, locs_spike_2nd);
 
 %Store light-triggered events (s)
 triggeredEvents = SLE_final(SLE_final(:,4)>0, 1);
@@ -180,7 +217,7 @@ exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis
 %% Plotting out detected SLEs with context | To figure out how off you are
 data1 = LFP_normalized; %Time series to be plotted 
 
-for i = 1:size(SLE,1)
+for i = 1:size(SLE_final,1)
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
@@ -188,16 +225,16 @@ for i = 1:size(SLE,1)
    
     time1 = single(SLE_final(i,1)*10000);
     time2 = single(SLE_final(i,2)*10000);
-    rangeSLE = (time1:time2);
+    sleVector = (time1:time2);  %SLE Vector    
     if time1 >= 50001
-        rangeOverview = (time1-50000:time2+50000);
+        backgroundVector = (time1-50000:time2+50000);   %Background Vector
     else
-        rangeOverview = (1:time2+50000);
+        backgroundVector = (1:time2+50000);
     end
         
-    plot (t(rangeOverview),data1(rangeOverview))
+    plot (t(backgroundVector),data1(backgroundVector))
     hold on
-    plot (t(rangeSLE),data1(rangeSLE))     %SLE
+    plot (t(sleVector),data1(sleVector))     %SLE
     plot (t(time1), data1(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
     plot (t(time2), data1(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
     title (sprintf('LFP Recording, SLE #%d', i));

@@ -1,5 +1,7 @@
 %% Plotting out the detected SLEs with context | To figure out how off you are
-%define variables
+% Previously know as the 'troubleshooting script'
+
+% define variables
 data1 = LFP_normalized;
 data2 = powerFeatureLowPassFiltered25;
 
