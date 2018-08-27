@@ -87,10 +87,6 @@ duration = offsetLocation-onsetLocation;
 %% Putting onset and offset locations into an array
 epileptiformLocation = [onsetLocation, offsetLocation, duration];
 
-%% Classifier (initial)
-SLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
-IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
-
 end
 
 

@@ -13,7 +13,11 @@ for i = 1:size(SLE,1)
     time1 = single(SLE_final(i,1)*10000);
     time2= single(SLE_final(i,2)*10000);
     rangeSLE = (time1:time2);
-    rangeOverview = (time1-50000:time2+50000);
+    if time1 >= 50001
+        rangeOverview = (time1-50000:time2+50000);
+    else
+        rangeOverview = (1:time2+50000);
+    end
     
     subplot (2,1,1)
     %overview
