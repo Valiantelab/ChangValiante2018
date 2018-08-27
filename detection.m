@@ -115,22 +115,8 @@ B = 'Offset (s)';
 C = 'Duration (s)';
 D = 'Light-triggered (1 = yes)';
 
-if isempty(SLE_final) == 0
-    %Sheet 1 = SLE
-    subtitle1 = {A, B, C, D};
-    xlswrite(sprintf('%s(algo)',excelFileName),subtitle1,'SLE' ,'A1');
-    xlswrite(sprintf('%s(algo)',excelFileName),SLE_final,'SLE' ,'A2');
-else
-    display ('No SLEs were detected.');
-end
-    
-%Sheet 2 = IIS
-subtitle2 = {A, B, C, D};
-xlswrite(sprintf('%s(algo)',excelFileName),subtitle2,'IIS' ,'A1');
-xlswrite(sprintf('%s(algo)',excelFileName),IIS,'IIS' ,'A2');
-
+%Sheet 1 = Artifacts   
 if isempty(artifacts) == 0
-    %Sheet 3 = Artifacts
     subtitle3 = {A, B, C};
     xlswrite(sprintf('%s(algo)',excelFileName),subtitle3,'Artifacts','A1');
     xlswrite(sprintf('%s(algo)',excelFileName),artifacts/frequency,'Artifacts','A2');
@@ -138,6 +124,19 @@ else
     display ('No artifacts were detected.');
 end
 
+%Sheet 2 = IIS
+subtitle2 = {A, B, C, D};
+xlswrite(sprintf('%s(algo)',excelFileName),subtitle2,'IIS' ,'A1');
+xlswrite(sprintf('%s(algo)',excelFileName),IIS,'IIS' ,'A2');
+
+%Sheet 3 = SLE
+if isempty(SLE_final) == 0   
+    subtitle1 = {A, B, C, D};
+    xlswrite(sprintf('%s(algo)',excelFileName),subtitle1,'SLE' ,'A1');
+    xlswrite(sprintf('%s(algo)',excelFileName),SLE_final,'SLE' ,'A2');
+else
+    display ('No SLEs were detected.');
+end
 
 %% Optional: Plot Figures
 if threshold_multiple(3) == 1   
