@@ -16,7 +16,7 @@ prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt = {prompt1, prompt2, prompt3};
 dims = [1 70];
-definput = {'6', '100', '0'};
+definput = {'3', '100', '0'};
 opts = 'on';
 threshold_multiple = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -56,8 +56,8 @@ AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);            %1st derived
 %Derivative of the filtered data (absolute value)
 DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived signal
 
-% %Power of the derivative of the filtered data (absolute values)     
-% powerFeature = (DiffLFP_normalizedFiltered).^2;                     %3rd derived signal
+%Power of the filtered data (feature for classification)     
+powerFeature = (LFP_normalizedFiltered).^2;                     %3rd derived signal
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
 [epileptiformLocation, artifacts, locs_spike_1st] = detectEvents (DiffLFP_normalizedFiltered, frequency);
@@ -132,18 +132,21 @@ for i = 1:size(putativeSLE,1)
     
     %average spiking rate in 2nd half, SLE
     putativeSLE (i,6) = mean(spikeRateMinute(int64((sleDuration/2):sleDuration),2));    
-end
-
+    
+    %average power
+    totalPower = sum(powerFeature(sleVector));
+    putativeSLE (i,7) = totalPower /sleDuration;  
+    
 %     %Store SLE
 %     SLE = putativeSLE(putativeSLE(:,4)>0, 1);
         
-    %calculate the average spiking rate at defined window
-    averageWindowSize = 5;  %seconds
-    x  = spikeRateMinute(:,2);
-    S  = numel(x);
-    xx = reshape(x(1:averageWindowSize - mod(S, averageWindowSize)), averageWindowSize, []);
-    y  = sum(xx, 1).' / averageWindowSize;
-        
+%     %calculate the average spiking rate at defined window
+%     averageWindowSize = 5;  %seconds
+%     x  = spikeRateMinute(:,2);
+%     S  = numel(x);
+%     xx = reshape(x(1:averageWindowSize - mod(S, averageWindowSize)), averageWindowSize, []);
+%     y  = sum(xx, 1).' / averageWindowSize;
+%         
     %make background vector
     if onsetTime >= 50001
         backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
@@ -151,8 +154,10 @@ end
         backgroundVector = (1:offsetTime+50000);
     end
     background_vector{i} = backgroundVector;  %store background vector
+
+    %% plot vectors
+    if threshold_multiple(3) == 1   
     
-    %plot vectors
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
@@ -175,6 +180,8 @@ end
     plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'b')
     ylabel ('spike rate/second (Hz)');
     set(gca,'fontsize',16)
+    end
+    
 end
 
 %% SLE: Determine exact onset and offset times | Power Feature
@@ -283,6 +290,7 @@ for i = 1:size(SLE_final,1)
     title (sprintf('LFP Recording, SLE #%d', i));
     ylabel ('mV');
     xlabel ('Time (sec)');
+    set(gca,'fontsize',16)
     
 %     yyaxis right
 %     

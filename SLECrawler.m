@@ -135,8 +135,13 @@ else
         %Locating the onset time
         prominence = max(powerFeatureLowPassFiltered25(onsetContext))/3; %SLE onset where spike prominience > 1/3 the maximum amplitude
         [onset_pks, onset_locs] = findpeaks(powerFeatureLowPassFiltered25(onsetContext), 'MinPeakProminence', prominence);     
-        SLEonset_final(i,1) = t(onsetContext(onset_locs(1))); %The onset time, the first spike (increase in power) is the onset   
-
+        if isempty(onset_locs)
+            [peakValue, peakIndex] = max(powerFeatureLowPassFiltered25(onsetContext));
+            SLEonset_final(i,1) = t(onsetContext(peakIndex)); %The onset time, the first spike (increase in power) is the onset   
+        else
+            SLEonset_final(i,1) = t(onsetContext(onset_locs(1))); %The onset time, the first spike (increase in power) is the onset   
+        end
+        
         %Locating the offset time    
         meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext)); %SLE ends when signal returned to half the mean power of signal
         OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
