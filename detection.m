@@ -101,9 +101,10 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %% Finding event time 
 epileptiformTime = [epileptiformLocation/frequency];
 
-%% Classifier
-putativeSLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
-IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
+%% Classifier - function
+
+putativeSLE = epileptiformTime(epileptiformTime(:,3)>=5,:);
+IIS = epileptiformTime(epileptiformTime(:,3)<5,:);
 
 %% Spiking Frequency Classifier
 data1 = AbsLFP_normalizedFiltered; %Time series to be plotted 
@@ -131,27 +132,11 @@ for i = 1:size(putativeSLE,1)
     
     %average spiking rate of SLE
     putativeSLE (i,4) = mean(spikeRateMinute(:,2));
-    
-    %average spiking rate in 1st half, SLE
-    putativeSLE (i,5) = mean(spikeRateMinute(int64(1:(sleDuration/2)),2));
-    
-    %average spiking rate in 2nd half, SLE
-    putativeSLE (i,6) = mean(spikeRateMinute(int64((sleDuration/2):sleDuration),2));    
-    
+          
     %average power
     totalPower = sum(powerFeature(sleVector));
-    putativeSLE (i,7) = totalPower /sleDuration;  
-    
-%     %Store SLE
-%     SLE = putativeSLE(putativeSLE(:,4)>0, 1);
-        
-%     %calculate the average spiking rate at defined window
-%     averageWindowSize = 5;  %seconds
-%     x  = spikeRateMinute(:,2);
-%     S  = numel(x);
-%     xx = reshape(x(1:averageWindowSize - mod(S, averageWindowSize)), averageWindowSize, []);
-%     y  = sum(xx, 1).' / averageWindowSize;
-%         
+    putativeSLE (i,5) = totalPower /sleDuration;     
+              
     %make background vector
     if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
         backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
@@ -191,9 +176,31 @@ for i = 1:size(putativeSLE,1)
     
 end
 
+
+    %% Classifier
+    %Rule #1: average frequency > 1 Hz
+    index1 = putativeSLE(:,4)>1;
+    
+    %Rule #2: intensity (power/duration) > average - sigma
+    averageIntensity = mean(putativeSLE(:,5));
+    sigmaIntensity = std(putativeSLE(:,5));
+    if averageIntensity > sigmaIntensity 
+        thresholdIntensity = averageIntensity - sigmaIntensity; 
+    else
+        thresholdIntensity = averageIntensity; 
+    end
+    index2 = putativeSLE(:,5)>thresholdIntensity
+    
+    %Rule #3: duration > sigma of durations
+    sigmaDuration = std(putativeSLE(:,3));
+    index3 = putativeSLE(:,3)>sigmaDuration; 
+        
+    SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
+    
+    
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE, frequency, LED, 0.13, locs_spike_2nd, 0);  %can also define if light triggered
+SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, 0.13, locs_spike_2nd, 0);  %can also define if light triggered
 
 %testing - trouble shooting classifier
 SLE_final = [SLE_final(:,1:3), putativeSLE(:,4:7)];
