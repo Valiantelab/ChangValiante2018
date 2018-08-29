@@ -16,7 +16,7 @@ prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt = {prompt1, prompt2, prompt3};
 dims = [1 70];
-definput = {'3', '100', '0'};
+definput = {'4', '100', '0'};
 opts = 'on';
 threshold_multiple = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -36,6 +36,11 @@ t = t';
 %% Seperate signals from .abf files
 LFP = x(:,1);   %original LFP signal
 LED = x(:,2);   %light pulse signal
+
+% if exist('x(:,2)') == 1
+%     LED = x(:,2);   %light pulse signal
+%     lightpulse = LED > 1;
+% end
 
 %% Data Processing 
 %Center the LFP data
@@ -101,7 +106,7 @@ putativeSLE = epileptiformTime(epileptiformTime(:,3)>=10,:);
 IIS = epileptiformTime(epileptiformTime(:,3)<10,:);
 
 %% Spiking Frequency Classifier
-data1 = LFP_normalized; %Time series to be plotted 
+data1 = AbsLFP_normalizedFiltered; %Time series to be plotted 
 lightpulse = LED > 1;
 
 for i = 1:size(putativeSLE,1)   
@@ -148,11 +153,13 @@ for i = 1:size(putativeSLE,1)
 %     y  = sum(xx, 1).' / averageWindowSize;
 %         
     %make background vector
-    if onsetTime >= 50001
+    if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
         backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
-    else
+    elseif (onsetTime < 50001)
         backgroundVector = (1:offsetTime+50000);
-    end
+    elseif ((offsetTime+50000)>numel(data1))
+        backgroundVector = (onsetTime-50000:numel(data1));
+    end                    
     background_vector{i} = backgroundVector;  %store background vector
 
     %% plot vectors
@@ -161,7 +168,7 @@ for i = 1:size(putativeSLE,1)
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
+     set(gcf, 'Position', get(0, 'Screensize'));   
     
     plot (t(backgroundVector),data1(backgroundVector))
     hold on
@@ -186,10 +193,13 @@ end
 
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE, frequency, LED, 0.13, locs_spike_2nd);  %can also define if light triggered
+SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE, frequency, LED, 0.13, locs_spike_2nd, 0);  %can also define if light triggered
+
+%testing - trouble shooting classifier
+SLE_final = [SLE_final(:,1:3), putativeSLE(:,4:7)];
 
 %Store light-triggered events (s)
-triggeredEvents = SLE_final(SLE_final(:,4)>0, 1);
+%triggeredEvents = SLE_final(SLE_final(:,4)>0, 1);
 
 %% Write to .xls
 excelFileName = FileName(1:8);
@@ -273,24 +283,26 @@ for i = 1:size(SLE_final,1)
     set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));   
    
-    time1 = single(SLE_final(i,1)*10000);
-    time2 = single(SLE_final(i,2)*10000);
-    sleVector = (time1:time2);  %SLE Vector    
-    if time1 >= 50001
-        backgroundVector = (time1-50000:time2+50000);   %Background Vector
-    else
-        backgroundVector = (1:time2+50000);
-    end
+    onsetTime = single(SLE_final(i,1)*10000);
+    offsetTime = single(SLE_final(i,2)*10000);
+    sleVector = (onsetTime:offsetTime);  %SLE Vector    
+    
+    if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
+        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
+    elseif (onsetTime < 50001)
+        backgroundVector = (1:offsetTime+50000);
+    elseif ((offsetTime+50000)>numel(data1))
+        backgroundVector = (onsetTime-50000:numel(data1));
+    end                    
         
     plot (t(backgroundVector),data1(backgroundVector))
     hold on
     plot (t(sleVector),data1(sleVector))     %SLE
-    plot (t(time1), data1(time1), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-    plot (t(time2), data1(time2), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+    plot (t(onsetTime), data1(onsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+    plot (t(offsetTime), data1(offsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
     title (sprintf('LFP Recording, SLE #%d', i));
     ylabel ('mV');
     xlabel ('Time (sec)');
-
     
 %     yyaxis right
 %     
