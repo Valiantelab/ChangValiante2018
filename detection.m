@@ -290,13 +290,13 @@ for i = 1:size(SLE_final,1)
     title (sprintf('LFP Recording, SLE #%d', i));
     ylabel ('mV');
     xlabel ('Time (sec)');
-    set(gca,'fontsize',16)
+
     
 %     yyaxis right
 %     
 %     plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'b')
 %     ylabel ('spike rate/second (Hz)');
-%     set(gca,'fontsize',16)
+     set(gca,'fontsize',20)
        
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);      
