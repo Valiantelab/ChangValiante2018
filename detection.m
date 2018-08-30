@@ -11,18 +11,20 @@ clc
 %% GUI to set thresholds
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
-prompt1 = 'Epileptiform Spike Threshold: average + (6 x Sigma)';
+prompt1 = 'Epileptiform Spike Threshold: average + (4 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
-prompt = {prompt1, prompt2, prompt3};
+prompt4 = 'Stimulus channel (enter 0 if none):'
+prompt = {prompt1, prompt2, prompt3, prompt4};
 dims = [1 70];
-definput = {'4', '100', '0'};
+definput = {'4', '100', '0', '2'};
 opts = 'on';
 threshold_multiple = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
 %setting on distance between spikes, hard coded
 distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
+minSLEduration = 3; %seconds
 
 %% Load .abf and excel data
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
@@ -36,6 +38,7 @@ t = t';
 %% Seperate signals from .abf files
 LFP = x(:,1);   %original LFP signal
 LED = x(:,2);   %light pulse signal
+onsetDelay = 0.13;  %seconds
 
 % if exist('x(:,2)') == 1
 %     LED = x(:,2);   %light pulse signal
@@ -101,12 +104,11 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %% Finding event time 
 epileptiformTime = [epileptiformLocation/frequency];
 
-%% Classifier - function
+%% Initial Classifier (rough)
+putativeSLE = epileptiformTime(epileptiformTime(:,3)>=minSLEduration,:); %change threshold back to 5 if any detection issues 
+IIS = epileptiformTime(epileptiformTime(:,3)<minSLEduration,:);  %change threshold back to 5 if any detection issues
 
-putativeSLE = epileptiformTime(epileptiformTime(:,3)>=5,:);
-IIS = epileptiformTime(epileptiformTime(:,3)<5,:);
-
-%% Spiking Frequency Classifier
+%% Spiking Frequency Counter
 data1 = AbsLFP_normalizedFiltered; %Time series to be plotted 
 lightpulse = LED > 1;
 
@@ -118,22 +120,21 @@ for i = 1:size(putativeSLE,1)
     SLE_vector{i} = sleVector;  %store SLE vector
     
     %Calculate the spiking rate for SLE
-    windowSize = 1;  %seconds  
-    
+    windowSize = 1;  %seconds      
     sleDuration = round(numel(sleVector)/frequency);    %rounded to whole number
     clear spikeRateMinute
     for j = 1:sleDuration
         startWindow = onsetTime+((windowSize*frequency)*(j-1));
         EndWindow = onsetTime+((windowSize*frequency)*j);
         spikeRate = and(startWindow<=locs_spike_2nd, EndWindow >=locs_spike_2nd);
-        spikeRateMinute(j,1) = startWindow;
+        spikeRateMinute(j,1) = startWindow; %time windows starts
         spikeRateMinute(j,2) = sum(spikeRate(:));   %number of spikes in the window
     end
     
-    %average spiking rate of SLE
+    %average spike rate of SLE
     putativeSLE (i,4) = mean(spikeRateMinute(:,2));
           
-    %average power
+    %average intensity of SLE
     totalPower = sum(powerFeature(sleVector));
     putativeSLE (i,5) = totalPower /sleDuration;     
               
@@ -153,7 +154,7 @@ for i = 1:size(putativeSLE,1)
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
-     set(gcf, 'Position', get(0, 'Screensize'));   
+    set(gcf, 'Position', get(0, 'Screensize'));   
     
     plot (t(backgroundVector),data1(backgroundVector))
     hold on
@@ -176,37 +177,40 @@ for i = 1:size(putativeSLE,1)
     
 end
 
+%% Classifier - high precision
+%Rule #1: average frequency > 1 Hz
+index1 = putativeSLE(:,4)>1;
 
-    %% Classifier
-    %Rule #1: average frequency > 1 Hz
-    index1 = putativeSLE(:,4)>1;
-    
-    %Rule #2: intensity (power/duration) > average - sigma
-    averageIntensity = mean(putativeSLE(:,5));
-    sigmaIntensity = std(putativeSLE(:,5));
-    if averageIntensity > sigmaIntensity 
-        thresholdIntensity = averageIntensity - sigmaIntensity; 
-    else
-        thresholdIntensity = averageIntensity; 
-    end
-    index2 = putativeSLE(:,5)>thresholdIntensity
-    
-    %Rule #3: duration > sigma of durations
-    sigmaDuration = std(putativeSLE(:,3));
-    index3 = putativeSLE(:,3)>sigmaDuration; 
-        
-    SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
-    
+%Rule #2: intensity > (average - sigma)
+averageIntensity = mean(putativeSLE(:,5));
+sigmaIntensity = std(putativeSLE(:,5));
+if averageIntensity > sigmaIntensity 
+    thresholdIntensity = averageIntensity - sigmaIntensity; 
+else
+    thresholdIntensity = averageIntensity; 
+end
+index2 = putativeSLE(:,5)>thresholdIntensity;
+
+%Rule #3: duration > sigma of durations
+sigmaDuration = std(putativeSLE(:,3));
+index3 = putativeSLE(:,3)>sigmaDuration; 
+
+%Collect all the SLEs 
+SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
+
+%Sort remaining events as interictal events (IIEs)
+indexIIEs = ~ismember(putativeSLE, SLE);
+putativeIIS = putativeSLE(indexIIEs(:,1),:); %analyze in future versions
     
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, 0.13, locs_spike_2nd, 0);  %can also define if light triggered
+SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, onsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
 
 %testing - trouble shooting classifier
-SLE_final = [SLE_final(:,1:3), putativeSLE(:,4:7)];
+SLE_final = [SLE_final(:,1:4), SLE(:,4:5)];
 
 %Store light-triggered events (s)
-%triggeredEvents = SLE_final(SLE_final(:,4)>0, 1);
+triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
 
 %% Write to .xls
 excelFileName = FileName(1:8);
@@ -214,6 +218,28 @@ A = 'Onset (s)';
 B = 'Offset (s)';
 C = 'Duration (s)';
 D = 'Light-triggered (1 = yes)';
+E = 'Average Spike Rate (Hz)';
+F = 'Average Intensity (power/duration)';
+
+% %Sheet 0 = Details - To be completed at a later date with Liam's help.
+% details{1,1} = 'FileName:';     details {1,2} = sprintf('%s', FileName);
+% details{2,1} = 'LED:';     details {2,2} = sprintf('%s', FileName);
+% 
+% details {2,1} = 'LED:';         
+% 'Sampling Frequency:'
+% 'Multiple of Sigma for spike threshold:' 
+% 'Epileptiform Spike Threshold:'
+% 'Minimum distance between epileptiform spikes:'
+% 'Multiple of Sigma for artifact threshold:' 
+% 'Artifact threshold:'
+% 'Minimum distance between artifacts:'
+% 'Minimum seizure duration:' 
+% 'Maximum onset delay for stimulus'
+% 
+%     subtitle0 = {details(:,1)};
+%     xlswrite(sprintf('%s(algo)',excelFileName),subtitle0,'Details','A1');
+%     xlswrite(sprintf('%s(algo)',excelFileName),artifacts/frequency,'Artifacts','A2');
+    
 
 %Sheet 1 = Artifacts   
 if isempty(artifacts) == 0
@@ -235,7 +261,7 @@ end
     
 %Sheet 3 = SLE
 if isempty(SLE_final) == 0   
-    subtitle1 = {A, B, C, D};
+    subtitle1 = {A, B, C, D, E, F};
     xlswrite(sprintf('%s(algo)',excelFileName),subtitle1,'SLE' ,'A1');
     xlswrite(sprintf('%s(algo)',excelFileName),SLE_final,'SLE' ,'A2');
 else
