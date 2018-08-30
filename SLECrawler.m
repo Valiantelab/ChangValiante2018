@@ -24,6 +24,7 @@ if nargin<5
     frequency = 10000;      % 10kHz is default sampling frequency    
     onsetDelay = 0.13;       % seconds after light pusle onset
     troubleshoot = 0;
+    LED = [];
 end
 
 %create time vector

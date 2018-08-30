@@ -14,17 +14,17 @@ titleInput = 'Specify Detection Thresholds';
 prompt1 = 'Epileptiform Spike Threshold: average + (4 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
-prompt4 = 'Stimulus channel (enter 0 if none):'
+prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt = {prompt1, prompt2, prompt3, prompt4};
 dims = [1 70];
 definput = {'4', '100', '0', '2'};
 opts = 'on';
-threshold_multiple = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
+userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
 %setting on distance between spikes, hard coded
 distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
-minSLEduration = 3; %seconds
+minSLEduration = 3; %seconds; %change to 5 s if any detection issues 
 
 %% Load .abf and excel data
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
@@ -37,13 +37,13 @@ t = t';
 
 %% Seperate signals from .abf files
 LFP = x(:,1);   %original LFP signal
-LED = x(:,2);   %light pulse signal
-onsetDelay = 0.13;  %seconds
-
-% if exist('x(:,2)') == 1
-%     LED = x(:,2);   %light pulse signal
-%     lightpulse = LED > 1;
-% end
+if userInput(4)>0
+    LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
+    onsetDelay = 0.13;  %seconds
+else
+    LED =[];
+    onsetDelay = [];
+end
 
 %% Data Processing 
 %Center the LFP data
@@ -93,9 +93,9 @@ sigmaBaseline = std(AbsLFP_normalizedFilteredBaseline); %Standard Deviation
 AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered); %the LFP analyzed
 
 %Define thresholds for detection, using inputs from GUI
-minPeakHeight = avgBaseline+(threshold_multiple(1)*sigmaBaseline);      %threshold for epileptiform spike detection
+minPeakHeight = avgBaseline+(userInput(1)*sigmaBaseline);      %threshold for epileptiform spike detection
 minPeakDistance = distanceSpike*frequency;                              %minimum distance spikes must be apart
-minArtifactHeight = avgBaseline+(threshold_multiple(2)*sigmaBaseline);  %threshold for artifact spike detection
+minArtifactHeight = avgBaseline+(userInput(2)*sigmaBaseline);  %threshold for artifact spike detection
 minArtifactDistance = distanceArtifact*frequency;                       %minimum distance artifact spikes must be apart
 
 %Detect events
@@ -105,19 +105,15 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 epileptiformTime = [epileptiformLocation/frequency];
 
 %% Initial Classifier (rough)
-putativeSLE = epileptiformTime(epileptiformTime(:,3)>=minSLEduration,:); %change threshold back to 5 if any detection issues 
-IIS = epileptiformTime(epileptiformTime(:,3)<minSLEduration,:);  %change threshold back to 5 if any detection issues
+putativeSLE = epileptiformTime(epileptiformTime(:,3)>=minSLEduration,:); 
+IIS = epileptiformTime(epileptiformTime(:,3)<minSLEduration,:); 
 
-%% Spiking Frequency Counter
-data1 = AbsLFP_normalizedFiltered; %Time series to be plotted 
-lightpulse = LED > 1;
-
+%% Feature Extraction (Spiking Frequency and Intensity)
 for i = 1:size(putativeSLE,1)   
     %make SLE vector
     onsetTime = single(putativeSLE(i,1)*10000);
     offsetTime = single(putativeSLE(i,2)*10000);
     sleVector = (onsetTime:offsetTime);  %SLE Vector  
-    SLE_vector{i} = sleVector;  %store SLE vector
     
     %Calculate the spiking rate for SLE
     windowSize = 1;  %seconds      
@@ -131,6 +127,8 @@ for i = 1:size(putativeSLE,1)
         spikeRateMinute(j,2) = sum(spikeRate(:));   %number of spikes in the window
     end
     
+    spikeFrequency{i} = spikeRateMinute;    %store the spike frequency of each SLE for plotting later
+    
     %average spike rate of SLE
     putativeSLE (i,4) = mean(spikeRateMinute(:,2));
           
@@ -139,42 +137,17 @@ for i = 1:size(putativeSLE,1)
     putativeSLE (i,5) = totalPower /sleDuration;     
               
     %make background vector
-    if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
+    if (onsetTime >= 50001 && (offsetTime+50000)<numel(LFP))
         backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
     elseif (onsetTime < 50001)
         backgroundVector = (1:offsetTime+50000);
-    elseif ((offsetTime+50000)>numel(data1))
-        backgroundVector = (onsetTime-50000:numel(data1));
+    elseif ((offsetTime+50000)>numel(LFP))
+        backgroundVector = (onsetTime-50000:numel(LFP));
     end                    
-    background_vector{i} = backgroundVector;  %store background vector
+
 
     %% plot vectors
-    if threshold_multiple(3) == 1   
-    
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-    
-    plot (t(backgroundVector),data1(backgroundVector))
-    hold on
-    plot (t(sleVector),data1(sleVector))     %SLE
-    plot (t(onsetTime), data1(onsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-    plot (t(offsetTime), data1(offsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
-    indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-    plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))), 'x') %plot spikes (artifact removed)
-    plot (t(backgroundVector),(lightpulse(backgroundVector)-1)/20, 'b') %plot LED   
-    title (sprintf('Absolute values of Filtered LFP Recording, SLE #%d', i));
-    ylabel ('mV');
-    xlabel ('Time (sec)');   
-    
-    yyaxis right
-    
-    plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'b')
-    ylabel ('spike rate/second (Hz)');
-    set(gca,'fontsize',16)
-    end
-    
+    %use troubleShootingSpikeAnalysis.m
 end
 
 %% Classifier - high precision
@@ -199,8 +172,8 @@ index3 = putativeSLE(:,3)>sigmaDuration;
 SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
 
 %Sort remaining events as interictal events (IIEs)
-indexIIEs = ~ismember(putativeSLE, SLE);
-putativeIIS = putativeSLE(indexIIEs(:,1),:); %analyze in future versions
+indexIIS = ~ismember(putativeSLE, SLE);
+putativeIIS = putativeSLE(indexIIS(:,1),:); %analyze in future versions
     
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
@@ -210,7 +183,7 @@ SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, onsetDelay, 
 SLE_final = [SLE_final(:,1:4), SLE(:,4:5)];
 
 %Store light-triggered events (s)
-triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+%triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
 
 %% Write to .xls
 excelFileName = FileName(1:8);
@@ -269,7 +242,7 @@ else
 end
 
 %% Optional: Plot Figures
-if threshold_multiple(3) == 1   
+if userInput(3) == 1   
     
 %% Creating powerpoint slide
 isOpen  = exportToPPTX();
@@ -305,51 +278,6 @@ exportToPPTX('addtext', 'SLE offset is when power returns below baseline/2', 'Po
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
 exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);      
-
-
-%% Plotting out detected SLEs with context | To figure out how off you are
-data1 = LFP_normalized; %Time series to be plotted 
-
-for i = 1:size(SLE_final,1)
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-   
-    onsetTime = single(SLE_final(i,1)*10000);
-    offsetTime = single(SLE_final(i,2)*10000);
-    sleVector = (onsetTime:offsetTime);  %SLE Vector    
-    
-    if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
-        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
-    elseif (onsetTime < 50001)
-        backgroundVector = (1:offsetTime+50000);
-    elseif ((offsetTime+50000)>numel(data1))
-        backgroundVector = (onsetTime-50000:numel(data1));
-    end                    
-        
-    plot (t(backgroundVector),data1(backgroundVector))
-    hold on
-    plot (t(sleVector),data1(sleVector))     %SLE
-    plot (t(onsetTime), data1(onsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-    plot (t(offsetTime), data1(offsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
-    title (sprintf('LFP Recording, SLE #%d', i));
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    
-%     yyaxis right
-%     
-%     plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'b')
-%     ylabel ('spike rate/second (Hz)');
-     set(gca,'fontsize',20)
-       
-    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-    exportToPPTX('addpicture',figHandle);      
-    close(figHandle)
-end
-        
-% save and close the .PPTX
-newFile = exportToPPTX('saveandclose',sprintf(excelFileName)); 
 
 %% plot entire recording 
 figHandle = figure;
@@ -401,31 +329,71 @@ subplot (3,1,3)
 reduce_plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g');
 hold on
 
-% %plot onset markers
-% for i=1:numel(locs_onset)
-% plot (t(locs_spike(locs_onset(i))), (pks_spike(locs_onset(i))), 'o')
-% end
- 
 %plot spikes 
 for i=1:size(locs_spike_1st,1)
 plot (t(locs_spike_1st(i,1)), (DiffLFP_normalizedFiltered(locs_spike_1st(i,1))), 'x')
 end
 
-% %plot artifacts, found in the 1st search
-% for i=1:size(locs_artifact_1st(: ,1))
-% plot (t(locs_artifact_1st(i,1)), (DiffLFP_normalizedFiltered(locs_artifact_1st(i,1))), 'o', 'MarkerSize', 12)
-% end
-
-% %plot offset markers
-% for i=1:numel(locs_onset)
-% plot ((offsetTimes(i)), (pks_spike(locs_onset(i))), 'x')
-% end
-
 title ('Peaks (o) in Derivative of filtered LFP');
 ylabel ('Derivative (mV)');
 xlabel ('Time (s)');
 
-saveas(figHandle,sprintf('%s.png', FileName), 'png');
+exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+exportToPPTX('addpicture',figHandle);      
+close(figHandle)
+
+%% Plotting out detected SLEs with context | To figure out how off you are
+data1 = LFP_normalized; %Time series to be plotted 
+
+    lightpulse = LED > 1;
+
+for i = 1:size(SLE_final,1)
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));   
+   
+    onsetTime = single(SLE_final(i,1)*10000);
+    offsetTime = single(SLE_final(i,2)*10000);
+    sleVector = (onsetTime:offsetTime);  %SLE Vector    
+    
+    if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
+        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
+    elseif (onsetTime < 50001)
+        backgroundVector = (1:offsetTime+50000);
+    elseif ((offsetTime+50000)>numel(data1))
+        backgroundVector = (onsetTime-50000:numel(data1));
+    end
+    
+    normalizeLFP = (data1(backgroundVector(1)));
+    normalizeLED = abs(min(data1(sleVector)-normalizeLFP));
+    plot (t(backgroundVector),data1(backgroundVector)-normalizeLFP ) %background
+    hold on
+    plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-normalizeLED, 'b') %plot LED   
+    plot (t(sleVector),data1(sleVector)-normalizeLFP)     %SLE
+    plot (t(onsetTime), data1(onsetTime)-normalizeLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+    plot (t(offsetTime), data1(offsetTime)-normalizeLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+    indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
+    plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-normalizeLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
+    
+       
+    title (sprintf('LFP Recording, SLE #%d', i));
+    ylabel ('mV');
+    xlabel ('Time (sec)');
+    
+%     yyaxis right
+%     
+%     plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'k')
+%     ylabel ('spike rate/second (Hz)');
+%      set(gca,'fontsize',20)
+       
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);      
+    close(figHandle)
+end
+        
+% save and close the .PPTX
+newFile = exportToPPTX('saveandclose',sprintf(excelFileName)); 
 
 end
 
