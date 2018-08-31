@@ -52,18 +52,9 @@ for i = 1:size(putativeSLE,1)
     %average intensity of SLE
     totalPower = sum(powerFeature(eventVector));
     putativeSLE (i,5) = totalPower /sleDuration;     
-              
-    %make background vector
-    if (onsetTime >= 50001 && (offsetTime+50000)<numel(LFP))
-        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
-    elseif (onsetTime < 50001)
-        backgroundVector = (1:offsetTime+50000);
-    elseif ((offsetTime+50000)>numel(LFP))
-        backgroundVector = (onsetTime-50000:numel(LFP));
-    end                    
-
-    %% plot vectors
-    %use troubleShootingSpikeAnalysis.m
+                
+    %% plot vectors            
+    %open script: troubleShootingSpikeAnalysis.m
 end
 
 %% Classifier - high precision
@@ -71,7 +62,7 @@ end
 index1 = putativeSLE(:,4)>1;
 
 %Rule #2: intensity > (average - sigma)
-averageIntensity = mean(putativeSLE(:,5));
+averageIntensity = mean(putativeSLE(:,5));calc
 sigmaIntensity = std(putativeSLE(:,5));
 if averageIntensity > sigmaIntensity 
     thresholdIntensity = averageIntensity - sigmaIntensity; 
@@ -88,8 +79,8 @@ index3 = putativeSLE(:,3)>sigmaDuration;
 SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
 
 %Sort remaining events as interictal events (IIEs)
-indexIIS = ~ismember(putativeSLE, SLE);
-putativeIIS = putativeSLE(indexIIS(:,1),:); %analyze in future versions
+indexIIE = ~ismember(putativeSLE, SLE);
+IIE = putativeSLE(indexIIE(:,1),:); %analyze in future versions
 
 
 %% finding event time (s)

@@ -15,7 +15,7 @@ function [ ] = epileptiformClassifier(epileptiformLocation, artifactsLocation, l
 %% Default values, if frequency and minPeakDistance is not specified 
 if nargin<2
     frequency = 10000;   %10kHz sampling frequency
-    minSLEduration = 3; 
+    minSLEduration = 1;  %seconds
 end
 
 %convert variables into Michael's terms used when writing "detection.m"
@@ -53,27 +53,19 @@ for i = 1:size(putativeSLE,1)
     totalPower = sum(powerFeature(eventVector));
     putativeSLE (i,5) = totalPower /sleDuration;     
               
-    %make background vector
-    if (onsetTime >= 50001 && (offsetTime+50000)<numel(LFP))
-        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
-    elseif (onsetTime < 50001)
-        backgroundVector = (1:offsetTime+50000);
-    elseif ((offsetTime+50000)>numel(LFP))
-        backgroundVector = (onsetTime-50000:numel(LFP));
-    end                    
-
+   
     %% plot vectors
+%     %make background vector
+%     if (onsetTime >= 50001 && (offsetTime+50000)<numel(LFP))
+%         backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
+%     elseif (onsetTime < 50001)
+%         backgroundVector = (1:offsetTime+50000);
+%     elseif ((offsetTime+50000)>numel(LFP))
+%         backgroundVector = (onsetTime-50000:numel(LFP));
+%     end                    
+    
     %use troubleShootingSpikeAnalysis.m
 end
-
-%finding event time (s)
-epileptiformTime = [epileptiformLocation/frequency];
-
-% %% Initial Classifier (rough)
-% putativeSLE = epileptiformTime(epileptiformTime(:,3)>=minSLEduration,:); 
-% IIS = epileptiformTime(epileptiformTime(:,3)<minSLEduration,:); 
-
-
 
 %% Classifier - high precision
 %Rule #1: average frequency > 1 Hz
@@ -97,7 +89,15 @@ index3 = putativeSLE(:,3)>sigmaDuration;
 SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
 
 %Sort remaining events as interictal events (IIEs)
-indexIIS = ~ismember(putativeSLE, SLE);
-putativeIIS = putativeSLE(indexIIS(:,1),:); %analyze in future versions
+indexIIE = ~ismember(putativeSLE, SLE);
+IIE = putativeSLE(indexIIE(:,1),:); %analyze in future versions
+
+
+%% finding event time (s)
+epileptiformTime = [epileptiformLocation/frequency];
+
+% %% Initial Classifier (rough)
+% putativeSLE = epileptiformTime(epileptiformTime(:,3)>=minSLEduration,:); 
+% IIS = epileptiformTime(epileptiformTime(:,3)<minSLEduration,:); 
 
 end
