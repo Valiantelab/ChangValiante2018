@@ -41,7 +41,6 @@ if userInput(4)>0
     LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
     onsetDelay = 0.13;  %seconds
 else
-    LED =[];
     onsetDelay = [];
 end
 
@@ -99,10 +98,79 @@ minArtifactHeight = avgBaseline+(userInput(2)*sigmaBaseline);  %threshold for ar
 minArtifactDistance = distanceArtifact*frequency;                       %minimum distance artifact spikes must be apart
 
 %Detect events
-[epileptiformLocation, artifactLocation, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
+[epileptiformLocation, artifacts, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
 %% Finding event time 
 epileptiformTime = [epileptiformLocation/frequency];
+
+%% Initial Classifier (rough)
+putativeSLE = epileptiformTime(epileptiformTime(:,3)>=minSLEduration,:); 
+IIS = epileptiformTime(epileptiformTime(:,3)<minSLEduration,:); 
+
+%% Spiking Frequency Counter
+for i = 1:size(putativeSLE,1)   
+    %make SLE vector
+    onsetTime = single(putativeSLE(i,1)*10000);
+    offsetTime = single(putativeSLE(i,2)*10000);
+    sleVector = (onsetTime:offsetTime);  %SLE Vector  
+    
+    %Calculate the spiking rate for SLE
+    windowSize = 1;  %seconds      
+    sleDuration = round(numel(sleVector)/frequency);    %rounded to whole number
+    clear spikeRateMinute
+    for j = 1:sleDuration
+        startWindow = onsetTime+((windowSize*frequency)*(j-1));
+        EndWindow = onsetTime+((windowSize*frequency)*j);
+        spikeRate = and(startWindow<=locs_spike_2nd, EndWindow >=locs_spike_2nd);
+        spikeRateMinute(j,1) = startWindow; %time windows starts
+        spikeRateMinute(j,2) = sum(spikeRate(:));   %number of spikes in the window
+    end
+    
+    %average spike rate of SLE
+    putativeSLE (i,4) = mean(spikeRateMinute(:,2));
+          
+    %average intensity of SLE
+    totalPower = sum(powerFeature(sleVector));
+    putativeSLE (i,5) = totalPower /sleDuration;     
+              
+    %make background vector
+    if (onsetTime >= 50001 && (offsetTime+50000)<numel(LFP))
+        backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
+    elseif (onsetTime < 50001)
+        backgroundVector = (1:offsetTime+50000);
+    elseif ((offsetTime+50000)>numel(LFP))
+        backgroundVector = (onsetTime-50000:numel(LFP));
+    end                    
+
+
+    %% plot vectors
+    %use troubleShootingSpikeAnalysis.m
+end
+
+%% Classifier - high precision
+%Rule #1: average frequency > 1 Hz
+index1 = putativeSLE(:,4)>1;
+
+%Rule #2: intensity > (average - sigma)
+averageIntensity = mean(putativeSLE(:,5));
+sigmaIntensity = std(putativeSLE(:,5));
+if averageIntensity > sigmaIntensity 
+    thresholdIntensity = averageIntensity - sigmaIntensity; 
+else
+    thresholdIntensity = averageIntensity; 
+end
+index2 = putativeSLE(:,5)>thresholdIntensity;
+
+%Rule #3: duration > sigma of durations
+sigmaDuration = std(putativeSLE(:,3));
+index3 = putativeSLE(:,3)>sigmaDuration; 
+
+%Collect all the SLEs 
+SLE = putativeSLE((index1 & index2 & index3), :);   %classified SLEs
+
+%Sort remaining events as interictal events (IIEs)
+indexIIS = ~ismember(putativeSLE, SLE);
+putativeIIS = putativeSLE(indexIIS(:,1),:); %analyze in future versions
     
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
@@ -144,10 +212,10 @@ F = 'Average Intensity (power/duration)';
     
 
 %Sheet 1 = Artifacts   
-if isempty(artifactLocation) == 0
+if isempty(artifacts) == 0
     subtitle3 = {A, B, C};
     xlswrite(sprintf('%s(algo)',excelFileName),subtitle3,'Artifacts','A1');
-    xlswrite(sprintf('%s(algo)',excelFileName),artifactLocation/frequency,'Artifacts','A2');
+    xlswrite(sprintf('%s(algo)',excelFileName),artifacts/frequency,'Artifacts','A2');
 else
     display ('No artifacts were detected.');
 end
@@ -222,8 +290,8 @@ hold on
 reduce_plot (t, lightpulse - 2);
 
 %plot artifacts (red), found in 2nd search
-for i = 1:numel(artifactLocation(:,1)) 
-    reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_normalized(artifactLocation(i,1):artifactLocation(i,2)), 'r');
+for i = 1:numel(artifacts(:,1)) 
+    reduce_plot (t(artifacts(i,1):artifacts(i,2)), LFP_normalized(artifacts(i,1):artifacts(i,2)), 'r');
 end
 
 %plot onset markers
@@ -310,11 +378,11 @@ for i = 1:size(SLE_final,1)
     ylabel ('mV');
     xlabel ('Time (sec)');
     
-%     yyaxis right
-%     
-%     plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'k')
-%     ylabel ('spike rate/second (Hz)');
-%      set(gca,'fontsize',20)
+    yyaxis right
+    
+    plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'k')
+    ylabel ('spike rate/second (Hz)');
+     set(gca,'fontsize',20)
        
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);      
