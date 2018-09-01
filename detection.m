@@ -123,20 +123,21 @@ D = 'Light-triggered (1 = yes)';
 E = 'Average Spike Rate (Hz)';
 F = 'Average Intensity (power/duration)';
 
-% %Sheet 0 = Details - To be completed at a later date with Liam's help.
-% details{1,1} = 'FileName:';     details {1,2} = sprintf('%s', FileName);
-% details{2,1} = 'LED:';     details {2,2} = sprintf('%s', FileName);
-% 
-% details {2,1} = 'LED:';         
-% 'Sampling Frequency:'
-% 'Multiple of Sigma for spike threshold:' 
-% 'Epileptiform Spike Threshold:'
-% 'Minimum distance between epileptiform spikes:'
-% 'Multiple of Sigma for artifact threshold:' 
-% 'Artifact threshold:'
-% 'Minimum distance between artifacts:'
-% 'Minimum seizure duration:' 
-% 'Maximum onset delay for stimulus'
+%Sheet 0 = Details - To be completed at a later date with Liam's help.
+% https://www.mathworks.com/help/matlab/matlab_prog/creating-a-map-object.html
+details{1,1} = 'FileName:';     details {1,2} = sprintf('%s', FileName);
+details{2,1} = 'LED:';     details {2,2} = sprintf('%s', FileName);
+
+details {2,1} = 'LED:';         
+'Sampling Frequency:'
+'Multiple of Sigma for spike threshold:' 
+'Epileptiform Spike Threshold:'
+'Minimum distance between epileptiform spikes:'
+'Multiple of Sigma for artifact threshold:' 
+'Artifact threshold:'
+'Minimum distance between artifacts:'
+'Minimum seizure duration:' 
+'Maximum onset delay for stimulus'
 % 
 %     subtitle0 = {details(:,1)};
 %     xlswrite(sprintf('%s(algo)',excelFileName),subtitle0,'Details','A1');
