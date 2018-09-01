@@ -1,4 +1,4 @@
-function [SLE_final] = SLECrawler(filteredLFP, SLETimes, frequency, LED, onsetDelay, locs_spike, troubleshoot)
+function [SLE_final] = SLECrawler(filteredLFP, SLETimes, frequency, LED, onsetDelay, locs_spike)
 %'SLE Crawl' function detects exact onset and offset time of ictal event
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
 %   where all the SLEs (aka ictal events) roughly occur to the nearest 0.5
@@ -20,11 +20,9 @@ LFP_normalizedFiltered = filteredLFP;
 SLE = SLETimes;
 
 %Default values, if frequenct is not specified 
-if nargin<5
+if nargin<4
     frequency = 10000;      % 10kHz is default sampling frequency    
     onsetDelay = 0.13;       % seconds after light pusle onset
-    troubleshoot = 0;
-    LED = [];
 end
 
 %create time vector
@@ -181,35 +179,33 @@ else
     
     %% plotting the onset and offsets detected, troubleshooting purposes (uncomment to use)
     
-    if troubleshoot == 1
-    %plot onset
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-    subplot (2,1,1)
-    plot(t(onsetContext),LFP_normalizedFiltered(onsetContext))
-    hold on
-    plot(t(onsetSLE), LFP_normalizedFiltered(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
-    plot(SLEonset_final(i,1), LFP_normalizedFiltered(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
-    plot(t(onsetContext(onset_locs)), LFP_normalizedFiltered(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-    %Labels
-    title ('LFP normalized, bandpass filtered');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    
-    subplot (2,1,2)
-    plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
-    hold on
-    plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(SLEonset_final(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
-    plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-    %Labels
-    title ('Power, Low Pass Filtered (2 Hz)');
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    end
-    
+%     %Test plot onset
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%     subplot (2,1,1)
+%     plot(t(onsetContext),LFP_normalized(onsetContext))
+%     hold on
+%     plot(t(onsetSLE), LFP_normalized(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
+%     plot(SLEonset_final(i,1), LFP_normalized(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), LFP_normalized(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+%     %Labels
+%     title ('LFP normalized');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+%     
+%     subplot (2,1,2)
+%     plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
+%     hold on
+%     plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+%     plot(SLEonset_final(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+%     %Labels
+%     title ('Power, Low Pass Filtered (2 Hz)');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+
 end
 
 %Store output 

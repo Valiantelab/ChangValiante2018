@@ -106,10 +106,10 @@ epileptiformTime = [epileptiformLocation/frequency];
     
 %% SLE: Determine exact onset and offset times | Power Feature
 % Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, SLE, frequency, LED, onsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
+SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE(:,1:3), frequency, LED, onsetDelay, locs_spike_2nd);  %can also define if light triggered
 
 %testing - trouble shooting classifier
-SLE_final = [SLE_final(:,1:4), SLE(:,4:5)];
+SLE_final = putativeSLE;
 
 %Store light-triggered events (s)
 %triggeredEvents = SLE_final(SLE_final(:,4)>0, :);

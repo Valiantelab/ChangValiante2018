@@ -51,10 +51,10 @@ for i = 8
     plot (t(eventVector),data1(eventVector))     %SLE
     plot (t(onsetTime), data1(onsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
     plot (t(offsetTime), data1(offsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
-    %indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-    %plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))), 'x') %plot spikes (artifact removed)
+    indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
+    plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))), 'x') %plot spikes (artifact removed)
     plot (t(backgroundVector),(lightpulse(backgroundVector)-1)/20, 'b') %plot LED   
-    title (sprintf('Absolute values of Filtered LFP Recording, SLE #%d', i));
+    title (sprintf('LFP Recording, SLE #%d | For Troubleshooting', i));
     ylabel ('mV');
     xlabel ('Time (sec)');   
     
