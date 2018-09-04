@@ -203,13 +203,14 @@ for i = 1:size(putativeSLE,1)
         lightpulse = LED > 1;
 
         %make background vector
-        if onsetTime >= 50001
+        if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
             backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
-        else
+        elseif (onsetTime < 50001)
             backgroundVector = (1:offsetTime+50000);
+        elseif ((offsetTime+50000)>numel(data1))
+            backgroundVector = (onsetTime-50000:numel(data1));
         end
-            background_vector{i} = backgroundVector;  %store background vector
-
+    
         %Plot figures
         figHandle = figure;
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
