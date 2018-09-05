@@ -11,14 +11,14 @@ clc
 %% GUI to set thresholds
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
-prompt1 = 'Epileptiform Spike Threshold: average + (4 x Sigma)';
+prompt1 = 'Epileptiform Spike Threshold: average + (3.5 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt5 = 'Plot all epileptiform events (Yes (1) or No (0):';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5};
 dims = [1 70];
-definput = {'4', '100', '0', '2', '1'};
+definput = {'3.5', '100', '0', '2', '1'};
 opts = 'on';
 userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -246,8 +246,50 @@ end
     newFile = exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
     end    
     
-    
-    
+%% Stage 1: Final Classifier (k-means clustering)
+%perform k-means clustering on the three feature sets
+
+% Maybe I can turn this into a function
+
+%k-means clustering based on average frequency
+%SLE_final(:,9) = kmeans(SLE_final(:,4), 2);    %short form
+%SLE = SLE_final(kMeansIndexFrequency<2);
+
+kMeansIndexFrequency = kmeans(SLE_final(:,4), 2);   %cluster into two groups
+AvgFreq = SLE_final(:,4);   %make a new array for avg frequency
+
+% finding the threshold
+groupSLE = AvgFreq(kMeansIndexFrequency==1); %SLEs are labelled 1
+groupIIE = AvgFreq(kMeansIndexFrequency==2); %SLEs are labelled 2
+upperLimit = min(groupSLE)  %upper limit of threshold
+lowerLimit = max(groupIIE)  %lower limit of threshold
+freqThreshold = (upperLimit + lowerLimit)/2; %assumed to be in between
+
+figure;
+gscatter(AvgFreq , AvgFreq, kMeansIndexFrequency);    %plot scatter plot
+hold on
+plot ([1 1], ylim); %plot vertical line at 1 Hz, which is what i think the threshold is
+plot ([freqThreshold freqThreshold], ylim); %plot vertical line at 1
+
+SLE_final(:,9) = kMeansIndexFrequency;  %update main matrix
+
+
+%k-means clustering on one feature set
+gscatter(sleFreq, SLE_final(:,5), idx)
+
+%k-means clustering on multiple feature set -- not effective 
+idx = kmeans(SLE_final(:,4:5), 2);
+gscatter(SLE_final(:,4), SLE_final(:,5), idx)
+
+
+
+scatter3(SLE_final(idx<2,4), SLE_final(idx<2,5), SLE_final(idx<2,6), 18, 'r', 'filled')
+scatter3(SLE_final(:,4), SLE_final(:,5), SLE_final(:,6), 18, 'b', 'filled')
+hold on
+scatter3(SLE_final(idx<2,4), SLE_final(idx<2,5), SLE_final(idx<2,6), 18, 'r', 'filled')
+>>
+
+
 %% SLE: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 % SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE(:,1:3), frequency, LED, onsetDelay, locs_spike_2nd);  %can also define if light triggered
