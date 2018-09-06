@@ -16,6 +16,7 @@ prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt5 = 'Plot all epileptiform events (Yes (1) or No (0):';
+
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5};
 dims = [1 70];
 definput = {'3.5', '100', '0', '2', '1'};
@@ -244,11 +245,101 @@ end
     if userInput(5) == 1   
     % save and close the .PPTX
     newFile = exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
-    end    
+    end
     
-%% Stage 1: Final Classifier (k-means clustering)
+    
+%% Stage 3: Final Classifier (k-means clustering)
 %perform k-means clustering on the three feature sets
 
+%classify based on average frequency 
+[indexFrequency, thresholdFrequency] = sleClassifier (putativeSLE(:,4))   
+%plot figure
+featureSet = putativeSLE(:,4);
+index = indexFrequency;
+featureThreshold = thresholdFrequency;
+michaelThreshold = 1 %Hz 
+figure;
+set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+set(gcf,'Name', 'Feature Set: Spiking Rate (Hz)'); %select the name you want
+gscatter(featureSet , featureSet, index);    %plot scatter plot
+hold on
+%plot the algorithm detected threshold
+plot ([featureThreshold featureThreshold], ylim); 
+%plot Michael Chang's threshold values 
+plot ([michaelThreshold michaelThreshold], ylim);
+%Label
+title ('Unsupervised classication, using k-means clustering');
+ylabel ('Spiking Rate (Hz)');
+xlabel ('Spiking Rate (Hz)');   
+legend('SLE', 'IIE', 'Algo Threshold', 'Michaels Threshold')
+set(gca,'fontsize',12)
+
+%classify based on average intensity 
+[indexIntensity, thresholdIntensity] = sleClassifier (putativeSLE(:,5))
+%plot figure
+featureSet = putativeSLE(:,5);
+index = indexIntensity;
+featureThreshold = thresholdIntensity;
+figure;
+set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+set(gcf,'Name', 'Feature Set: Intensity (Power/Duration)'); %select the name you want
+gscatter(featureSet , featureSet, index);    %plot scatter plot
+hold on
+%plot the algorithm detected threshold
+plot ([featureThreshold featureThreshold], ylim); 
+%plot Michael Chang's threshold values 
+if mean(featureSet)>std(featureSet)
+    michaelThreshold = mean(featureSet)-std(featureSet);
+else 
+    michaelThreshold = mean(featureSet);
+end
+plot ([michaelThreshold michaelThreshold], ylim);
+%Label
+title ('Unsupervised classication, using k-means clustering');
+ylabel ('Average Intensity (Power/Duration)');
+xlabel ('Average Intensity (Power/Duration)');   
+legend('SLE', 'IIE', 'Algo Threshold', 'Michaels Threshold')
+set(gca,'fontsize',12)
+
+%classify based on average amplitude 
+[indexAmplitude, thresholdAmplitude] = sleClassifier (putativeSLE(:,6))   
+    
+%plot figure
+featureSet = putativeSLE(:,6);
+index = indexAmplitude;
+featureThreshold = thresholdAmplitude;
+figure;
+set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+set(gcf,'Name', 'Feature Set: Peak-to-Peak Amplitude (mV)'); %select the name you want
+gscatter(featureSet , featureSet, index);    %plot scatter plot
+hold on
+%plot the algorithm detected threshold
+plot ([featureThreshold featureThreshold], ylim); 
+%plot Michael Chang's threshold values 
+michaelThreshold = 100*std(featureSet);
+plot ([michaelThreshold michaelThreshold], ylim);
+%Label
+title ('Unsupervised classication, using k-means clustering');
+ylabel ('Peak-to-Peak Amplitude (mV)');
+xlabel ('Peak-to-Peak Amplitude (mV)');   
+legend('SLE', 'IIE', 'Algo Threshold', 'Michaels Threshold')
+set(gca,'fontsize',12)
+
+%Classifier 
+for i = 1: numel(putativeSLE(:,1))
+    if indexFrequency(i) + indexIntensity(i) +  indexAmplitude(i) == 3
+    putativeSLE (i,7) = 1   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified.
+    else
+    putativeSLE (i,7) = 2
+    end
+end
+
+
+
+
+
+for i = 1:numel(indexFrequency)
+    
 % Maybe I can turn this into a function
 
 %k-means clustering based on average frequency
@@ -274,7 +365,7 @@ plot ([freqThreshold freqThreshold], ylim); %plot vertical line at 1
 SLE_final(:,9) = kMeansIndexFrequency;  %update main matrix
 
 
-%k-means clustering on one feature set
+%k-means clustering on average intensity
 gscatter(sleFreq, SLE_final(:,5), idx)
 
 %k-means clustering on multiple feature set -- not effective 
