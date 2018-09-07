@@ -133,13 +133,13 @@ if LED;
         if lightTriggered %find location of new SLE offset (that is not light-triggered)
             %find index of new SLE offset            
             offsetIndex = find(locs_spike(:,1) == SLE(i,2)*frequency); %find the preceding spike, using data from previous 'detectEvent function' in abs LFP
-            precedingOffsetIndex = find(flipud(locs_spike(1:offsetIndex, 2))==1,1);        % Thomas flipped the array and looked for the first point where spike was not light-triggered; consider using the while-loop
-            newOffsetIndex = offsetIndex-(precedingOffsetIndex+1);
-            offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
+            indexTrueOffset = find(flipud(locs_spike(1:offsetIndex, 2))==1,1);        %consider using the while loop, ask Thomas for help.
+            trueOffsetIndex = offsetIndex-(a+1);
+            offsetSLE = int64(locs_spike(trueOffsetIndex));  %approximate position of last spike
 
-            %crawl to find the exact offset based on the new offset index
-            offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (preceding baseline)
-            offsetBaselineEnd = (offsetSLE+(1*frequency));  %SLE "context" (post-ictal baseline)
+            %SLE "context" (a.k.a. baseline)
+            offsetBaselineStart = (offsetSLE-(0.5*frequency));
+            offsetBaselineEnd = (offsetSLE+(1*frequency));
 
             %Range of LFP to scan 
             offsetContext = int64(offsetBaselineStart:offsetBaselineEnd);
@@ -261,14 +261,14 @@ end
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
 
-if LED
+if LED_empty == 0
     %Preallocate
-    SLE_final(:,8)= 0;
+    SLE_final(:,4)= 0;
 
     %Classify which SLEs were light triggered
     for i=1:size(SLE_final,1) 
         %use the "ismember" function 
-        SLE_final(i,8)=ismember (int64(SLE_final(i,1)*frequency), lightTriggeredOnsetZones);
+        SLE_final(i,4)=ismember (int64(SLE_final(i,1)*frequency), lightTriggeredOnsetZones);
     end
 end
 

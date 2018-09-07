@@ -9,7 +9,7 @@ end
 %set variables
 k = 2;  %number of cluster, set a apriori
 
-idx = kmeans(featureSet, k);
+idx = kmeans(featureSet, k, 'Start', 'cluster');
 
 % finding the threshold
 groupSLE = featureSet(idx ==1); %SLEs are labelled 1

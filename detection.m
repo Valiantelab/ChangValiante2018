@@ -47,6 +47,7 @@ LFP = x(:,1);   %original LFP signal
 if userInput(4)>0
     LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
     onsetDelay = 0.13;  %seconds
+    offsetDelay = 1.5;  %seconds 
 else
     LED =[];
     onsetDelay = [];
@@ -249,17 +250,59 @@ end
     
     
 %% Stage 3: Final Classifier (k-means clustering)
-%perform k-means clustering on the three feature sets
 
+%% Remove artifacts based on average amplitude
+%set variable for plotting
+[indexAmplitude, thresholdAmplitude] = sleClassifier (putativeSLE(:,6))   
+featureSet = putativeSLE(:,6);
+index = indexAmplitude;
+featureThreshold = thresholdAmplitude;
+michaelArtifactThreshold = mean(featureSet)+(3*std(featureSet));
+
+%Determine if artifact is present using Michael's Threshold
+indexArtifact = featureSet > michaelArtifactThreshold; 
+
+%Plot any artifacts that are detected
+if featureSet (indexArtifact)
+    if userInput(6) == 1  
+    %plot figure
+    featureSet = putativeSLE(:,6);
+    index = indexAmplitude;
+    featureThreshold = thresholdAmplitude;
+    figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', 'Secondary Artifact Removal, using Peak-to-Peak Amplitude (mV)'); %select the name you want
+    gscatter(featureSet , featureSet, index);    %plot scatter plot
+    hold on
+    %plot the algorithm detected threshold
+    plot ([featureThreshold featureThreshold], ylim); 
+    %plot Michael Chang's threshold values 
+    michaelArtifactThreshold = mean(featureSet)+(3*std(featureSet));
+    plot ([michaelArtifactThreshold michaelArtifactThreshold], ylim);
+    %Label
+    title ('Unsupervised classication, using k-means clustering');
+    ylabel ('Peak-to-Peak Amplitude (mV)');
+    xlabel ('Peak-to-Peak Amplitude (mV)');   
+    legend('Epileptiform Events', 'Artifact', 'Algo Threshold', 'Michaels Threshold')
+    set(gca,'fontsize',12)
+    end
+end
+
+%Remove artifact, based on Michael's threshold 
+if featureSet (indexArtifact)
+putativeSLE (indexArtifact, :) = [];
+end
+
+%% perform k-means clustering on the three feature sets
 %classify based on average frequency 
 [indexFrequency, thresholdFrequency] = sleClassifier (putativeSLE(:,4))   
-putativeSLE (:,9) = putativeSLE (:,4)>thresholdFrequency;
+putativeSLE (:,9) = indexFrequency;
     if userInput(6) == 1  
     %plot figure
     featureSet = putativeSLE(:,4);
     index = indexFrequency;
     featureThreshold = thresholdFrequency;
-    michaelThreshold = 1 %Hz 
+    michaelFrequencyThreshold = 1 %Hz 
     figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', 'Feature Set: Spiking Rate (Hz)'); %select the name you want
@@ -268,19 +311,22 @@ putativeSLE (:,9) = putativeSLE (:,4)>thresholdFrequency;
     %plot the algorithm detected threshold
     plot ([featureThreshold featureThreshold], ylim); 
     %plot Michael Chang's threshold values 
-    plot ([michaelThreshold michaelThreshold], ylim);
+    plot ([michaelFrequencyThreshold michaelFrequencyThreshold], ylim);
     %Label
     title ('Unsupervised classication, using k-means clustering');
     ylabel ('Spiking Rate (Hz)');
     xlabel ('Spiking Rate (Hz)');   
-    legend('SLE', 'IIE', 'Algo Threshold', 'Michaels Threshold')
+    legend('IIE', 'SLE', 'Algo Threshold', 'Michaels Threshold')
     set(gca,'fontsize',12)
     end
 
 
 %classify based on average intensity 
 [indexIntensity, thresholdIntensity] = sleClassifier (putativeSLE(:,5))
-putativeSLE (:,10) = indexIntensity;
+featureSet = putativeSLE(:,5);
+thresholdIntensity = mean(featureSet)-std(featureSet);
+indexIntensity = featureSet>thresholdIntensity 
+%putativeSLE (:,10) = indexIntensity;
 
     if userInput(6) == 1  
     %plot figure
@@ -296,22 +342,32 @@ putativeSLE (:,10) = indexIntensity;
     plot ([featureThreshold featureThreshold], ylim); 
     %plot Michael Chang's threshold values 
     if mean(featureSet)>std(featureSet)
-        michaelThreshold = mean(featureSet)-std(featureSet);
+        michaelIntensityThreshold = mean(featureSet)-std(featureSet);
     else 
-        michaelThreshold = mean(featureSet);
+        michaelIntensityThreshold = mean(featureSet);
     end
-    plot ([michaelThreshold michaelThreshold], ylim);
+    plot ([michaelIntensityThreshold michaelIntensityThreshold], ylim);
     %Label
     title ('Unsupervised classication, using k-means clustering');
     ylabel ('Average Intensity (Power/Duration)');
     xlabel ('Average Intensity (Power/Duration)');   
-    legend('SLE', 'IIE', 'Algo Threshold', 'Michaels Threshold')
+    legend('IIE', 'SLE', 'Algo Threshold', 'Michaels Threshold')
     set(gca,'fontsize',12)
     end
 
+%classify based on average amplitude
+for i = 1:15
+[indexAmplitude, thresholdAmplitude] = sleClassifier (putativeSLE(:,6));
+thresholdAmplitudeStorage(i) = thresholdAmplitude;
+end
+thresholdAmplitude=min(thresholdAmplitudeStorage);  %deteremined by Algo
 
-%classify based on average amplitude 
-[indexAmplitude, thresholdAmplitude] = sleClassifier (putativeSLE(:,6))   
+featureSet = putativeSLE(:,6);  
+sigmaAmplitude = std(featureSet)
+algoMinusSigma = thresholdAmplitude-sigmaAmplitude;
+michaelAmplitudeThreshold = 1;   %set threshold
+indexAmplitude = featureSet>michaelAmplitudeThreshold; 
+putativeSLE(:,11) = indexAmplitude;
 
     if userInput(6) == 1  
     %plot figure
@@ -320,19 +376,20 @@ putativeSLE (:,10) = indexIntensity;
     featureThreshold = thresholdAmplitude;
     figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', 'Feature Set: Peak-to-Peak Amplitude (mV)'); %select the name you want
+    set(gcf,'Name', 'Feature set: Peak-to-Peak Amplitude (mV)'); %select the name you want
     gscatter(featureSet , featureSet, index);    %plot scatter plot
     hold on
     %plot the algorithm detected threshold
     plot ([featureThreshold featureThreshold], ylim); 
     %plot Michael Chang's threshold values 
-    michaelThreshold = 100*std(featureSet);
-    plot ([michaelThreshold michaelThreshold], ylim);
+    michaelArtifactThreshold = mean(featureSet)+(3*std(featureSet));
+    plot ([michaelAmplitudeThreshold michaelAmplitudeThreshold], ylim);
+    plot ([michaelArtifactThreshold michaelArtifactThreshold], ylim);
     %Label
     title ('Unsupervised classication, using k-means clustering');
     ylabel ('Peak-to-Peak Amplitude (mV)');
     xlabel ('Peak-to-Peak Amplitude (mV)');   
-    legend('SLE', 'IIE', 'Algo Threshold', 'Michaels Threshold')
+    legend('Epileptiform Events', 'Artifact', 'Algo Threshold', 'Michaels Threshold', 'Michaels Artifact Threshold')
     set(gca,'fontsize',12)
     end
 
@@ -371,7 +428,8 @@ indexSLE = putativeSLE (:,7) == 1;  %classify which ones are SLEs
 
 %% SLE: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
-SLE_final = SLECrawler(LFP_normalizedFiltered, putativeSLE(indexSLE,1:3), frequency, LED, onsetDelay, locs_spike_2nd);  %can also define if light triggered
+SLE_times = putativeSLE(indexSLE,1:2)/frequency;
+SLE_final = SLECrawler(LFP_normalizedFiltered, SLE_times, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
 
 
 %Store light-triggered events (s)
@@ -491,13 +549,13 @@ for i = 1:numel(artifactLocation(:,1))
 end
 
 %plot onset markers
-for i=1:numel(epileptiformTime(:,1))
-reduce_plot ((onsetTimes(i)), (LFP_normalized(epileptiformLocation(i))), 'o');
+for i=1:numel(SLE_final(:,1))
+reduce_plot ((SLE_final(i,1)), (LFP_normalized(int64(SLE_final(i,1)*frequency))), 'o');
 end
 
 %plot offset markers
-for i=1:numel(epileptiformTime(:,2))
-reduce_plot ((offsetTimes(i)), (LFP_normalized(epileptiformLocation(i,2))), 'x');
+for i=1:numel(SLE_final(:,2))
+reduce_plot ((SLE_final(i,2)), (LFP_normalized(int64(SLE_final(i,2)*frequency))), 'x');
 end
 
 title (sprintf ('Overview of LFP (10000 points/s), %s', FileName));
@@ -586,7 +644,7 @@ for i = 1:size(SLE_final,1)
 end
         
 % save and close the .PPTX
-newFile = exportToPPTX('saveandclose',sprintf(excelFileName)); 
+newFile = exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName)); 
 
 end
 
