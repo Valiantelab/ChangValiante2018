@@ -30,11 +30,11 @@ if nargin<3
     average = mean(LFP);                %Average
     sigma = std(LFP);               %Standard Deviation
     minPeakHeight = average+(sigma*100);   %artifact amplitude >120x 3rd quartile 
-    minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
+    minPeakDistance = 1;    %artifact spikes seperated by .001 seconds
 end
 
 %% Finding potential artifacts
-[pks_artifact, locs_artifact_potential, width] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance); 
+[pks_artifact, locs_artifact_potential, width] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight); 
 
 %% Finding real Artifacts, width <10 ms
 locs_artifact = locs_artifact_potential(width<100);
@@ -50,9 +50,8 @@ for i= 1:numel(locs_artifact);
     clear pks_artifact_spikes pks_artifact_spikes
     timeSeries=locs_artifact(i)-6000:locs_artifact(i)+6000;
 
-    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(LFP(timeSeries), 'MinPeakHeight', Q(3)*10); %artifact should be 3x 3rd quartile 
-    TF = isempty(locs_artifact_spikes);
-    if TF == 1 
+    [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(LFP(timeSeries), 'MinPeakHeight', Q(3)*5); %artifact should be 3x 3rd quartile 
+    if isempty(locs_artifact_spikes)
         return
     else            
         artifactSpikes=timeSeries(locs_artifact_spikes);
@@ -66,6 +65,15 @@ end
 
     %putting it all into an array 
     artifacts = [artifactStart, artifactEnd, artifactDuration];
+    
+    %test
+    
+%     figure
+%     plot(LFP(timeSeries));
+%     hold on
+%     plot (locs_artifact_spikes, LFP((locs_artifact_spikes)), '*r')
+%    
+    
 
 end
 

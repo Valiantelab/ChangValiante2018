@@ -17,6 +17,7 @@ function [SLE_final] = SLECrawler(filteredLFP, SLETimes, frequency, LED, onsetDe
 %% Setting initial variables
 %converting inputs into terms Michael used when writing function
 LFP_normalizedFiltered = filteredLFP;
+LFP_normalized = filteredLFP;   %for plotting
 SLE = SLETimes;
 
 %Default values, if frequenct is not specified 
@@ -132,23 +133,28 @@ if LED;
         lightTriggered = intersect(lastBurstEvent, lightTriggeredOffsetZones); %check if last burst event is due to a light trigger
         if lightTriggered %find location of new SLE offset (that is not light-triggered)
             %find index of new SLE offset            
-            offsetIndex = find(locs_spike(:,1) == SLE(i,2)*frequency); %find the preceding spike, using data from previous 'detectEvent function' in abs LFP
+            offsetIndex = find(locs_spike(:,1) == int64(SLE(i,2)*frequency)); %find the preceding spike, using data from previous 'detectEvent function' in abs LFP
             precedingOffsetIndex = find(flipud(locs_spike(1:offsetIndex, 2))==1,1);        % Thomas flipped the array and looked for the first point where spike was not light-triggered; consider using the while-loop
-            newOffsetIndex = offsetIndex-(precedingOffsetIndex+1);
+            newOffsetIndex = offsetIndex-(precedingOffsetIndex-1);
             offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
 
             %crawl to find the exact offset based on the new offset index
-            offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (preceding baseline)
-            offsetBaselineEnd = (offsetSLE+(1*frequency));  %SLE "context" (post-ictal baseline)
+            offsetBaselineStart = double(offsetSLE-(0.5*frequency));  %SLE "context" (preceding baseline)
+            offsetBaselineEnd = double(offsetSLE+(1*frequency));  %SLE "context" (post-ictal baseline)
 
             %Range of LFP to scan 
-            offsetContext = int64(offsetBaselineStart:offsetBaselineEnd);
+            offsetContext = (offsetBaselineStart:offsetBaselineEnd);
 
             %Locating the new offset time    
             meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext)); %SLE ends when signal returned to half the mean power of signal
             OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
             offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
-            SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detect new offset time             
+            if offset_loc
+                SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detect new offset time             
+            else
+                SLEoffset_final(i,1) = -1;
+            end
+            
         else   %if it is not light triggered, use as is 
             SLEoffset_final(i,1) = t(offsetSLE_2);
         end
@@ -260,6 +266,7 @@ end
 %Store output 
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
+SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
 
 if LED
     %Preallocate
