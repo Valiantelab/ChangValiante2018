@@ -140,7 +140,13 @@ if LED;
 
             %crawl to find the exact offset based on the new offset index
             offsetBaselineStart = double(offsetSLE-(0.5*frequency));  %SLE "context" (preceding baseline)
-            offsetBaselineEnd = double(offsetSLE+(1*frequency));  %SLE "context" (post-ictal baseline)
+            
+            if numel(filteredLFP)>(offsetSLE+(1*frequency))
+                offsetBaselineEnd = double(offsetSLE+(1*frequency));  %SLE "context" (post-ictal baseline)
+            else
+                offsetBaselineEnd = double(numel(powerFeatureLowPassFiltered)); %SLE "context" (post-ictal baseline), end of recording, cut the SLE short
+            end
+                       
 
             %Range of LFP to scan 
             offsetContext = (offsetBaselineStart:offsetBaselineEnd);

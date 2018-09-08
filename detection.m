@@ -122,7 +122,6 @@ indexEvents = (epileptiformLocation (:,3)>=(minSLEduration*frequency));
 putativeEvents = epileptiformLocation(indexEvents,:); 
 
 
-
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 SLE_times = putativeEvents(:,1:2)/frequency;
@@ -325,7 +324,7 @@ events (:,9) = indexFrequency;
     %plot the algorithm detected threshold
     plot ([featureThreshold featureThreshold], ylim); 
     %plot Michael Chang's threshold values 
-    plot ([michaelFrequencyThreshold michaelFrequencyThreshold], ylim);
+    plot ([michaelsFrequencyThreshold michaelsFrequencyThreshold], ylim);
     %Label
     title ('Unsupervised classication, using k-means clustering');
     ylabel ('Spiking Rate (Hz)');
@@ -686,4 +685,4 @@ newFile = exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName));
 
 end
 
-'successfully completed. Thank you for choosing to use The Epileptiform Detector'
+disp('successfully completed. Thank you for choosing to use The Epileptiform Detector')
