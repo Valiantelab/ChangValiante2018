@@ -19,7 +19,7 @@ prompt5 = 'Plot all epileptiform events (Yes (1) or No (0):';
 prompt6 = 'Classification Report';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '100', '0', '2', '0', '0'};
+definput = {'3.9', '100', '1', '2', '1', '1'};
 opts = 'on';
 userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -250,25 +250,26 @@ end
     
 %% Stage 2: Artifact (outlier) removal
 originalEvents = events;   %store prior to removing any artifacts
+indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 
 % While-loop to remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
 while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     
     thresholdArtifactAmplitude = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
-    indexArtifact = featureSet > thresholdArtifactAmplitude;  %implement a while-loop, so it repeats until all outliers are gone
+    indexArtifact = events(:,6) > thresholdArtifactAmplitude;  %implement a while-loop, so it repeats until all outliers are gone
     index = indexArtifact; %Generic Terms
 
     %Plot figure if artifacts detected within events
     if userInput(6) == 1      
         figure;
-        gscatter(featureSet , featureSet, index);    %plot index determined by Michael's Threshold
+        gscatter(events(:,6) , events(:,6), index);    %plot index determined by Michael's Threshold
         hold on
         %plot Michael Chang's threshold values 
         plot ([thresholdArtifactAmplitude thresholdArtifactAmplitude], ylim);
         %Label
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', 'Secondary Artifact Removal, using Peak-to-Peak Amplitude (mV)'); %select the name you want
+        set(gcf,'Name', 'Remove events containing artifact, using Peak-to-Peak Amplitude (mV)'); %select the name you want
         set(gca,'fontsize',12)
         title ('Unsupervised classication, using k-means clustering');
         ylabel ('Peak-to-Peak Amplitude (mV)');
@@ -279,8 +280,8 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     %Remove artifact, based on Michael's threshold 
     events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
     %Make new index without the artifacts
-    indexEvents = events(:,7)<4;
-    featureSet = events(indexEvents,6);
+    indexEventsToAnalyze = events(:,7)<4;
+    featureSet = events(indexEventsToAnalyze,6);
 end
 
 % While-loop to remove outliers based on intensity 
@@ -288,31 +289,31 @@ featureSet = events(:,5);   %intensity values
 while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     
     thresholdIntensityArtifact = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
-    indexArtifact = featureSet > thresholdIntensityArtifact;  %implement a while-loop, so it repeats until all outliers are gone
+    indexArtifact = events(:,5) > thresholdIntensityArtifact;  %implement a while-loop, so it repeats until all outliers are gone
     index = indexArtifact; %Generic Terms
 
     %Plot figure if artifacts detected within events
     if userInput(6) == 1      
         figure;
-        gscatter(featureSet , featureSet, index);    %plot index determined by Michael's Threshold
+        gscatter(events(:,5) , events(:,5), index);    %plot index determined by Michael's Threshold
         hold on
         %plot Michael Chang's threshold values 
         plot ([thresholdIntensityArtifact thresholdIntensityArtifact], ylim);
         %Label
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', 'Secondary Artifact Removal, using Peak-to-Peak Amplitude (mV)'); %select the name you want
+        set(gcf,'Name', 'Remove events containing artifact, using Intensity (mV^2/s)'); %select the name you want
         set(gca,'fontsize',12)
         title ('Unsupervised classication, using k-means clustering');
-        ylabel ('Peak-to-Peak Amplitude (mV)');
-        xlabel ('Peak-to-Peak Amplitude (mV)');   
+        ylabel ('Intensity (power/duration)');
+        xlabel ('Intensity (power/duration)');   
         legend('Epileptiform Events', 'Artifact', 'Michaels Artifact Threshold')                
     end
 
     %Remove artifact, based on Michael's threshold 
-    events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
+    events (indexArtifact, 7) = 4;   %%Label the event containing an artifact as '4'
     %Make new index without the artifacts
-    indexEvents = events(:,7)<4;
-    featureSet = events(indexEvents,5);
+    indexEventsToAnalyze = events(:,7)<4;    %Index of all events without an artifact
+    featureSet = events(indexEventsToAnalyze,5);
 end  
  
 
@@ -322,7 +323,7 @@ featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
 michaelsFrequencyThreshold = 1; %Hz  
 %Algo determined threshold
-[algoFrequencyIndex, algoFrequencyThreshold] = sleThresholdFinder (events(indexEvents,4));
+[algoFrequencyIndex, algoFrequencyThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,4));
 %Use the lowest threshold, unless it's below 1 Hz
 if algoFrequencyThreshold >= 1
     thresholdFrequency = algoFrequencyThreshold;
@@ -361,25 +362,22 @@ events (:,9) = indexFrequency;
 % classify based on average intensity 
 featureSet = events(:,5);   %Average intensity (Power/Duration)
 %Michael's threshold
-if mean(events(indexEvents,5))>std(events(indexEvents,5))
-    michaelIntensityThreshold = mean(events(indexEvents,5))-std(events(indexEvents,5));
+if mean(events(indexEventsToAnalyze,5))>std(events(indexEventsToAnalyze,5))
+    michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5))-std(events(indexEventsToAnalyze,5));
 else 
-    michaelIntensityThreshold = mean(events(indexEvents,5));
+    michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5));
 end
 %Algo determined threshold 
-[algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEvents,5));
+[algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,5));
 
-% %use the lower threshold
-% if algoIntensity<michaelIntensityThreshold
-%     indexIntensity = featureSet>algoIntensity;
-% else
-%     indexIntensity = featureSet>michaelIntensityThreshold;
-% end
+%use the lower threshold for Intensity
+if algoIntensityThreshold<=michaelIntensityThreshold
+    thresholdIntensity = algoIntensityThreshold;
+else
+    thresholdIntensity = michaelIntensityThreshold;
+end
 
-%for the time being, use this method
-thresholdIntensity = algoIntensityThreshold;
-
-%determine the threshold for Intensity (feature)
+%determine the index for SLE and IIE using threshold for Intensity (feature)
 indexIntensity = featureSet>=thresholdIntensity;
 events (:,10) = indexIntensity; %store in array
 
@@ -408,7 +406,7 @@ events (:,10) = indexIntensity; %store in array
     end
  
 %% Classifier rules (Filter)
-for i = 1: numel(events(indexEvents,1))
+for i = 1: numel(events(:,1))
     if (indexFrequency(i) + indexIntensity(i)) == 2 & events(i,7) <4    %and not an artifact
         events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified
     else if (indexFrequency(i) + indexIntensity(i)) < 2 & events(i,7) <4
@@ -437,7 +435,7 @@ else
 end
 
 %Algo deteremined threshold (tend to be higher value)
-[algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEvents,3));
+[algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
 
 %Use lower threshold, more liberal
 if michaelsDurationThreshold < algoDurationThreshold
@@ -492,15 +490,16 @@ SLE_final = events(indexSLE, :);
     if userInput(6) == 1  
     %3D scatter plot
     figure;
-    scatter3(events(indexEvents,4), events(indexEvents,5), events(indexEvents,6), 18, 'red', 'filled')
+    scatter3(events(:,4), events(:,5), events(:,6), 18, 'red', 'filled')  %All events including artifacts
     hold on
-    scatter3(events(indexSLE ,4), events(indexSLE ,5), events(indexSLE ,6), 18, 'blue', 'filled')
+    scatter3(events(indexEventsToAnalyze,4), events(indexEventsToAnalyze,5), events(indexEventsToAnalyze,6), 18, 'black', 'filled')  %All events without artifacts
+    scatter3(events(indexSLE ,4), events(indexSLE ,5), events(indexSLE ,6), 18, 'green', 'filled')   %All SLEs
     %Label
     title ('Classified Epileptiform Events');
     xlabel ('Average Spiking Rate (Hz)');   
     ylabel ('Average Intensity (Power/Duration)');
     zlabel ('Peak-to-Peak Amplitude (mV)');    
-    legend ('IIE', 'SLE')
+    legend ('Artifact', 'IIE', 'SLE')
     end
     
 
@@ -516,7 +515,7 @@ G = 'Classification';
 H = 'Light-triggered';
 I = sprintf('%.02f Hz', thresholdFrequency);
 J = sprintf('%.02f mV^2/s', thresholdIntensity);
-K = sprintf('%.02f mV', thresholdDuration);     
+K = sprintf('%.02f s', thresholdDuration);     
 %L = sprintf('%.02f mV', thresholdAmplitude);     %artifacts threshold
 
 
