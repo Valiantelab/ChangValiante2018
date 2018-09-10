@@ -65,16 +65,6 @@ end
 % compute total number of outliers
 Noutliers = length(outliersQ1)+length(outliersQ3);
 
-% display results
-disp(['Mean:                                ',num2str(mx)]);
-disp(['Standard Deviation:                  ',num2str(sigma)]);
-disp(['Median:                              ',num2str(medianx)]);
-disp(['25th Percentile:                     ',num2str(Q(1))]);
-disp(['50th Percentile:                     ',num2str(Q(2))]);
-disp(['75th Percentile:                     ',num2str(Q(3))]);
-disp(['Semi Interquartile Deviation:        ',num2str(SID)]);
-disp(['Number of outliers:                  ',num2str(Noutliers)]);
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Percentile Calculation Example
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
