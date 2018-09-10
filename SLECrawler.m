@@ -274,10 +274,10 @@ duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
 SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
 
-if LED
-    %Preallocate
-    SLE_final(:,8)= 0;
+%Preallocate
+SLE_final(:,8)= 0;
 
+if LED
     %Classify which SLEs were light triggered
     for i=1:size(SLE_final,1) 
         %use the "ismember" function 
