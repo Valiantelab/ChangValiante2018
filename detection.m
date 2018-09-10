@@ -48,6 +48,7 @@ if userInput(4)>0
     LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
     onsetDelay = 0.13;  %seconds
     offsetDelay = 1.5;  %seconds 
+    lightpulse = LED > 1;
 else
     LED =[];
     onsetDelay = [];
@@ -202,8 +203,7 @@ for i = 1:size(events,1)
         
         %set variables
         data1 = LFP_normalized; %Time series to be plotted 
-        lightpulse = LED > 1;
-
+       
         %make background vector
         if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
             backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
@@ -218,8 +218,8 @@ for i = 1:size(events,1)
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize'));   
-
-        plot (t(backgroundVector),data1(backgroundVector))
+                
+        plot (t(backgroundVector),data1(backgroundVector))  %background
         hold on
         plot (t(eventIndex),data1(eventIndex))     %SLE
         plot (t(onsetTime), data1(onsetTime), 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
@@ -254,7 +254,7 @@ end
 originalEvents = events;   %store prior to removing any artifacts
 featureSet = events(:,6);   %Generic Terms
 %Determine if artifact is present using Michael's Amplitude Threshold
-michaelArtifactThreshold = mean(featureSet)+(3.9*std(featureSet));
+michaelArtifactThreshold = mean(featureSet)+(3*std(featureSet));
 thresholdAmplitude = michaelArtifactThreshold;
 indexArtifact = featureSet > michaelArtifactThreshold;  %implement a while-loop, so it repeats until all outliers are gone
 index = indexArtifact; %Generic Terms
@@ -579,26 +579,30 @@ set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
 set(gcf,'Name', sprintf ('Overview of %s', FileName)); %select the name you want
 set(gcf, 'Position', get(0, 'Screensize'));
 
-lightpulse = LED > 1;
-
 subplot (3,1,1)
 reduce_plot (t, LFP_normalized, 'k');
 hold on
-reduce_plot (t, lightpulse - 2);
+if LED
+    reduce_plot (t, lightpulse - 2);
+end
+
 
 %plot artifacts (red), found in 2nd search
-for i = 1:numel(artifactLocation(:,1)) 
-    reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_normalized(artifactLocation(i,1):artifactLocation(i,2)), 'r');
+if artifactLocation
+    for i = 1:numel(artifactLocation(:,1)) 
+        reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_normalized(artifactLocation(i,1):artifactLocation(i,2)), 'r');
+    end
 end
 
-%plot onset markers
-for i=1:numel(SLE_final(:,1))
-reduce_plot ((SLE_final(i,1)), (LFP_normalized(int64(SLE_final(i,1)*frequency))), 'o');
-end
-
-%plot offset markers
-for i=1:numel(SLE_final(:,2))
-reduce_plot ((SLE_final(i,2)), (LFP_normalized(int64(SLE_final(i,2)*frequency))), 'x');
+%plot onset/offset markers
+if SLE_final
+    for i=1:numel(SLE_final(:,1))
+    reduce_plot ((SLE_final(i,1)), (LFP_normalized(int64(SLE_final(i,1)*frequency))), 'o'); %onset markers
+    end
+    
+    for i=1:numel(SLE_final(:,2))
+    reduce_plot ((SLE_final(i,2)), (LFP_normalized(int64(SLE_final(i,2)*frequency))), 'x'); %offset markers
+    end
 end
 
 title (sprintf ('Overview of LFP (10000 points/s), %s', FileName));
@@ -612,7 +616,7 @@ reduce_plot (t, (lightpulse/2) - 0.75);
 
 %plot spikes (artifact removed)
 for i=1:size(locs_spike_2nd,1)
-plot (t(locs_spike_2nd(i,1)), (DiffLFP_normalizedFiltered(locs_spike_2nd(i,1))), 'x')
+    plot (t(locs_spike_2nd(i,1)), (DiffLFP_normalizedFiltered(locs_spike_2nd(i,1))), 'x')
 end
 
 title ('Overview of Absolute filtered LFP (bandpass: 1 to 100 Hz)');
@@ -623,9 +627,9 @@ subplot (3,1,3)
 reduce_plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g');
 hold on
 
-%plot spikes 
+%plot spikes in absoluate derivative of LFP 
 for i=1:size(locs_spike_1st,1)
-plot (t(locs_spike_1st(i,1)), (DiffLFP_normalizedFiltered(locs_spike_1st(i,1))), 'x')
+    plot (t(locs_spike_1st(i,1)), (DiffLFP_normalizedFiltered(locs_spike_1st(i,1))), 'x')
 end
 
 title ('Peaks (o) in Absolute Derivative of filtered LFP');
@@ -638,8 +642,6 @@ close(figHandle)
 
 %% Plotting out detected SLEs with context | To figure out how off you are
 data1 = LFP_normalized; %Time series to be plotted 
-
-    lightpulse = LED > 1;
 
 for i = 1:size(SLE_final,1)
     figHandle = figure;
@@ -662,14 +664,15 @@ for i = 1:size(SLE_final,1)
     normalizeLFP = (data1(backgroundVector(1)));
     normalizeLED = abs(min(data1(sleVector)-normalizeLFP));
     plot (t(backgroundVector),data1(backgroundVector)-normalizeLFP ) %background
-    hold on
-    plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-normalizeLED, 'b') %plot LED   
+    hold on    
     plot (t(sleVector),data1(sleVector)-normalizeLFP)     %SLE
     plot (t(onsetTime), data1(onsetTime)-normalizeLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
     plot (t(offsetTime), data1(offsetTime)-normalizeLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
     indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
     plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-normalizeLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-    
+    if LED
+        plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-normalizeLED, 'b') %plot LED 
+    end
        
     title (sprintf('LFP Recording, SLE #%d', i));
     ylabel ('mV');
