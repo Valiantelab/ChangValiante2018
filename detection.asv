@@ -472,7 +472,7 @@ events(:,11) = indexDuration;
     set(gca,'fontsize',12)
     end
 
-%% Classification (final)
+    %% Classification (final)
 
 for i = 1: numel(events(:,1))
     if indexFrequency(i) + indexIntensity(i) + indexDuration(i) == 3 & events (i,7) <4
