@@ -256,8 +256,8 @@ indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the scr
 featureSet = events(:,6);   %peak-to-peak amplitude values
 while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     
-    thresholdArtifactAmplitude = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
-    indexArtifact = events(:,6) > thresholdArtifactAmplitude;  %implement a while-loop, so it repeats until all outliers are gone
+    thresholdAmplitudeOutlier = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
+    indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
     index = indexArtifact; %Generic Terms
 
     %Plot figure if artifacts detected within events
@@ -266,7 +266,7 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
         gscatter(events(:,6) , events(:,6), index);    %plot index determined by Michael's Threshold
         hold on
         %plot Michael Chang's threshold values 
-        plot ([thresholdArtifactAmplitude thresholdArtifactAmplitude], ylim);
+        plot ([thresholdAmplitudeOutlier thresholdAmplitudeOutlier], ylim);
         %Label
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', 'Remove events containing artifact, using Peak-to-Peak Amplitude (mV)'); %select the name you want
@@ -279,6 +279,7 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
 
     %Remove artifact, based on Michael's threshold 
     events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
+    events (indexArtifact, 12) = 1;
     %Make new index without the artifacts
     indexEventsToAnalyze = events(:,7)<4;
     featureSet = events(indexEventsToAnalyze,6);
@@ -288,8 +289,8 @@ end
 featureSet = events(:,5);   %intensity values
 while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     
-    thresholdIntensityArtifact = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
-    indexArtifact = events(:,5) > thresholdIntensityArtifact;  %implement a while-loop, so it repeats until all outliers are gone
+    thresholdIntensityOutlier = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
+    indexArtifact = events(:,5) > thresholdIntensityOutlier;  %implement a while-loop, so it repeats until all outliers are gone
     index = indexArtifact; %Generic Terms
 
     %Plot figure if artifacts detected within events
@@ -298,7 +299,7 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
         gscatter(events(:,5) , events(:,5), index);    %plot index determined by Michael's Threshold
         hold on
         %plot Michael Chang's threshold values 
-        plot ([thresholdIntensityArtifact thresholdIntensityArtifact], ylim);
+        plot ([thresholdIntensityOutlier thresholdIntensityOutlier], ylim);
         %Label
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', 'Remove events containing artifact, using Intensity (mV^2/s)'); %select the name you want
@@ -311,6 +312,7 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
 
     %Remove artifact, based on Michael's threshold 
     events (indexArtifact, 7) = 4;   %%Label the event containing an artifact as '4'
+    events (indexArtifact, 13) = 1;   %%Label the event containing an artifact as '4'
     %Make new index without the artifacts
     indexEventsToAnalyze = events(:,7)<4;    %Index of all events without an artifact
     featureSet = events(indexEventsToAnalyze,5);
@@ -477,13 +479,22 @@ for i = 1: numel(events(:,1))
         events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified.
         else if indexFrequency(i) + indexIntensity(i) + indexDuration(i) < 3 & events (i,7) < 4
                 events (i,7) = 2;
-            else
-                events (i,7) = 4;   
+            else if events (i,11) + events (i,12) + events (i,13) == 3
+                events (i,7) = 5;   %class 5 SLE (high intensity)
+                else
+                events (i,7) = 4;
+                end
             end
     end
 end
 
-indexSLE = events (:,7) == 1;  %classify which ones are SLEs
+% Class 5 seizures take priority over normal SLEs
+if ~sum(events (:,7) == 5)>0
+    indexSLE = events (:,7) == 1;  %classify which ones are SLEs
+else
+    indexSLE = events (:,7) == 5;  %Class 5 seizures detected
+end
+    
 SLE_final = events(indexSLE, :);
 
     %Plot a 3D scatter plot of events
@@ -519,7 +530,20 @@ H = 'Light-triggered';
 I = sprintf('%.02f Hz', thresholdFrequency);
 J = sprintf('%.02f mV^2/s', thresholdIntensity);
 K = sprintf('%.02f s', thresholdDuration);     
-%L = sprintf('%.02f mV', thresholdAmplitude);     %artifacts threshold
+
+%plot if outliers were detected using amplitude feature
+if sum(events(:,12))>0
+    L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
+else
+    L = 'no outliers';
+end
+
+%plot if outliers were detected using intensity feature
+if sum(events(:,13))>0
+    M = sprintf('%.02f mV', thresholdIntensityOutlier);     %artifacts threshold
+else
+    M = 'no outliers';
+end
 
 
 %Sheet 1 = Details - To be completed at a later date with Liam's help.
@@ -545,7 +569,7 @@ K = sprintf('%.02f s', thresholdDuration);
 
 %Sheet 1 = Events   
 if isempty(events) == 0
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
@@ -574,7 +598,7 @@ end
 if isempty(SLE_final) == 0   
     subtitle4 = {A, B, C, D, E, F, G, H};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE_final,'SLE' ,'A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE_final(:, 1:8),'SLE' ,'A2');
 else
     disp ('No SLEs were detected.');
 end
