@@ -248,7 +248,7 @@ end
     newFile = exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
     end
     
-%% Stage 2: Artifact (outlier) removal
+%% Stage 2: Artifact removal / Outlier Detection (Class 5 SLE)
 originalEvents = events;   %store prior to removing any artifacts
 indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 
@@ -466,7 +466,7 @@ events(:,11) = indexDuration;
     title ('Unsupervised classication, using k-means clustering');
     ylabel ('Duration (sec)');
     xlabel ('Duration (sec)');   
-    legend('Epileptiform Events', 'Artifact', 'Algo Threshold', 'Michaels Threshold', 'Duration Threshold')
+    legend('Epileptiform Events', 'SLE', 'Algo Threshold', 'Michaels Threshold', 'Duration Threshold')
     set(gca,'fontsize',12)
     end
 
@@ -502,6 +502,9 @@ SLE_final = events(indexSLE, :);
     legend ('Artifact', 'IIE', 'SLE')
     end
     
+    
+% Store light-triggered events (s)
+% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
 
 %% Write to .xls
 %set subtitle

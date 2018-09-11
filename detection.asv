@@ -19,7 +19,7 @@ prompt5 = 'Plot all epileptiform events (Yes (1) or No (0):';
 prompt6 = 'Classification Report';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '100', '0', '2', '0', '0'};
+definput = {'3.9', '100', '1', '2', '1', '1'};
 opts = 'on';
 userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -250,6 +250,7 @@ end
     
 %% Stage 2: Artifact (outlier) removal
 originalEvents = events;   %store prior to removing any artifacts
+indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 
 % While-loop to remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
@@ -279,8 +280,8 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     %Remove artifact, based on Michael's threshold 
     events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
     %Make new index without the artifacts
-    indexEvents = events(:,7)<4;
-    featureSet = events(indexEvents,6);
+    indexEventsToAnalyze = events(:,7)<4;
+    featureSet = events(indexEventsToAnalyze,6);
 end
 
 % While-loop to remove outliers based on intensity 
@@ -311,8 +312,8 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     %Remove artifact, based on Michael's threshold 
     events (indexArtifact, 7) = 4;   %%Label the event containing an artifact as '4'
     %Make new index without the artifacts
-    indexEvents = events(:,7)<4;    %Index of all events without an artifact
-    featureSet = events(indexEvents,5);
+    indexEventsToAnalyze = events(:,7)<4;    %Index of all events without an artifact
+    featureSet = events(indexEventsToAnalyze,5);
 end  
  
 
@@ -322,7 +323,7 @@ featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
 michaelsFrequencyThreshold = 1; %Hz  
 %Algo determined threshold
-[algoFrequencyIndex, algoFrequencyThreshold] = sleThresholdFinder (events(indexEvents,4));
+[algoFrequencyIndex, algoFrequencyThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,4));
 %Use the lowest threshold, unless it's below 1 Hz
 if algoFrequencyThreshold >= 1
     thresholdFrequency = algoFrequencyThreshold;
@@ -361,25 +362,22 @@ events (:,9) = indexFrequency;
 % classify based on average intensity 
 featureSet = events(:,5);   %Average intensity (Power/Duration)
 %Michael's threshold
-if mean(events(indexEvents,5))>std(events(indexEvents,5))
-    michaelIntensityThreshold = mean(events(indexEvents,5))-std(events(indexEvents,5));
+if mean(events(indexEventsToAnalyze,5))>std(events(indexEventsToAnalyze,5))
+    michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5))-std(events(indexEventsToAnalyze,5));
 else 
-    michaelIntensityThreshold = mean(events(indexEvents,5));
+    michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5));
 end
 %Algo determined threshold 
-[algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEvents,5));
+[algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,5));
 
-% %use the lower threshold
-% if algoIntensity<michaelIntensityThreshold
-%     indexIntensity = featureSet>algoIntensity;
-% else
-%     indexIntensity = featureSet>michaelIntensityThreshold;
-% end
+%use the lower threshold for Intensity
+if algoIntensityThreshold<=michaelIntensityThreshold
+    thresholdIntensity = algoIntensityThreshold;
+else
+    thresholdIntensity = michaelIntensityThreshold;
+end
 
-%for the time being, use this method
-thresholdIntensity = algoIntensityThreshold;
-
-%determine the threshold for Intensity (feature)
+%determine the index for SLE and IIE using threshold for Intensity (feature)
 indexIntensity = featureSet>=thresholdIntensity;
 events (:,10) = indexIntensity; %store in array
 
@@ -437,7 +435,7 @@ else
 end
 
 %Algo deteremined threshold (tend to be higher value)
-[algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEvents,3));
+[algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
 
 %Use lower threshold, more liberal
 if michaelsDurationThreshold < algoDurationThreshold
@@ -468,7 +466,7 @@ events(:,11) = indexDuration;
     title ('Unsupervised classication, using k-means clustering');
     ylabel ('Duration (sec)');
     xlabel ('Duration (sec)');   
-    legend('Epileptiform Events', 'Artifact', 'Algo Threshold', 'Michaels Threshold', 'Duration Threshold')
+    legend('Epileptiform Events', 'SLE', 'Algo Threshold', 'Michaels Threshold', 'Duration Threshold')
     set(gca,'fontsize',12)
     end
 
@@ -494,16 +492,19 @@ SLE_final = events(indexSLE, :);
     figure;
     scatter3(events(:,4), events(:,5), events(:,6), 18, 'red', 'filled')  %All events including artifacts
     hold on
-    scatter3(events(indexEvents,4), events(indexEvents,5), events(indexEvents,6), 18, 'black', 'filled')  %All events without artifacts
-    scatter3(events(indexSLE ,4), events(indexSLE ,5), events(indexSLE ,6), 18, 'blue', 'filled')   %All SLEs
+    scatter3(events(indexEventsToAnalyze,4), events(indexEventsToAnalyze,5), events(indexEventsToAnalyze,6), 18, 'black', 'filled')  %All events without artifacts
+    scatter3(events(indexSLE ,4), events(indexSLE ,5), events(indexSLE ,6), 18, 'green', 'filled')   %All SLEs
     %Label
     title ('Classified Epileptiform Events');
     xlabel ('Average Spiking Rate (Hz)');   
     ylabel ('Average Intensity (Power/Duration)');
     zlabel ('Peak-to-Peak Amplitude (mV)');    
-    legend ('Contain Artifact' 'IIE', 'SLE')
+    legend ('Artifact', 'IIE', 'SLE')
     end
     
+    
+% Store light-triggered events (s)
+% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
 
 %% Write to .xls
 %set subtitle
@@ -517,7 +518,7 @@ G = 'Classification';
 H = 'Light-triggered';
 I = sprintf('%.02f Hz', thresholdFrequency);
 J = sprintf('%.02f mV^2/s', thresholdIntensity);
-K = sprintf('%.02f mV', thresholdDuration);     
+K = sprintf('%.02f s', thresholdDuration);     
 %L = sprintf('%.02f mV', thresholdAmplitude);     %artifacts threshold
 
 
