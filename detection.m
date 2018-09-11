@@ -56,7 +56,7 @@ end
 
 %% Data Processing 
 %Center the LFP data
-LFP_normalized = LFP - LFP(1);                                      %centered signal at 0, y-axis
+LFP_normalized = LFP - LFP(1);                                      %centered signal at 0, y-axis; misnomer, should have called it LFP_centered
 
 %Lowpass butter filter [2Hz]
 fc = 2; % Cut off frequency
@@ -128,7 +128,7 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 EventTimes = putativeEvents(:,1:2)/frequency;
 events = SLECrawler(LFP_normalizedFiltered, EventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
 
-%% Feature Extraction (Duration, Spiking Frequency and Intensity)
+%% Feature Extraction (Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude)
     if userInput(5) == 1   
         %% Creating powerpoint slide
         isOpen  = exportToPPTX();
