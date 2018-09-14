@@ -29,7 +29,7 @@ distanceArtifact = 0.6; %distance between artifacts (seconds)
 minSLEduration = 3; %seconds; %change to 5 s if any detection issues 
 
 %% Load .abf and excel data
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
+    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
 
 %Label for titles
@@ -392,7 +392,7 @@ putativeSLE = events(indexPutativeSLE, :);
 averageSLEDuration=mean(putativeSLE(:,3));
 sigmaSLEDuration = std(putativeSLE(:,3));
 
-%% Tertiary Classifier: sigma + duration idea
+%% Stage 3: Classify based on Class 1 dataset, using duration as a feature
 %classify based on duration
 featureSet = events(:,3);   %Duration (s)
 %Michael's threshold, use the one that is higher, conservative
@@ -405,12 +405,12 @@ end
 %Algo deteremined threshold (tend to be higher value)
 [algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
 
-%Use lower threshold, more liberal
-if michaelsDurationThreshold < algoDurationThreshold
+%Michael's Threshold, plot the algo threshold just for your reference
+% if michaelsDurationThreshold < algoDurationThreshold
     thresholdDuration = michaelsDurationThreshold;
-else
-    thresholdDuration = algoDurationThreshold;
-end
+% else
+%     thresholdDuration = algoDurationThreshold;
+% end
 
 indexDuration = featureSet>thresholdDuration; 
 events(:,11) = indexDuration;
@@ -445,21 +445,20 @@ for i = 1: numel(events(:,1))
         events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified.
         else if indexFrequency(i) + indexIntensity(i) + indexDuration(i) < 3 & events (i,7) < 4
                 events (i,7) = 2;
-            else if events (i,11) + events (i,12) + events (i,13) == 3
-                events (i,7) = 5;   %class 5 SLE (high intensity)
                 else
                 events (i,7) = 4;
-                end
             end
     end
 end
 
+            
+
 % Class 5 seizures take priority over normal SLEs
-if ~sum(events (:,7) == 5)>0
+% if ~sum(events (:,7) == 5)>0
     indexSLE = events (:,7) == 1;  %classify which ones are SLEs
-else
-    indexSLE = events (:,7) == 5;  %Class 5 seizures detected
-end
+% else
+%     indexSLE = events (:,7) == 5;  %Class 5 seizures detected
+% end
     
 SLE_final = events(indexSLE, :);
 
@@ -504,14 +503,6 @@ else
     L = 'no outliers';
 end
 
-%plot if outliers were detected using intensity feature
-if sum(events(:,13))>0
-    M = sprintf('%.02f mV', thresholdIntensityOutlier);     %artifacts threshold
-else
-    M = 'no outliers';
-end
-
-
 %Sheet 1 = Details - To be completed at a later date with Liam's help.
 % https://www.mathworks.com/help/matlab/matlab_prog/creating-a-map-object.html
 % details{1,1} = 'FileName:';     details {1,2} = sprintf('%s', FileName);
@@ -535,7 +526,7 @@ end
 
 %Sheet 1 = Events   
 if isempty(events) == 0
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else

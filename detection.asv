@@ -392,7 +392,7 @@ putativeSLE = events(indexPutativeSLE, :);
 averageSLEDuration=mean(putativeSLE(:,3));
 sigmaSLEDuration = std(putativeSLE(:,3));
 
-%% Tertiary Classifier: sigma + duration idea
+%% Stage 3: Classify based on Class 1 dataset, using duration as a feature
 %classify based on duration
 featureSet = events(:,3);   %Duration (s)
 %Michael's threshold, use the one that is higher, conservative
