@@ -255,11 +255,11 @@ indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the scr
 
 %Remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
-if sum(featureSet > mean(featureSet)+(3.1*std(featureSet)))>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines    
-    thresholdAmplitudeOutlier = mean(featureSet)+(3.1*std(featureSet));  %Michael's custom threshold
-    indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
-    index = indexArtifact; %Generic Terms
+thresholdAmplitudeOutlier = mean(featureSet)+(3.1*std(featureSet));  %Michael's custom threshold
+indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
+index = indexArtifact; %Generic Terms
 
+if sum(index)>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines       
     %Plot figure if artifacts detected within events
     if userInput(6) == 1      
         figure;
@@ -285,7 +285,7 @@ if sum(featureSet > mean(featureSet)+(3.1*std(featureSet)))>0   %I wonder if thi
     featureSet = events(indexEventsToAnalyze,6);
 end
 
-%% Stage 3: Secondary Classifier 
+%% Stage 2: Unsupervised Classifier 
 % classify based on average frequency 
 featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
