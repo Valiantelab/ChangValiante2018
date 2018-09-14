@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 5.0
+%Version 5.1
 
 %% Clear All
 close all
