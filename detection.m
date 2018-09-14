@@ -259,7 +259,7 @@ thresholdAmplitudeOutlier = mean(featureSet)+(3.1*std(featureSet));  %Michael's 
 indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
 index = indexArtifact; %Generic Terms
 
-if sum(index)>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines       
+if sum(indexArtifact)>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines       
     %Plot figure if artifacts detected within events
     if userInput(6) == 1      
         figure;
@@ -497,7 +497,7 @@ J = sprintf('%.02f mV^2/s', thresholdIntensity);
 K = sprintf('%.02f s', thresholdDuration);     
 
 %plot if outliers were detected using amplitude feature
-if sum(events(:,12))>0
+if sum(indexArtifact)>0
     L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
 else
     L = 'no outliers';
