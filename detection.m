@@ -110,7 +110,7 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %Detect events
 [epileptiformLocation, artifactLocation, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
-%% Stage 1: Initial Classifier (duration)
+%% Stage 0: Initial Classifier (duration)
 %Putative IIS
 indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
@@ -127,6 +127,7 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 EventTimes = putativeEvents(:,1:2)/frequency;
 events = SLECrawler(LFP_normalizedFiltered, EventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
+
 
 %% Feature Extraction (Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude)
     if userInput(5) == 1   
@@ -248,7 +249,7 @@ end
     newFile = exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
     end
     
-%% Stage 2: Artifact removal / Outlier Detection (Class 5 SLE)
+%% Stage 1: Artifact (Outlier) removal 
 originalEvents = events;   %store prior to removing any artifacts
 indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 

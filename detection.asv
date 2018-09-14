@@ -56,7 +56,7 @@ end
 
 %% Data Processing 
 %Center the LFP data
-LFP_normalized = LFP - LFP(1);                                      %centered signal at 0, y-axis
+LFP_normalized = LFP - LFP(1);                                      %centered signal at 0, y-axis; misnomer, should have called it LFP_centered
 
 %Lowpass butter filter [2Hz]
 fc = 2; % Cut off frequency
@@ -110,7 +110,7 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 %Detect events
 [epileptiformLocation, artifactLocation, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
-%% Stage 1: Initial Classifier (duration)
+%% Stage 0: Initial Classifier (duration)
 %Putative IIS
 indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
@@ -128,7 +128,8 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 EventTimes = putativeEvents(:,1:2)/frequency;
 events = SLECrawler(LFP_normalizedFiltered, EventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
 
-%% Feature Extraction (Duration, Spiking Frequency and Intensity)
+
+%% Feature Extraction (Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude)
     if userInput(5) == 1   
         %% Creating powerpoint slide
         isOpen  = exportToPPTX();
@@ -248,7 +249,7 @@ end
     newFile = exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
     end
     
-%% Stage 2: Artifact removal / Outlier Detection (Class 5 SLE)
+%% Stage 1: Artifact (Outlier) removal 
 originalEvents = events;   %store prior to removing any artifacts
 indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 
@@ -530,9 +531,20 @@ H = 'Light-triggered';
 I = sprintf('%.02f Hz', thresholdFrequency);
 J = sprintf('%.02f mV^2/s', thresholdIntensity);
 K = sprintf('%.02f s', thresholdDuration);     
-if (events(:,12)>1)
-L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
-M = sprintf('%.02f mV', thresholdIntensityOutlier);     %artifacts threshold
+
+%plot if outliers were detected using amplitude feature
+if sum(events(:,12))>0
+    L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
+else
+    L = 'no outliers';
+end
+
+%plot if outliers were detected using intensity feature
+if sum(events(:,13))>0
+    M = sprintf('%.02f mV', thresholdIntensityOutlier);     %artifacts threshold
+else
+    M = 'no outliers';
+end
 
 
 %Sheet 1 = Details - To be completed at a later date with Liam's help.
