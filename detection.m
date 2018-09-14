@@ -253,11 +253,10 @@ end
 originalEvents = events;   %store prior to removing any artifacts
 indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 
-% While-loop to remove outliers based on peak-to-peak amplitude
+%Remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
-while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
-    
-    thresholdAmplitudeOutlier = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
+if sum(featureSet > mean(featureSet)+(3.1*std(featureSet)))>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines    
+    thresholdAmplitudeOutlier = mean(featureSet)+(3.1*std(featureSet));  %Michael's custom threshold
     indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
     index = indexArtifact; %Generic Terms
 
@@ -285,40 +284,6 @@ while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     indexEventsToAnalyze = events(:,7)<4;
     featureSet = events(indexEventsToAnalyze,6);
 end
-
-% While-loop to remove outliers based on intensity 
-featureSet = events(:,5);   %intensity values
-while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
-    
-    thresholdIntensityOutlier = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
-    indexArtifact = events(:,5) > thresholdIntensityOutlier;  %implement a while-loop, so it repeats until all outliers are gone
-    index = indexArtifact; %Generic Terms
-
-    %Plot figure if artifacts detected within events
-    if userInput(6) == 1      
-        figure;
-        gscatter(events(:,5) , events(:,5), index);    %plot index determined by Michael's Threshold
-        hold on
-        %plot Michael Chang's threshold values 
-        plot ([thresholdIntensityOutlier thresholdIntensityOutlier], ylim);
-        %Label
-        set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', 'Remove events containing artifact, using Intensity (mV^2/s)'); %select the name you want
-        set(gca,'fontsize',12)
-        title ('Unsupervised classication, using k-means clustering');
-        ylabel ('Intensity (power/duration)');
-        xlabel ('Intensity (power/duration)');   
-        legend('Epileptiform Events', 'Artifact', 'Michaels Artifact Threshold')                
-    end
-
-    %Remove artifact, based on Michael's threshold 
-    events (indexArtifact, 7) = 4;   %%Label the event containing an artifact as '4'
-    events (indexArtifact, 13) = 1;   %%Label the event containing an artifact as '4'
-    %Make new index without the artifacts
-    indexEventsToAnalyze = events(:,7)<4;    %Index of all events without an artifact
-    featureSet = events(indexEventsToAnalyze,5);
-end  
- 
 
 %% Stage 3: Secondary Classifier 
 % classify based on average frequency 

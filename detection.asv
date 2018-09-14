@@ -253,9 +253,9 @@ end
 originalEvents = events;   %store prior to removing any artifacts
 indexEventsToAnalyze = events(:,7)<4;   %continuously updated throughout the script
 
-% While-loop to remove outliers based on peak-to-peak amplitude
+%Remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
-while sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
+if sum(featureSet > mean(featureSet)+(userInput(1)*std(featureSet)))>0
     
     thresholdAmplitudeOutlier = mean(featureSet)+(userInput(1)*std(featureSet));  %Michael's custom threshold
     indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
