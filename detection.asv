@@ -29,7 +29,7 @@ distanceArtifact = 0.6; %distance between artifacts (seconds)
 minSLEduration = 3; %seconds; %change to 5 s if any detection issues 
 
 %% Load .abf and excel data
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
+    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
 
 %Label for titles
@@ -259,7 +259,7 @@ thresholdAmplitudeOutlier = mean(featureSet)+(3.1*std(featureSet));  %Michael's 
 indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
 index = indexArtifact; %Generic Terms
 
-if sum(index)>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines       
+if sum(indexArtifact)>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines       
     %Plot figure if artifacts detected within events
     if userInput(6) == 1      
         figure;
@@ -338,11 +338,14 @@ end
 %Algo determined threshold 
 [algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,5));
 
-%use the lower threshold for Intensity
-if algoIntensityThreshold<=michaelIntensityThreshold
-    thresholdIntensity = algoIntensityThreshold;
-else
-    thresholdIntensity = michaelIntensityThreshold;
+%use the lower threshold for Intensity, (with a floor at 10 mV^2/s)
+if algoIntensityThreshold < 10 && michaelIntensityThreshold < 10
+    thresholdIntensity = 10;
+else if algoIntensityThreshold<=michaelIntensityThreshold
+        thresholdIntensity = algoIntensityThreshold;
+    else
+        thresholdIntensity = michaelIntensityThreshold;
+    end
 end
 
 %determine the index for SLE and IIE using threshold for Intensity (feature)
@@ -405,12 +408,16 @@ end
 %Algo deteremined threshold (tend to be higher value)
 [algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
 
-%Michael's Threshold, plot the algo threshold just for your reference
-% if michaelsDurationThreshold < algoDurationThreshold
-    thresholdDuration = michaelsDurationThreshold;
-% else
-%     thresholdDuration = algoDurationThreshold;
-% end
+%Use the lowest threhsold, unless it's below 10 s (that's the floor)
+if algoDurationThreshold < 10 && michaelsDurationThreshold < 10
+    thresholdDuration = 10;
+else if michaelsDurationThreshold <= algoDurationThreshold
+        thresholdDuration = michaelsDurationThreshold;
+    else
+        thresholdDuration = algoDurationThreshold;
+    end
+end
+
 
 indexDuration = featureSet>thresholdDuration; 
 events(:,11) = indexDuration;
@@ -497,7 +504,7 @@ J = sprintf('%.02f mV^2/s', thresholdIntensity);
 K = sprintf('%.02f s', thresholdDuration);     
 
 %plot if outliers were detected using amplitude feature
-if sum(events(:,12))>0
+if sum(indexArtifact)>0
     L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
 else
     L = 'no outliers';

@@ -8,21 +8,23 @@ function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(
 %   specified.
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
-[mx, Q] = quartilesStat(LFP);   %Quartiles
+% [mx, Q] = quartilesStat(LFP);   %Quartiles
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
+    [mx, Q] = quartilesStat(LFP);   %Quartiles
     frequency = 10000;   %10kHz sampling frequency
     minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
     minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
-    minArtifactHeight = mean(LFP) + (100*std(LFP));
+    minArtifactHeight = mean(LFP) + (70*std(LFP));
     minArtifactDistance = 0.6 * frequency;
 end
 
 if nargin<3 
+    [mx, Q] = quartilesStat(LFP);   %Quartiles
     minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
     minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
-    minArtifactHeight = mean(LFP) + (100*std(LFP));
+    minArtifactHeight = mean(LFP) + (70*std(LFP));
     minArtifactDistance = 0.6 * frequency;
 end
 

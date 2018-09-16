@@ -22,14 +22,14 @@ if nargin<2
     frequency = 10000;       %10kHz sampling frequency
     average = mean(LFP);                %Average
     sigma = std(LFP);               %Standard Deviation
-    minPeakHeight = average+(sigma*50);   %artifact amplitude >120x 3rd quartile 
+    minPeakHeight = average+(sigma*70);   %artifact amplitude >120x 3rd quartile 
     minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
 end
 
 if nargin<3
     average = mean(LFP);                %Average
     sigma = std(LFP);               %Standard Deviation
-    minPeakHeight = average+(sigma*50);   %artifact amplitude >120x 3rd quartile 
+    minPeakHeight = average+(sigma*70);   %artifact amplitude >120x 3rd quartile 
     minPeakDistance = 6000;    %artifact spikes seperated by .6 seconds
 end
 
@@ -37,7 +37,7 @@ end
 [pks_artifact, locs_artifact_potential, width] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance); 
 
 %% Finding real Artifacts, width <10 ms
-locs_artifact = locs_artifact_potential(width<115);
+locs_artifact = locs_artifact_potential(width<105);
 
 %preallocate array
 artifactStart = zeros(size(locs_artifact));
@@ -61,9 +61,7 @@ for i= 1:numel(locs_artifact);
 
     [pks_artifact_spikes, locs_artifact_spikes] = findpeaks(LFP(timeSeries), 'MinPeakHeight', Q(3)*5); %artifact should be 3x 3rd quartile 
     
-    if isempty(locs_artifact_spikes)
-        return
-    else            
+    if locs_artifact_spikes
         artifactSpikes=timeSeries(locs_artifact_spikes);
 
         artifactStart(i) = artifactSpikes(1);

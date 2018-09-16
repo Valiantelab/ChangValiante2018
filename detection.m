@@ -19,7 +19,7 @@ prompt5 = 'Plot all epileptiform events (Yes (1) or No (0):';
 prompt6 = 'Classification Report';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '50', '0', '2', '0', '0'};
+definput = {'3.9', '70', '0', '2', '0', '0'};
 opts = 'on';
 userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -126,7 +126,7 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 EventTimes = putativeEvents(:,1:2)/frequency;
-events = SLECrawler(LFP_normalizedFiltered, EventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
+  events = SLECrawler(LFP_normalizedFiltered, EventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
 
 
 %% Feature Extraction (Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude)
@@ -626,7 +626,7 @@ if artifactLocation
 end
 
 %plot onset/offset markers
-if SLE_final
+if SLE_final(:,1)
     for i=1:numel(SLE_final(:,1))
     reduce_plot ((SLE_final(i,1)), (LFP_normalized(int64(SLE_final(i,1)*frequency))), 'o'); %onset markers
     end
