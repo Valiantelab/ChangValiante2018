@@ -11,7 +11,7 @@ clc
 %% GUI to set thresholds
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
-prompt1 = 'Epileptiform Spike Threshold: average + (3.5 x Sigma)';
+prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
@@ -19,7 +19,7 @@ prompt5 = 'Plot all epileptiform events (Yes (1) or No (0):';
 prompt6 = 'Classification Report';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '100', '1', '2', '1', '1'};
+definput = {'3.9', '50', '0', '2', '0', '0'};
 opts = 'on';
 userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 
@@ -29,7 +29,7 @@ distanceArtifact = 0.6; %distance between artifacts (seconds)
 minSLEduration = 3; %seconds; %change to 5 s if any detection issues 
 
 %% Load .abf and excel data
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
+    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
 
 %Label for titles
@@ -338,11 +338,14 @@ end
 %Algo determined threshold 
 [algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,5));
 
-%use the lower threshold for Intensity
-if algoIntensityThreshold<=michaelIntensityThreshold
-    thresholdIntensity = algoIntensityThreshold;
-else
-    thresholdIntensity = michaelIntensityThreshold;
+%use the lower threshold for Intensity, (with a floor at 10 mV^2/s)
+if algoIntensityThreshold < 10 && michaelIntensityThreshold < 10
+    thresholdIntensity = 10;
+else if algoIntensityThreshold<=michaelIntensityThreshold
+        thresholdIntensity = algoIntensityThreshold;
+    else
+        thresholdIntensity = michaelIntensityThreshold;
+    end
 end
 
 %determine the index for SLE and IIE using threshold for Intensity (feature)
@@ -405,12 +408,15 @@ end
 %Algo deteremined threshold (tend to be higher value)
 [algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
 
-%Michael's Threshold, plot the algo threshold just for your reference
-% if michaelsDurationThreshold < algoDurationThreshold
-    thresholdDuration = michaelsDurationThreshold;
-% else
-%     thresholdDuration = algoDurationThreshold;
-% end
+%Use the lowest threhsold, unless it's below 10 s (the floor)
+if algoDurationThreshold < 10 && michaelsDurationThreshold < 10
+    thresholdDuration = 10;
+else if michaelsDurationThreshold <= algoDurationThreshold
+        thresholdDuration = michaelsDurationThreshold;
+    else
+        thresholdDuration = algoDurationThreshold;
+    end
+end
 
 indexDuration = featureSet>thresholdDuration; 
 events(:,11) = indexDuration;
@@ -718,4 +724,5 @@ end
 newFile = exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName)); 
 end
 
-disp('successfully completed. Thank you for choosing to use The Epileptiform Detector')
+%disp('Successfully completed. Thank you for choosing to use The Epileptiform Detector.')
+fprintf(2,'\nSuccessfully completed. Thank you for choosing to use The Epileptiform Detector.\n')

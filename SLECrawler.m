@@ -8,10 +8,12 @@ function [SLE_final] = SLECrawler(filteredLFP, SLETimes, frequency, LED, onsetDe
 %   spike) to be the seizure onset and the point where all spiking activity
 %   (power) ends to be the offset. This function can also determine if the
 %   SLE is light-triggered and also ensures that the last spike is not  
-%   induced by a light pulse. Author: Michael Chang (michael.chang@live.ca)
+%   induced by a light pulse or an artifact (because it's using locs_spike). 
+%   Author: Michael Chang (michael.chang@live.ca)
 %   Additional Notes: The default onset delay is 130 ms (or 100 ms after a
 %   30 ms light pulse). The threshold for offset detection is
-%   'meanOffsetBaseline/2'
+%   'meanOffsetBaseline/2'  SLE onset where spike prominience > 1/3 the
+%   maximum amplitude of the "onset context".
 
    
 %% Setting initial variables
