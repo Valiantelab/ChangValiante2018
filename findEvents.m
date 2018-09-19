@@ -1,18 +1,30 @@
-function [ epileptiformLocation, artifactsLocation, locs_spike ] = detectEvents(LFP, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance)
-%detectEvents is a function to detect the location where events occur
-%(i.e., epileptiform events, ictal events, interictal spikes, etc.)
-%   This function will take the time series (i.e., LFP) to analyze for
-%   major events. It will report the onset and offset of these events based
-%   on the default criteria that spikes are 20x 1st quartile in the time
-%   series and each spike is seperated by 1 second, unless otherwise
-%   specified.
+function [ epileptiformLocation, artifactsLocation, locs_spike ] = findEvents(LFP, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance)
+%findEvents detects the onset/offset location of events (such as
+%epileptiform events, ictal events, interictal spikes, etc.)
+%   This function will analyze the time series (i.e., LFP) for major events
+%   and artifacts. It is based on the built-in function, findpeaks to
+%   detect spikes of a given characteristic. This function detects all the
+%   spikes in the time series and assumes that spikes within 10 s of each
+%   other are from the same event. Thus, spikes that are seperated by more
+%   than 10 seconds represent the space between individual events. The
+%   spikes with gaps >10 s represent the onset and offset of neighbouring
+%   events. The default criteria is that spikes must have an amplitude that
+%   is at least the average value of the time series + 20 x the 1st
+%   quartile value, and at least 0.1 seconds apart from each. This allows
+%   the algorithm to run faster by reducing the number of spikes detected,
+%   but still maintain enough resolution to find the onsets and offsets to
+%   the nearest 100 ms. The spikes are considered to be artifacts if they
+%   have an amplitude that is greater than 70x the standard deviation
+%   (sigma) of the time series above the average value. Detected artifacts 
+%   are then ignored when considering which spikes are the onset or 
+%   offset of events. Author: Michael Chang (michael.chang@live.ca).
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
 % [mx, Q] = quartilesStat(LFP);   %Quartiles
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
-    [mx, Q] = quartilesStat(LFP);   %Quartiles
+    [average, sigma, Q] = statistics(LFP);   %Quartiles
     frequency = 10000;   %10kHz sampling frequency
     minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
     minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
@@ -21,8 +33,8 @@ if nargin<2
 end
 
 if nargin<3 
-    [mx, Q] = quartilesStat(LFP);   %Quartiles
-    minPeakHeight = Q(1)*20;   %spike amplitude >40x 3rd quartile 
+    [average, sigma, Q] = statistics(LFP);   %Quartiles Stats
+    minPeakHeight = Q(1)*20;   %spike amplitude threshold = 20x(3rd quartile)
     minPeakDistance = 0.1 * frequency;    %spikes seperated by 0.1 seconds
     minArtifactHeight = mean(LFP) + (70*std(LFP));
     minArtifactDistance = 0.6 * frequency;

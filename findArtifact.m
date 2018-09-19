@@ -2,20 +2,30 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, frequency, minPeakHeigh
 
 %Program: Artifact Finder
 %Authors: Michael Chang (michael.chang@live.ca) and Liam Long
-%Description: Input variables: bandpass filtered [1 - 100 Hz] LFP (timeSeries data); minPeakheight (the
-%minimum height of the artifact); minPeakDistance (the minimum distance the
-%artifact should be apart). If you don't specific minPeakHeight or
-%minPeakDistance, it will be Q(3)*120 and 6000 (1 sec @ 10 kHz),
-%respectively. The width of the population spike should also be >4 ms, on 
-%average it is 110 ms in width.
-%Output variables will be artifacts (matrix): the artifact onset (1st column);
-%artifact offset (2nd column); artifact duration (3rd %column). The output
-%will be the point in the data (not the time) and locs_artifact. To find the time, insert
-%the point into the time vector. Please note, Sigma is any characteristic
-%of the recording (std dev, or quartile, or mean, etc).
+%Description: Searches for artifacts in time series data (bandpass
+%     filtered [1 - 100 Hz] LFP. The function is based on the peakfinder
+%     function and requires the time series data (LFP), the sampling rate
+%     (frequency), the minimum height of the artifact (minPeakheight) and the
+%     minimum distance between artifact spikes (minPeakDistance). The default
+%     criteria if parameters are not specified is average value of the time
+%     series + 70 x the sigma for the height threshold and 0.6 s for the minimum
+%     distance between artifact spikes (which tend to be very short in
+%     duration). The Output variables will be a matrix containing the details on
+%     the location of the artifact onset (1st column); artifact offset (2nd
+%     column; and artifact duration (3rd column). The output will be the point
+%     in the (not the time) and also the location of the artifcts in terms of
+%     position (locs_artifact). To find the time (in seconds), insert the point
+%     into the time vectors or simply divide by frequency. A control feature to
+%     make sure large biological spikes are not mistaken as a artifact is the
+%     maximum width allowed for artifact spikes detected is set to be 10 ms. On
+%     average, population spikes tend to be 100 ms in width, while artifacts tend
+%     to have a width that is less than 10 ms (on average, ~4 ms). If a
+%     putative artifact is detected to be larger than 10.5 ms, it is rejected as a
+%     biological spike, and ignored. 
+
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
-[mx, Q] = quartilesStat(LFP);   %Quartiles, used to detect artifacts on the minor scale
+[average, sigma, Q] = statistics(LFP);   %Quartiles, used to detect artifacts on the minor scale
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
@@ -37,7 +47,7 @@ end
 [pks_artifact, locs_artifact_potential, width] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance); 
 
 %% Finding real Artifacts, width <10 ms
-locs_artifact = locs_artifact_potential(width<105);
+locs_artifact = locs_artifact_potential(width<105); %0.5% lee way provided in threshold
 
 %preallocate array
 artifactStart = zeros(size(locs_artifact));

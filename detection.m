@@ -25,7 +25,7 @@ userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 %setting on distance between spikes, hard coded
 distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
-minSLEduration = 4; %seconds; %change to 5 s if any detection issues 
+minSLEduration = 3.5; %seconds; %change to 5 s if any detection issues 
 
 %% Load .abf and excel data
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
@@ -76,7 +76,7 @@ DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived
 powerFeature = (LFP_normalizedFiltered).^2;                     %3rd derived signal
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
-[epileptiformLocation, artifacts, locs_spike_1st] = detectEvents (DiffLFP_normalizedFiltered, frequency);
+[epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_normalizedFiltered, frequency);
 
 %remove potential events
 for i = 1:size(epileptiformLocation,1)
@@ -107,7 +107,7 @@ minArtifactHeight = avgBaseline+(userInput(2)*sigmaBaseline);  %threshold for ar
 minArtifactDistance = distanceArtifact*frequency;                       %minimum distance artifact spikes must be apart
 
 %Detect events
-[epileptiformLocation, artifactLocation, locs_spike_2nd] = detectEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
+[epileptiformLocation, artifactLocation, locs_spike_2nd] = findEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
 %If no events are detected, terminate script
 if isempty(epileptiformLocation)
@@ -183,7 +183,7 @@ for i = 1:size(events,1)
         
     %Calculate the spiking rate for epileptiform events
     windowSize = 1;  %seconds      
-    sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number
+    sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
     end
@@ -346,6 +346,17 @@ end
 %     subtitle1 = {details(:,1)};
 %     xlswrite(sprintf('%s%s',excelFileName, uniqueTitle),subtitle0,'Details','A1');
 %     xlswrite(sprintf('%s%s',excelFileName, uniqueTitle),artifacts/frequency,'Artifacts','A2');
+
+%% Additional Examples of how to display results
+% disp(['Mean:                                ',num2str(mx)]);
+% disp(['Standard Deviation:                  ',num2str(sigma)]);
+% disp(['Median:                              ',num2str(medianx)]);
+% disp(['25th Percentile:                     ',num2str(Q(1))]);
+% disp(['50th Percentile:                     ',num2str(Q(2))]);
+% disp(['75th Percentile:                     ',num2str(Q(3))]);
+% disp(['Semi Interquartile Deviation:        ',num2str(SID)]);
+% disp(['Number of outliers:                  ',num2str(Noutliers)]);
+
 
 
 %Sheet 1 = Events   

@@ -18,7 +18,7 @@ end
 %% Stage 1: Artifact (Outlier) removal 
 %Remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
-thresholdAmplitudeOutlier = mean(featureSet)+(3.1*std(featureSet));  %Michael's custom threshold
+thresholdAmplitudeOutlier = mean(featureSet)+(3.2*std(featureSet));  %Michael's custom threshold
 indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
 index = indexArtifact; %Generic Terms
 
@@ -54,7 +54,7 @@ featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
 michaelsFrequencyThreshold = 1; %Hz  
 %Algo determined threshold
-[algoFrequencyIndex, algoFrequencyThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,4));
+[algoFrequencyIndex, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
 %Use the lowest threshold, unless it's below 1 Hz
 if algoFrequencyThreshold >= 1
     thresholdFrequency = algoFrequencyThreshold;
@@ -97,8 +97,7 @@ events (:,9) = indexFrequency;
     set(gca,'fontsize',12)
     end
 
-
-% classify based on average intensity 
+%classify based on average intensity 
 featureSet = events(:,5);   %Average intensity (Power/Duration)
 %Michael's threshold
 if mean(events(indexEventsToAnalyze,5))>std(events(indexEventsToAnalyze,5))
@@ -107,7 +106,7 @@ else
     michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5));
 end
 %Algo determined threshold 
-[algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,5));
+[algoIntensityIndex, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
 
 %use the lower threshold for Intensity, (with a floor at 10 mV^2/s)
 if algoIntensityThreshold < 10 && michaelIntensityThreshold < 10
@@ -185,9 +184,9 @@ else
 end
 
 %Algo deteremined threshold (tend to be higher value)
-[algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
+[algoDurationIndex, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
 
-%Use the lowest threhsold, unless it's below 3 s (the floor)
+%Use the lowest (more liberal) threhsold, unless it's below 3 s (the floor)
 if algoDurationThreshold < 3 || michaelsDurationThreshold < 3
     thresholdDuration = 3;
 else if michaelsDurationThreshold <= algoDurationThreshold
