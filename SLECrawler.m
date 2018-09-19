@@ -127,7 +127,7 @@ if LED;
         %Locating the offset time    
         meanOffsetBaseline = mean(powerFeatureLowPassFiltered(offsetContext)); %SLE ends when signal returned to half the mean power of signal
         OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
-        offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
+        offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the index for the offset location    
         offsetSLE_2 = (offsetContext(offset_loc));  %detecting the new offset location         
             
         %make sure last spike is not light triggered
@@ -141,15 +141,14 @@ if LED;
             offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
 
             %crawl to find the exact offset based on the new offset index
-            offsetBaselineStart = double(offsetSLE-(0.5*frequency));  %SLE "context" (preceding baseline)
+            offsetBaselineStart = double(offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
             
             if numel(filteredLFP)>(offsetSLE+(1*frequency))
-                offsetBaselineEnd = double(offsetSLE+(1*frequency));  %SLE "context" (post-ictal baseline)
+                offsetBaselineEnd = double(offsetSLE+(1*frequency));  %SLE "context" (end of post-ictal baseline)
             else
-                offsetBaselineEnd = double(numel(powerFeatureLowPassFiltered)); %SLE "context" (post-ictal baseline), end of recording, cut the SLE short
+                offsetBaselineEnd = double(numel(powerFeatureLowPassFiltered)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
             end
                        
-
             %Range of LFP to scan 
             offsetContext = (offsetBaselineStart:offsetBaselineEnd);
 
@@ -158,9 +157,9 @@ if LED;
             OffsetLocation = powerFeatureLowPassFiltered(offsetContext) > meanOffsetBaseline/2; 
             offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
             if offset_loc
-                SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detect new offset time             
+                SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detected new offset time             
             else
-                SLEoffset_final(i,1) = -1;
+                SLEoffset_final(i,1) = -1;  %This is considerd to be an artifact and will be removed (revisit this logic), no idea what I'm doing
             end
             
         else   %if it is not light triggered, use as is 
@@ -271,7 +270,7 @@ else
      end
 end
 
-%Store output 
+%% Store output 
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
 SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1

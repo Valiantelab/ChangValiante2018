@@ -1,13 +1,21 @@
-function [indexEvents,widestGapThreshold ] = sleThresholdFinder(featureSet,plotGraph)
-%[indexEvents,widestGapThreshold ] = sleThresholdFinder(featureSet,plotGraph)
-%   sleClassifer used to classify epileptiforms events as SLEs (ictus)
-%   Algorithm is based on k-means clustering. k-means clustering is run 25x
-%   on the feature set and uses find the lowest threshold found. The
+function [indexEvents,widestGapThreshold ] = findThresholdSLE(featureSet,plotGraph)
+%[indexEvents,widestGapThreshold ] = findThresholdSLE(featureSet,plotGraph)
+%   This function classifies a populations of events into two distinct
+%   populations based one feature set. This function is based on k-means
+%   clustering and the widest gap method. The function will sort the
+%   feature set and seperate the population based on where the widest gap
+%   (in the value of the feature set) is observed, at or below the gap
+%   created by k-means clustering. The populations of events with a larger
+%   value (of the feature) is classied as SLEs (ictal events), and the
+%   populatin with a lower value is classied as IIEs (interictal events). 
+%   Algorithm is based on k-means clustering. K-means clustering is run 25x
+%   on the feature set and uses the lowest threshold found. The
 %   algorithm then looks for the widest gap below the lowest threshold and
 %   uses that as the threshold that segments IIEs from SLEs. This function
 %   find the most liberal threshold possible. There is a feature to plot
-%   a graph of the feature sets and the thresholds found by the algorithm.
-%   Note: set the second variable to '1' to plot graph for trouble shooting
+%   a graph of the feature sets and the thresholds found by the algorithm. 
+%   Set the second input variable to '1' to plot graph for trouble
+%   shooting.
 
 
 if nargin == 1  

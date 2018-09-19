@@ -1,6 +1,7 @@
-function [average, sigma, Q] = quartilesStat (data)
-%% statistics
-
+function [average, sigma, Q] = statistics (data)
+% statistics function calculates the population statistics for the time
+% series provided. Outputs the average value, standard deviation (sigma) of
+% the values, and the quartile range for the time series.
 
 % compute mean
 average = mean(data);

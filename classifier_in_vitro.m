@@ -48,7 +48,7 @@ featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
 michaelsFrequencyThreshold = 1; %Hz  
 %Algo determined threshold
-[algoFrequencyIndex, algoFrequencyThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,4));
+[algoFrequencyIndex, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
 %Use Michael's hard-coded threshold 
 thresholdFrequency = michaelsFrequencyThreshold;    %michael's threshold frequency is the lowest frequency for SLEs
 
@@ -96,7 +96,7 @@ else
     michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5));
 end
 %Algo determined threshold 
-[algoIntensityIndex, algoIntensityThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,5));
+[algoIntensityIndex, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
 
 %use the hard-coded threshold for Intensity, (floor: 10 mV^2/s)
 thresholdIntensity = 10;
@@ -151,7 +151,7 @@ else
 end
 
 %Algo deteremined threshold (tend to be higher value)
-[algoDurationIndex, algoDurationThreshold] = sleThresholdFinder (events(indexEventsToAnalyze,3));
+[algoDurationIndex, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
 
 %Use the hard-coded threhsold, 10 s (the floor)
 thresholdDuration = 10;
