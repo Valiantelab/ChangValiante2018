@@ -18,7 +18,7 @@ prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt5 = 'Troubleshooting (plot all epileptiform events): Yes (1) or No (0)';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5};
 dims = [1 70];
-definput = {'3.9', '70', '0', '2', '0'};
+definput = {'3.9', '70', '1', '2', '0'};
 opts = 'on';
 userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
 

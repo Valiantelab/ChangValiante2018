@@ -1,55 +1,24 @@
-# matlab-plot-big
+# Epileptiform-Event-Detection-Algorithm (detection.m)
 
-Makes large MATLAB line plots much faster.
+Description: 
+High speed detection of ictal events (SLEs), as Chang et al., 2018 would mark them. This simple script detects all the spikes in the time series provided (.abf file) and groups spikes that are within 10 sec of each other as one event. These events are then classified based on their spiking characfteristics (duration, rate, intensity, and amplitude). Events can be classified as ictal event (SLE), interictal event (IIE), interictal spike (IIS), or an artifact.
 
-This simple tool intercepts data going into a plot and reduces it to the smallest possible set that looks identical given the number of pixels available on the screen. It then updates the data as a user zooms or pans. This is useful when a user must plot a very large amount of data and explore it visually. 
+For demonstration: 
+open exampleScript.m (which is exactly the same script as detection.m), but with on screen instructions provided. Provide the .abf file, "exampleFile.abf".
 
-This works with MATLAB's built-in line plot functions, allowing the functionality of those to be preserved. 
+Input options:
+This script gives end user the option to set the threshold for epileptiform spike detection as some multiple of the time series's sigma (Default is 3.9x, but use up to 10x in noisier data sets). End user can also set the threshold for artifacts in a similar manner (default is 70x; future versions will detect artifacts by their width). There is also an option to request figures of detected SLEs and all events (for troubleshooting purposes); select 1 as the option (see figure below). Otherwise, click "OK" and use default options to proceed. The script will then request for a time series (LFP recording) to analyze. Select "exampleFile" as indicated by on-screen instuctions.
 
-Instead of:
+Output Files:
+The script outputs an excel sheet and powerpoint of detect SLEs and figures demonstrating how the events were segmented based on their features (amplitude, frequency, intensity, and duration). These output files will be placed into the MatLab working folder. The excel sheet reports all the detected events and their features, organized by category of event in different tabs. 
 
-```
-plot(t, x);
-```
 
-One could use:
 
-```
-reduce_plot(t, x);
-```
+Thank you for choosing to use the Epileptiform Event Detector for your research needs. 
 
-Most plot options, such as multiple series and line properties, can be passed in too, such that 'reduce_plot' is largely a drop-in replacement for 'plot'.
+Refer to Chang et al., 2018. Neurobiology of Disease.
 
-```
-h = reduce_plot(t, x(1, :), 'b:', t, x(2, :), t, x(3, :), 'r--*');
-```
+Authors: Michael Chang (michael.chang@live.ca), Christopher Lucasius, Fu-der (Fred) Chen, Liam Long, Thomas Lordello, Vitaly Topekha, Taufik A. Valiante.
+ 
 
-This function works on plots where the "x" data is always increasing, which is the most common, such as for time series.
-
-![Example Plot](screenshot.png)
-
-For more information, see:
-
-```
->> help LinePlotReducer
-```
-
-or
-
-```
->> help reduce_plot
-```
-
-or
-
-```
->> help LinePlotExplorer
-```
-
-File Exchange page: http://www.mathworks.com/matlabcentral/fileexchange/40790
-
-Thanks for downloading.
-
-Tucker McClure
-
-Copyright 2013-2015, The MathWorks, Inc. and Tucker McClure
+Copyright 2018, Valiante Lab 
