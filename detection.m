@@ -12,7 +12,7 @@ clc
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
 prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
-prompt2 = 'Artifact Threshold: average + (100 x Sigma) ';
+prompt2 = 'Artifact Threshold: average + (70 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt5 = 'Troubleshooting (plot all epileptiform events): Yes (1) or No (0)';
