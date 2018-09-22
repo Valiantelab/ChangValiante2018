@@ -50,12 +50,8 @@ if numel(locs_spike) < 2
     epileptiformLocation = [[], [], []];
     artifactsLocation = [];
 else
-%     % Finding real Artifacts, width <10 ms
-% locs_artifact = locs_putative_spike(width_spike<(artifact_width*frequency),:); %0.5% lee way provided in threshold
-
-% Artifacts = locs_artifact/frequency;  
-
-locs_spike(:,2) = (width_spike);
+    %The widths of the spikes may be important when analyzing IIEs and IISs
+    locs_spike(:,2) = (width_spike);
 
     %% Finding artifacts (Calls function findArtifact.m)
     artifactsLocation = findArtifact(LFP, frequency, minArtifactHeight, minArtifactDistance);
