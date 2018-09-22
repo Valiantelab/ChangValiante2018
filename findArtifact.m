@@ -26,6 +26,7 @@ function [ artifacts, locs_artifact] = findArtifact(LFP, frequency, minPeakHeigh
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
 [average, sigma, Q] = statistics(LFP);   %Quartiles, used to detect artifacts on the minor scale
+artifact_width = 0.0105;    %seconds, 10 ms with 5% leeway
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
@@ -47,7 +48,7 @@ end
 [pks_artifact, locs_artifact_potential, width] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance); 
 
 %% Finding real Artifacts, width <10 ms
-locs_artifact = locs_artifact_potential(width<105); %0.5% lee way provided in threshold
+locs_artifact = locs_artifact_potential(width<artifact_width*frequency); %0.5% lee way provided in threshold
 
 %preallocate array
 artifactStart = zeros(size(locs_artifact));

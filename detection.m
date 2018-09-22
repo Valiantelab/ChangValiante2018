@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 5.3
+%Version 5.4
 
 %% Clear All
 close all
@@ -28,13 +28,13 @@ distanceArtifact = 0.6; %distance between artifacts (seconds)
 minSLEduration = 3.5; %seconds; %change to 5 s if any detection issues 
 
 %% Load .abf and excel data
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files');%Choose abf file
+    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\3) Control Data (WT C57Bl6)\1) abf files');%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
 
 %Label for titles
 excelFileName = FileName(1:8);
 uniqueTitle = '(epileptiformEvents)';
-finalTitle = '(algo)';
+finalTitle = '(V5,4)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -111,6 +111,7 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 
 %If no events are detected, terminate script
 if isempty(epileptiformLocation)
+    fprintf(2,'\nNo epileptiform events were detected. Review the raw data and consider using a different threshold for epileptiform spike detection.\n')
     return
 end
 
@@ -203,8 +204,8 @@ for i = 1:size(events,1)
     events (i,4) = mean(spikeRateMinute(:,2));
           
     %Calculate average intensity of epileptiform event
-    totalPower = sum(powerFeature(eventVector));
-    events (i,5) = totalPower /sleDuration;    
+    totalPower(i) = sum(powerFeature(eventVector));
+    events (i,5) = totalPower(i) /sleDuration;    
     
     %Calculate peak-to-peak amplitude of epileptiform event
     eventVectorLFP = LFP_normalized(eventVector);

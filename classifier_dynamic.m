@@ -15,20 +15,24 @@ if nargin < 2
     userInput(3) = 0    %by default don't plot any figures
 end
 
-%% Stage 1: Artifact (Outlier) removal 
+%% Stage 1: Artifact (Amplitude Outlier) removal 
 %Remove outliers based on peak-to-peak amplitude
 featureSet = events(:,6);   %peak-to-peak amplitude values
-thresholdAmplitudeOutlier = mean(featureSet)+(3.2*std(featureSet));  %Michael's custom threshold
-indexArtifact = events(:,6) > thresholdAmplitudeOutlier;  %implement a while-loop, so it repeats until all outliers are gone
+
+%algo-determined threshold | Find widest gap (below the detected outlier)
+thresholdAmplitudeOutlier = findThresholdArtifact (featureSet);
+
+%segment events into Artifacts and Epileptiform Events, using algo-deteremined threshold
+indexArtifact = featureSet>thresholdAmplitudeOutlier;
 index = indexArtifact; %Generic Terms
 
-if sum(indexArtifact)>0   %I wonder if this if statement will speed up the code by allowing it to skip a few lines       
+if sum(index)>0   
     %Plot figure if artifacts detected within events
     if userInput(3) == 1      
         figArtifact = figure;
         gscatter(events(:,6) , events(:,6), index);    %plot index determined by Michael's Threshold
         hold on
-        %plot Michael Chang's threshold values 
+        %plot the determined threshold values 
         plot ([thresholdAmplitudeOutlier thresholdAmplitudeOutlier], ylim);
         %Label
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -41,7 +45,7 @@ if sum(indexArtifact)>0   %I wonder if this if statement will speed up the code 
         set(gca,'fontsize',12)
     end
 
-    %Remove artifact, based on Michael's threshold 
+    %Remove artifact
     events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
     events (indexArtifact, 12) = 1;
     %Make new index without the artifacts
@@ -108,9 +112,10 @@ end
 %Algo determined threshold 
 [algoIntensityIndex, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
 
-%use the lower threshold for Intensity, (with a floor at 10 mV^2/s)
-if algoIntensityThreshold < 10 && michaelIntensityThreshold < 10
-    thresholdIntensity = 10;
+%use the lower threshold for Intensity, (with a floor at 5 mV^2/s)
+floorIntensityThreshold = 5;
+if algoIntensityThreshold < floorIntensityThreshold || michaelIntensityThreshold < floorIntensityThreshold
+    thresholdIntensity = floorIntensityThreshold;
 else if algoIntensityThreshold<=michaelIntensityThreshold
         thresholdIntensity = algoIntensityThreshold;
     else

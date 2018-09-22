@@ -20,7 +20,7 @@ function [ epileptiformLocation, artifactsLocation, locs_spike ] = findEvents(LF
 %   offset of events. Author: Michael Chang (michael.chang@live.ca).
 
 %% Calculate statistics of Time Serise (i.e., LFP recording)
-% [mx, Q] = quartilesStat(LFP);   %Quartiles
+artifact_width = 0.0105;  %seconds 
 
 % Default values, if minPeakHeight and minPeakDistance is not specified 
 if nargin<2
@@ -41,15 +41,22 @@ if nargin<3
 end
 
 
-%% Find prominient, distinct spikes in Derivative of filtered LFP (1st search)
-[pks_spike, locs_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
+%% Find prominient, distinct spikes in time series of LFP
+[pks_spike, locs_spike, width_spike] = findpeaks (LFP, 'MinPeakHeight', minPeakHeight, 'MinPeakDistance', minPeakDistance);
 
 if numel(locs_spike) < 2
     fprintf(2,'\nNo epileptiform spikes were detected; review raw data and consider using a lower multiple of baseline sigma as the threshold.\n')
     % Making a empty array so function can complete it's process
     epileptiformLocation = [[], [], []];
     artifactsLocation = [];
-else    
+else
+%     % Finding real Artifacts, width <10 ms
+% locs_artifact = locs_putative_spike(width_spike<(artifact_width*frequency),:); %0.5% lee way provided in threshold
+
+% Artifacts = locs_artifact/frequency;  
+
+locs_spike(:,2) = (width_spike);
+
     %% Finding artifacts (Calls function findArtifact.m)
     artifactsLocation = findArtifact(LFP, frequency, minArtifactHeight, minArtifactDistance);
 
@@ -62,7 +69,7 @@ else
         end    
     end
     %remove spikes that are artifacts
-    locs_spike(locs_spike==-1)=[];
+    locs_spike(locs_spike==-1,:)=[];
 
     %% Finding onset 
     %Find distance between spikes in data
@@ -73,18 +80,18 @@ else
     interSpikeInterval(n+1:end+1,:) = interSpikeInterval(n:end,:);
     interSpikeInterval(n,:) = (0);
 
-    %Find spikes following 10 s of silence (assume onset)
+    %Find the index of spikes following 10 s of silence (assume onset)
     locs_onset = find (interSpikeInterval(:,1)>100000);
 
-    %insert the first epileptiform event into array (not detected with algo)
+    %insert the first detected spike into array to represent the first event (not detected with algo) 
     n=1;
     locs_onset(n+1:end+1,:) = locs_onset(n:end,:);
     locs_onset(n) = n;   
 
-    %Onset location
-    onsetLocation = zeros(numel (locs_onset),1);
+    %Onset Location(Position)
+    onsetLocation = zeros(numel (locs_onset),2);
     for i=1:numel(locs_onset)
-          onsetLocation(i) = locs_spike(locs_onset(i));      
+          onsetLocation(i,:) = locs_spike(locs_onset(i),:);      
     end
 
     %% finding Offset 
@@ -102,10 +109,10 @@ else
 
     %% Duration
     %Duration of Epileptiform event 
-    duration = offsetLocation-onsetLocation;
+    duration = offsetLocation-onsetLocation(:,1);
 
     %% Putting onset and offset locations into an array
-    epileptiformLocation = [onsetLocation, offsetLocation, duration];
+    epileptiformLocation = [onsetLocation(:,1), offsetLocation, duration, onsetLocation(:,2)];
 
 end
 

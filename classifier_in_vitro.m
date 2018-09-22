@@ -98,8 +98,8 @@ end
 %Algo determined threshold 
 [algoIntensityIndex, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
 
-%use the hard-coded threshold for Intensity, (floor: 10 mV^2/s)
-thresholdIntensity = 10;
+%use the hard-coded threshold for Intensity, (floor: 5 mV^2/s)
+thresholdIntensity = 5;
 
 %determine the index for SLE and IIE using threshold for Intensity (feature)
 indexIntensity = featureSet>=thresholdIntensity;
