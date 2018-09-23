@@ -3,11 +3,11 @@
 %Copyright (c) 2018, Valiante Lab
 %Version 5.4
 
-%% Clear All
+%clear all (reset)
 close all
 clear all
 clc
-
+    
 %% GUI to set thresholds
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
@@ -15,22 +15,32 @@ prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (70 x Sigma) ';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
-prompt5 = 'Troubleshooting (plot all epileptiform events): Yes (1) or No (0)';
-prompt = {prompt1, prompt2, prompt3, prompt4, prompt5};
+prompt5 = 'Troubleshooting (plot all epileptiform events): Yes (1) or No 0)';
+prompt6 = 'To analyze multiple files in folder, provide File Directory:';
+prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '70', '0', '2', '0'};
-opts = 'on';
-userInput = str2double(inputdlg(prompt,titleInput,dims,definput, opts));
+definput = {'3.9', '70', '0', '2', '0', ''};
 
-%setting on distance between spikes, hard coded
-distanceSpike = 0.15;  %distance between spikes (seconds)
-distanceArtifact = 0.6; %distance between artifacts (seconds)
-minSLEduration = 3.5; %seconds; %change to 5 s if any detection issues 
+opts = 'on';    %allow end user to resize the GUI window
+InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
+userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
+
+% Analyze all files in folder
+PathName = char(InputGUI(6));
+S = dir(fullfile(PathName,'*.abf'));
+
+for k = 1:numel(S)
+
+    fnm = fullfile(PathName,S(k).name);
+    FileName = S(k).name;
+
+    %% Now the detection algorithm begins
 
 %% Load .abf and excel data
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\3) Control Data (WT C57Bl6)\1) abf files');%Choose abf file
-    [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
-
+%     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\3) Control Data (WT C57Bl6)\1) abf files');%Choose abf file
+%     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
+    [x,samplingInterval,metadata]=abfload([fnm]); %Load the directory for the file auto generated
+    
 %Label for titles
 excelFileName = FileName(1:8);
 uniqueTitle = '(epileptiformEvents)';
@@ -588,6 +598,8 @@ end
         
 % save and close the .PPTX
 newFile = exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName)); 
+end
+
 end
 
 fprintf(1,'\nSuccessfully completed. Thank you for choosing to use The Epileptiform Detector.\n')
