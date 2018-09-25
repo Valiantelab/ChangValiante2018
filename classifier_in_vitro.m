@@ -8,7 +8,7 @@ userInput(3) = plotFigures;  %1 = yes; 0 = no
 indexEventsToAnalyze = events(:,7)<4;
 
 if nargin < 2
-    userInput(3) = 0    %by default don't plot any figures
+    userInput(3) = 0;    %by default don't plot any figures
 end
 
 %% Remove artifacts (outliers) based on Peak-to-Peak Amplitude 
@@ -48,7 +48,7 @@ featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
 michaelsFrequencyThreshold = 1; %Hz  
 %Algo determined threshold
-[algoFrequencyIndex, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
+[~, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
 %Use Michael's hard-coded threshold 
 thresholdFrequency = michaelsFrequencyThreshold;    %michael's threshold frequency is the lowest frequency for SLEs
 
@@ -96,7 +96,7 @@ else
     michaelIntensityThreshold = mean(events(indexEventsToAnalyze,5));
 end
 %Algo determined threshold 
-[algoIntensityIndex, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
+[~, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
 
 %use the hard-coded threshold for Intensity, (floor: 5 mV^2/s)
 thresholdIntensity = 5;
@@ -151,7 +151,7 @@ else
 end
 
 %Algo deteremined threshold (tend to be higher value)
-[algoDurationIndex, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
+[~, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
 
 %Use the hard-coded threhsold, 10 s (the floor)
 thresholdDuration = 10;

@@ -1,8 +1,47 @@
-function [IIS, SLE_final, events] = inVitro4APDetection(FileName, userInput, x, samplingInterval, metadata)
+%function [IIS, SLE_final, events] = inVitro4APDetection(FileName, userInput, x, samplingInterval, metadata)
 %inVitro4APDetection is a function designed to search for epileptiform
 %events from the in vitro 4-AP seizure model
-%   Simply provide the directory to the filename, and user inputs
+%   Simply provide the directory to the filename, user inputs, and raw data
 
+
+%% Standalone function
+%Program: Epileptiform Activity Detector 
+%Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
+%Copyright (c) 2018, Valiante Lab
+%Version 6.0
+
+%clear all (reset)
+close all
+clear all
+clc
+
+if ~exist('x','var') == 1
+    %Manually set File Director
+    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+
+    %% GUI to set thresholds
+    %Settings, request for user input on threshold
+    titleInput = 'Specify Detection Thresholds';
+    prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
+    prompt2 = 'Artifact Threshold: average + (70 x Sigma) ';
+    prompt3 = 'Figure: Yes (1) or No (0)';
+    prompt4 = 'Stimulus channel (enter 0 if none):';
+    prompt5 = 'Troubleshooting (plot all epileptiform events): Yes (1) or No 0)';
+    prompt6 = 'To analyze multiple files in folder, provide File Directory:';
+    prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
+    dims = [1 70];
+    definput = {'3.9', '70', '0', '2', '0', ''};
+
+    opts = 'on';    %allow end user to resize the GUI window
+    InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
+    userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
+
+    %Load .abf file (raw data), analyze single file
+    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
+    [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
+end
+
+    
 %% Hard Coded values | distance between spikes
 distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
@@ -32,50 +71,45 @@ end
 
 %% Data Processing 
 %Center the LFP data
-LFP_normalized = LFP - LFP(1);                                      %centered signal at 0, y-axis; misnomer, should have called it LFP_centered
-
-%Lowpass butter filter [2Hz]
-fc = 2; % Cut off frequency
-[b,a] = butter(2,fc/(frequency/2)); % Butterworth filter of order 2
-LFP_normalizedLowPassFiltered = filtfilt(b,a,LFP_normalized); % Will be the filtered signal
+LFP_centered = LFP - LFP(1);                                         
 
 %Bandpass butter filter [1 - 100 Hz]
 [b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
-LFP_normalizedFiltered = filtfilt (b,a,LFP_normalized);             %Filtered signal
+LFP_filtered = filtfilt (b,a,LFP);             %Filtered signal
 
 %Absolute value of the filtered data
-AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered);            %1st derived signal
+AbsLFP_Filtered = abs(LFP_filtered);            %1st derived signal
 
 %Derivative of the filtered data (absolute value)
-DiffLFP_normalizedFiltered = abs(diff(LFP_normalizedFiltered));     %2nd derived signal
+DiffLFP_Filtered = abs(diff(LFP_filtered));     %2nd derived signal
 
 %Power of the filtered data (feature for classification)     
-powerFeature = (LFP_normalizedFiltered).^2;                     %3rd derived signal
+powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
-[epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_normalizedFiltered, frequency);
+[epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
 %remove potential events
 for i = 1:size(epileptiformLocation,1)
-AbsLFP_normalizedFiltered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = [-1];
+AbsLFP_Filtered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = [-1];
 end
 
 %remove artifacts
 for i = 1:size(artifacts,1)
-AbsLFP_normalizedFiltered (artifacts(i,1):artifacts(i,2)) = [-1];
+AbsLFP_Filtered (artifacts(i,1):artifacts(i,2)) = [-1];
 end
 
 %Isolate baseline recording
-AbsLFP_normalizedFiltered (AbsLFP_normalizedFiltered == -1) = [];
-AbsLFP_normalizedFilteredBaseline = AbsLFP_normalizedFiltered; %Renamed
+AbsLFP_Filtered (AbsLFP_Filtered == -1) = [];
+AbsLFP_centeredFilteredBaseline = AbsLFP_Filtered; %Renamed
 
 %Characterize baseline features from absolute value of the filtered data 
-avgBaseline = mean(AbsLFP_normalizedFilteredBaseline); %Average
-sigmaBaseline = std(AbsLFP_normalizedFilteredBaseline); %Standard Deviation
+avgBaseline = mean(AbsLFP_centeredFilteredBaseline); %Average
+sigmaBaseline = std(AbsLFP_centeredFilteredBaseline); %Standard Deviation
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
 %Recreate the Absolute filtered LFP (1st derived signal) vector
-AbsLFP_normalizedFiltered = abs(LFP_normalizedFiltered); %the LFP analyzed
+AbsLFP_Filtered = abs(LFP_filtered); %the LFP analyzed
 
 %Define thresholds for detection, using inputs from GUI
 minPeakHeight = avgBaseline+(userInput(1)*sigmaBaseline);      %threshold for epileptiform spike detection
@@ -84,7 +118,7 @@ minArtifactHeight = avgBaseline+(userInput(2)*sigmaBaseline);  %threshold for ar
 minArtifactDistance = distanceArtifact*frequency;                       %minimum distance artifact spikes must be apart
 
 %Detect events
-[epileptiformLocation, artifactLocation, locs_spike_2nd] = findEvents (AbsLFP_normalizedFiltered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
+[epileptiformLocation, artifactLocation, locs_spike_2nd] = findEvents (AbsLFP_Filtered, frequency, minPeakHeight, minPeakDistance, minArtifactHeight, minArtifactDistance);
 
 %If no events are detected, terminate script
 if isempty(epileptiformLocation)
@@ -106,15 +140,15 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
-EventTimes = putativeEvents(:,1:2)/frequency;
-events = SLECrawler(LFP_normalizedFiltered, EventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 0);  %can also define if light triggered
+eventTimes = putativeEvents(:,1:2)/frequency;
+events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
 
 %% Feature Extraction 
-%Optional Plot all epileptiform events, for troubleshooting
+%Optional plot all epileptiform events, for troubleshooting
 if userInput(5) == 1   
     
     %set variables
-    data1 = LFP_normalized; %Time series to be plotted 
+    data1 = LFP_centered; %Time series to be plotted 
 
     %% Creating powerpoint slide
     isOpen  = exportToPPTX();
@@ -152,30 +186,37 @@ if userInput(5) == 1
                  'Horiz','left', 'Vert','middle', 'FontSize', 16);      
 end    
 
-%Feature Extraction of Features: Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude
+%Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude
 for i = 1:size(events,1)   
     %make epileptiform event vector
     onsetTime = int64(events(i,1)*frequency);
     offsetTime = int64(events(i,2)*frequency);
     eventVector = int64(onsetTime:offsetTime);  %SLE Vector  
         
-    %Calculate the spiking rate for epileptiform events
-    windowSize = 1;  %seconds      
+    %Split the event vector into (1 min) windows 
+    windowSize = 1;  %seconds; you can change window size as desired      
     sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
     end
     
-    clear spikeRateMinute
+    %Calculate the spiking rate for epileptiform events
+    clear spikeRateMinute intensity
     for j = 1:sleDuration
         startWindow = onsetTime+((windowSize*frequency)*(j-1));
-        EndWindow = onsetTime+((windowSize*frequency)*j);
-        spikeRate = and(startWindow<=locs_spike_2nd, EndWindow >=locs_spike_2nd);
+        endWindow = onsetTime+((windowSize*frequency)*j);
+        %Calculate the spiking rate for epileptiform events
+        spikeRate = and(startWindow<=locs_spike_2nd, endWindow >=locs_spike_2nd);
         spikeRateMinute(j,1) = startWindow; %time windows starts
         spikeRateMinute(j,2) = sum(spikeRate(:));   %number of spikes in the window
+        %Calculate the intensity per minute for epileptiform events
+        PowerPerMinute = sum(powerFeature (startWindow:endWindow));        
+        intensity(j,1) = startWindow; %time windows starts
+        intensity(j,2) = PowerPerMinute;   %Total power within the (minute) window        
     end
     
     spikeFrequency{i} = spikeRateMinute;    %store the spike frequency of each SLE for plotting later
+    intensityPerMinute{i} = intensity;    %store the intensity per minute of each SLE for analysis later
     
     %Calculate average spike rate of epileptiform event
     events (i,4) = mean(spikeRateMinute(:,2));
@@ -185,7 +226,7 @@ for i = 1:size(events,1)
     events (i,5) = totalPower(i) /sleDuration;    
     
     %Calculate peak-to-peak amplitude of epileptiform event
-    eventVectorLFP = LFP_normalized(eventVector);
+    eventVectorLFP = LFP_centered(eventVector);
     p2pAmplitude = max(eventVectorLFP) - min (eventVectorLFP);
     events (i,6) = p2pAmplitude;
                 
@@ -207,26 +248,29 @@ for i = 1:size(events,1)
         set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize'));   
 
-        normalizeLFP = (data1(backgroundVector(1)));
-        normalizeLED = abs(min(data1(backgroundVector)-normalizeLFP));        
-        plot (t(backgroundVector),data1(backgroundVector)-normalizeLFP)  %background
+        centerLFP = (data1(backgroundVector(1)));
+        centerLED = abs(min(data1(backgroundVector)-centerLFP));        
+        plot (t(backgroundVector),data1(backgroundVector)-centerLFP)  %background
         hold on
-        plot (t(eventVector),data1(eventVector)-normalizeLFP)     %Epileptiform Event
-        plot (t(onsetTime), data1(onsetTime)-normalizeLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-        plot (t(offsetTime), data1(offsetTime)-normalizeLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+        plot (t(eventVector),data1(eventVector)-centerLFP)     %Epileptiform Event
+        plot (t(onsetTime), data1(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+        plot (t(offsetTime), data1(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
         indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-        plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-normalizeLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-        plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-normalizeLED, 'b') %plot LED 
+        plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
+        plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-centerLED, 'b') %plot LED 
         
-        title (sprintf('LFP Recording, SLE #%d | For Troubleshooting', i));
+        title (sprintf('LFP Recording, Epileptiform Event #%d | For Troubleshooting', i));
         ylabel ('mV');
         xlabel ('Time (sec)');   
 
         yyaxis right
 
-        plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'MarkerFaceColor', 'c')
-        plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'black')
-        ylabel ('spike rate/second (Hz)');
+%         plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'MarkerFaceColor', 'c')
+%         plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'black')
+        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'MarkerFaceColor', 'c')
+        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'black')
+%         ylabel ('Spike rate/second (Hz)');
+        ylabel ('intensity/minute');
         set(gca,'fontsize',20)
 
         exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
@@ -245,8 +289,7 @@ if events (:,1) < 1
     fprintf(2,'\nNo epileptiform events were detected.\n')
 else if events(:,1) < 2
          fprintf(2,'\nLimited Events were detected in the in vitro recording; epileptiform events will be classified with hard-coded thresholds.\n')
-         [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected
-         %sleTest = eventsTest(eventsTest(:,7)==1);
+         [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
     else       
         [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, userInput(3));
     end
@@ -417,27 +460,30 @@ set(gcf,'Name', sprintf ('Overview of %s', FileName)); %select the name you want
 set(gcf, 'Position', get(0, 'Screensize'));
 
 subplot (3,1,1)
-reduce_plot (t, LFP_normalized, 'k');
+reduce_plot (t, LFP_centered, 'k');
 hold on
+xL = get(gca, 'XLim');  %plot dashed reference line at y = 0
+plot(xL, [0 0], '--')
+
 if LED
-    reduce_plot (t, lightpulse - abs(min(LFP_normalized)));
+    reduce_plot (t, lightpulse - abs(min(LFP_centered)));
 end
 
 %plot artifacts (red), found in 2nd search
 if artifactLocation
     for i = 1:numel(artifactLocation(:,1)) 
-        reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_normalized(artifactLocation(i,1):artifactLocation(i,2)), 'r');
+        reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_centered(artifactLocation(i,1):artifactLocation(i,2)), 'r');
     end
 end
 
 %plot onset/offset markers
 if SLE_final(:,1)
     for i=1:numel(SLE_final(:,1))
-    reduce_plot ((SLE_final(i,1)), (LFP_normalized(int64(SLE_final(i,1)*frequency))), 'o'); %onset markers
+    reduce_plot ((SLE_final(i,1)), (LFP_centered(int64(SLE_final(i,1)*frequency))), 'o'); %onset markers
     end
     
     for i=1:numel(SLE_final(:,2))
-    reduce_plot ((SLE_final(i,2)), (LFP_normalized(int64(SLE_final(i,2)*frequency))), 'x'); %offset markers
+    reduce_plot ((SLE_final(i,2)), (LFP_centered(int64(SLE_final(i,2)*frequency))), 'x'); %offset markers
     end
 end
 
@@ -446,13 +492,13 @@ ylabel ('LFP (mV)');
 xlabel ('Time (s)');
 
 subplot (3,1,2) 
-reduce_plot (t, AbsLFP_normalizedFiltered, 'b');
+reduce_plot (t, AbsLFP_Filtered, 'b');
 hold on
 reduce_plot (t, (lightpulse/2) - 0.75);
 
 %plot spikes (artifact removed)
 for i=1:size(locs_spike_2nd,1)
-    plot (t(locs_spike_2nd(i,1)), (DiffLFP_normalizedFiltered(locs_spike_2nd(i,1))), 'x')
+    plot (t(locs_spike_2nd(i,1)), (DiffLFP_Filtered(locs_spike_2nd(i,1))), 'x')
 end
 
 title ('Overview of Absolute filtered LFP (bandpass: 1 to 100 Hz)');
@@ -460,12 +506,12 @@ ylabel ('LFP (mV)');
 xlabel ('Time (s)');
 
 subplot (3,1,3) 
-reduce_plot (t(1:end-1), DiffLFP_normalizedFiltered, 'g');
+reduce_plot (t(1:end-1), DiffLFP_Filtered, 'g');
 hold on
 
 %plot spikes in absoluate derivative of LFP 
 for i=1:size(locs_spike_1st,1)
-    plot (t(locs_spike_1st(i,1)), (DiffLFP_normalizedFiltered(locs_spike_1st(i,1))), 'x')
+    plot (t(locs_spike_1st(i,1)), (DiffLFP_Filtered(locs_spike_1st(i,1))), 'x')
 end
 
 title ('Peaks (o) in Absolute Derivative of filtered LFP');
@@ -477,42 +523,18 @@ exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
 %% Plot figures of thresholds for classification 
-if userInput(3) == 1
-    
+if userInput(3) == 1    
     figHandles = findall(0, 'Type', 'figure');  %find all open figures exported from classifer
     % Plot figure from Classifer
     for i = numel(figHandles):-1:1      %plot them in the order they were exported
         exportToPPTX('addslide'); %Add to new powerpoint slide
         exportToPPTX('addpicture',figHandles(i));      
         close(figHandles(i))
-    end
-    
-%     
-%     % Plot figIntensity
-%     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-%     exportToPPTX('addpicture',figHandles(3));      
-%     close(figHandles(3))
-%     
-%     % Plot figDuration
-%     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-%     exportToPPTX('addpicture',figHandles(4));      
-%     close(figHandles(4))
-%     
-%     % Plot figEvents
-%     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-%     exportToPPTX('addpicture', figEvents);      
-%     close(figEvents)
-%     
-%     if sum(indexArtifact)>0
-%         % Plot figArtifact
-%         exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-%         exportToPPTX('addpicture',figHandles(1));      
-%         close(figHandles(1))
-%     end    
+    end    
 end
 
 %% Plotting out detected SLEs with context | To figure out how off you are
-data1 = LFP_normalized; %Time series to be plotted 
+data1 = LFP_centered; %Time series to be plotted 
 
 for i = 1:size(SLE_final,1) 
     %make SLE vector
@@ -535,17 +557,17 @@ for i = 1:size(SLE_final,1)
     set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));  
     
-    normalizeLFP = (data1(backgroundVector(1)));
-    normalizeLED = abs(min(data1(backgroundVector)-normalizeLFP));
-    plot (t(backgroundVector),data1(backgroundVector)-normalizeLFP ) %background
+    centerLFP = (data1(backgroundVector(1)));
+    centerLED = abs(min(data1(backgroundVector)-centerLFP));
+    plot (t(backgroundVector),data1(backgroundVector)-centerLFP ) %background
     hold on    
-    plot (t(sleVector),data1(sleVector)-normalizeLFP)     %SLE
-    plot (t(onsetTime), data1(onsetTime)-normalizeLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-    plot (t(offsetTime), data1(offsetTime)-normalizeLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+    plot (t(sleVector),data1(sleVector)-centerLFP)     %SLE
+    plot (t(onsetTime), data1(onsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+    plot (t(offsetTime), data1(offsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
     indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-    plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-normalizeLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
+    plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
     if LED
-        plot (t(backgroundVector),(lightpulse(backgroundVector))-normalizeLED , 'b') %plot LED 
+        plot (t(backgroundVector),(lightpulse(backgroundVector))-centerLED , 'b') %plot LED 
     end
        
     title (sprintf('LFP Recording, SLE #%d', i));
@@ -567,7 +589,7 @@ end
 newFile = exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName)); 
 end
 
+fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector.\n')
 
 
-end
 

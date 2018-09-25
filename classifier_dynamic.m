@@ -12,7 +12,7 @@ userInput(3) = plotFigures;  %1 = yes; 0 = no
 indexEventsToAnalyze = events(:,7)<4;
 
 if nargin < 2
-    userInput(3) = 0    %by default don't plot any figures
+    userInput(3) = 0;    %by default don't plot any figures
 end
 
 %% Stage 1: Artifact (Amplitude Outlier) removal 
@@ -58,7 +58,7 @@ featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
 michaelsFrequencyThreshold = 1; %Hz  
 %Algo determined threshold
-[algoFrequencyIndex, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
+[~, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
 %Use the lowest threshold, unless it's below 1 Hz
 if algoFrequencyThreshold >= 1
     thresholdFrequency = algoFrequencyThreshold;
@@ -154,7 +154,8 @@ events (:,10) = indexIntensity; %store in array
                 else
                     legend('IIE', 'Algo Threshold', 'Michaels Threshold', 'Intensity Threshold')
                 end
-            end    
+        end
+          
     legend ('Location', 'southeast')
     set(gca,'fontsize',12)
     end
@@ -189,7 +190,7 @@ else
 end
 
 %Algo deteremined threshold (tend to be higher value)
-[algoDurationIndex, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
+[~, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
 
 %Use the lowest (more liberal) threhsold, unless it's below 3 s (the floor)
 if algoDurationThreshold < 3 || michaelsDurationThreshold < 3

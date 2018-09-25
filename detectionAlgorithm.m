@@ -9,7 +9,7 @@ clear all
 clc
 
 %Manually set File Director
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\3) Control Data (WT C57Bl6)\1) abf files';
+inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
 %% GUI to set thresholds
 %Settings, request for user input on threshold
@@ -39,9 +39,10 @@ else
     S = dir(fullfile(PathName,'*.abf'));    
     
     for k = 1:numel(S)    
+        clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        [x,samplingInterval,metadata]=abfload([fnm]);
+        [x,samplingInterval,metadata]=abfload(fnm);
         [IIS, SLE_final, events] = inVitro4APDetection(FileName, userInput, x, samplingInterval, metadata);
     end
 end
