@@ -28,7 +28,7 @@ end
 t = (0:(length(LFP_filtered)- 1))/frequency;
 t = t';
 
-%% Find Light pulse
+% Find Light pulse
 if LED
     [P] = pulse_seq(LED);   %determine location of light pulses     
 
@@ -55,11 +55,10 @@ if LED
     end
         
     %make index to indicate if spikes are triggered by light pulses
-    locs_spike (:,2) = locs_spike_replicated > 0;   %if index is 0, means spike triggered by light
-    
+    locs_spike (:,2) = locs_spike_replicated > 0;   %if index is 0, means spike triggered by light    
 end
 
-    if troubleshooting == 1      
+if troubleshooting == 1      
     %% Creating powerpoint slide
     isOpen  = exportToPPTX();
         if ~isempty(isOpen),
@@ -94,7 +93,7 @@ end
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
     exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 16);      
-    end
+end
     
 %% Processing the data to extract features to determine the onset/offset
 %Derivative of the filtered data (absolute value)
@@ -195,10 +194,10 @@ for i = 1:size(eventTimes,1)
         end
     end
         
-    %% plotting the onset and offsets detected, troubleshooting purposes     
+    %% plotting the onset and offsets detected     
     if troubleshooting == 1       
        
-    %Test plot, onset
+    %Plot onset detection
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
@@ -212,7 +211,7 @@ for i = 1:size(eventTimes,1)
     
     plot(t(onsetSLE), LED(onsetSLE))
     %Labels
-    title ('LFP Bandpass Filtered (1-100 Hz)');
+    title (sprintf('Event onset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
     ylabel ('mV');
     xlabel ('Time (sec)');
     
@@ -232,7 +231,7 @@ for i = 1:size(eventTimes,1)
     exportToPPTX('addpicture',figHandle);      
     close(figHandle)
     
-    %Test plot, offset
+    %Plot offset detection
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('SLE offset #%d', i)); %select the name you want
@@ -246,7 +245,7 @@ for i = 1:size(eventTimes,1)
 %     plot(t(offsetSLE_2), LFP_filtered(offsetSLE_2), '*', 'color', 'blue', 'MarkerSize', 14)  %test 
     
     %Labels
-    title ('LFP Bandpass Filtered (1-100 Hz)');
+    title (sprintf('Event offset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
     ylabel ('mV');
     xlabel ('Time (sec)');
     
