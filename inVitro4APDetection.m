@@ -17,7 +17,7 @@ clc
 
 if ~exist('x','var') == 1
     %Manually set File Director
-    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -141,7 +141,7 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = putativeEvents(:,1:2)/frequency;
-events = SLECrawler(LFP, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
+events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
 
 %% Feature Extraction 
 %Optional plot all epileptiform events, for troubleshooting
@@ -306,9 +306,9 @@ indexSLE = events (:,7) == 1;  %index to indicate which ones are SLEs
 SLE_final = events(indexSLE, :);
 
 %% IIE Crawler: Determine exact onset and offset times | Power Feature
-indexIIE = events(:,7) == 2;
-IIE_times = events(indexIIE,1:2);
-IIE_final = crawlerIIE(LFP, IIE_times, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
+% indexIIE = events(:,7) == 2;
+% IIE_times = events(indexIIE,1:2);
+% IIE_final = crawlerIIE(LFP, IIE_times, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
 
 %% Final Summary Report
 %Plot a 3D scatter plot of events
