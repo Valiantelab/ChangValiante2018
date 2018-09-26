@@ -141,7 +141,7 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = putativeEvents(:,1:2)/frequency;
-events = SLECrawler(LFP, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
+events = SLECrawler(LFP, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
 
 %% Feature Extraction 
 %Optional plot all epileptiform events, for troubleshooting
@@ -308,9 +308,9 @@ SLE_final = events(indexSLE, :);
 %% IIE Crawler: Determine exact onset and offset times | Power Feature
 indexIIE = events(:,7) == 2;
 IIE_times = events(indexIIE,1:2);
-IIE_final = crawlerIIE(LFP, IIE_times, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
+events = SLECrawler(LFP, IIE_times, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
 
-%% Final Summary Report
+
 %Plot a 3D scatter plot of events
 if userInput(3) == 1  
     figEvents = figure;
