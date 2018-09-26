@@ -32,7 +32,7 @@ end
 t = (0:(length(LFP)- 1))/frequency;
 t = t';
 
-% Find Light pulse
+%% Find Light pulse
 if LED
     [P] = pulse_seq(LED);   %determine location of light pulses     
 
@@ -59,10 +59,15 @@ if LED
     end
         
     %make index to indicate if spikes are triggered by light pulses
-    locs_spike (:,2) = locs_spike_replicated > 0;   %if index is 0, means spike triggered by light    
+    locs_spike (:,2) = locs_spike_replicated > 0;   %if index is 0, means spike triggered by light
+    
 end
 
+<<<<<<< HEAD
 if troubleshooting       
+=======
+    if troubleshooting == 1      
+>>>>>>> parent of 9c7a893... check point - prior to updating SLECrawler.m
     %% Creating powerpoint slide
     isOpen  = exportToPPTX();
         if ~isempty(isOpen),
@@ -97,7 +102,7 @@ if troubleshooting
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
     exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 16);      
-end
+    end
     
 %% Processing the data to extract features to determine the onset/offset
 %Center the LFP time series
@@ -232,9 +237,16 @@ for i = 1:size(eventTimes,1)
         end
     end
         
+<<<<<<< HEAD
     %% plotting the onset and offsets detected     
     if troubleshooting               
     %% Plot onset detection - Derivative Signal
+=======
+    %% plotting the onset and offsets detected, troubleshooting purposes     
+    if troubleshooting == 1       
+       
+    %Test plot, onset
+>>>>>>> parent of 9c7a893... check point - prior to updating SLECrawler.m
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
@@ -250,7 +262,7 @@ for i = 1:size(eventTimes,1)
     plot(t(onsetContext(onset_locs)), LFP_filtered(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %All potential detected onset points
     plot(t(onsetContext), (LED(onsetContext)/16)-abs(min(LFP_filtered(onsetContext))), 'blue')  %light pulse is shifted
     %Labels
-    title (sprintf('Event onset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
+    title ('LFP Bandpass Filtered (1-100 Hz)');
     ylabel ('mV');
     xlabel ('Time (sec)'); 
     legend ('Bandpass Filtered', 'Putative Onset', 'Detected (final) onsets', 'Potential onset(s)', 'Light pulse')
@@ -283,6 +295,7 @@ for i = 1:size(eventTimes,1)
     exportToPPTX('addpicture',figHandle);      
     close(figHandle)
     
+<<<<<<< HEAD
     
     %Plot onset detection - Absolute Signal
     figHandle = figure;
@@ -335,6 +348,9 @@ for i = 1:size(eventTimes,1)
     
     
     %% Plot offset detection - Derivative Values
+=======
+    %Test plot, offset
+>>>>>>> parent of 9c7a893... check point - prior to updating SLECrawler.m
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('SLE offset #%d', i)); %select the name you want
@@ -347,7 +363,7 @@ for i = 1:size(eventTimes,1)
     plot(SLEoffset_final(i,1), LFP_filtered(offsetContext(offset_loc)), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected offset point 
     plot(t(offsetContext(offset_loc)), LFP_filtered(offsetContext(offset_loc)), '*', 'color', 'green', 'MarkerSize', 14)    %All detected potential offsets   
     %Labels
-    title (sprintf('Event offset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
+    title ('LFP Bandpass Filtered (1-100 Hz)');
     ylabel ('mV');
     xlabel ('Time (sec)');
     
