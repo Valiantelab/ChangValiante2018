@@ -21,12 +21,19 @@ if nargin<4
     frequency = 10000;      % 10kHz is default sampling frequency    
     onsetDelay = 0.13;      % seconds after light pulse onset to be considered triggered
     offsetDelay = 1.5;      % seconds the event offset follows light pulse to be considered associated
-    troubleshooting = 0;    % plot onset and offset detections
+    troubleshooting = [];    % plot onset and offset detections
+end
+
+if nargin<8
+    troubleshooting = [];    % plot onset and offset detections
 end
 
 %create time vector
 t = (0:(length(LFP_filtered)- 1))/frequency;
 t = t';
+
+%hard-coded variables
+durationOffsetBaseline = 6;     %sec (context to analyze for finding the offset)
 
 % Find Light pulse
 if LED
@@ -126,7 +133,7 @@ for i = 1:size(eventTimes,1)
     onsetBaselineStart = (onsetSLE-(1*frequency));
     onsetBaselineEnd = (onsetSLE+(0.5*frequency));
     offsetBaselineStart = (offsetSLE-(0.5*frequency));
-    offsetBaselineEnd = (offsetSLE+(1*frequency));
+    offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));
 
     %Range of LFP to scan for onset
     if onsetBaselineStart > 0        
@@ -171,11 +178,11 @@ for i = 1:size(eventTimes,1)
             offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
 
             %crawl to find the exact offset based on the new offset index
-            offsetBaselineStart = double(offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
-            
-            if numel(powerFeatureLowPassFiltered2)>(offsetSLE+(1*frequency))
-                offsetBaselineEnd = double(offsetSLE+(1*frequency));  %SLE "context" (end of post-ictal baseline)
-            else
+            offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
+            offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));  %SLE "context" (end of post-ictal baseline)
+
+            if numel(powerFeatureLowPassFiltered2)>(offsetSLE+(durationOffsetBaseline*frequency))
+                            else
                 offsetBaselineEnd = double(numel(powerFeatureLowPassFiltered2)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
             end
                        

@@ -1,4 +1,4 @@
-%function [IIS, SLE_final, events] = inVitro4APDetection(FileName, userInput, x, samplingInterval, metadata)
+%function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 %inVitro4APDetection is a function designed to search for epileptiform
 %events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -17,7 +17,7 @@ clc
 
 if ~exist('x','var') == 1
     %Manually set File Director
-    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -141,7 +141,7 @@ putativeEvents = epileptiformLocation(indexEvents,:);
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = putativeEvents(:,1:2)/frequency;
-events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
+events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
 
 %% Feature Extraction 
 %Optional plot all epileptiform events, for troubleshooting
