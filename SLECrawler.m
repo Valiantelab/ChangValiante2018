@@ -33,7 +33,7 @@ t = (0:(length(LFP_filtered)- 1))/frequency;
 t = t';
 
 %hard-coded variables
-durationOffsetBaseline = 6;     %sec (context to analyze for finding the offset)
+durationOffsetBaseline = 3;     %sec (context to analyze for finding the offset)
 
 % Find Light pulse
 if LED
@@ -119,10 +119,28 @@ fc = 25; % Cut off frequency
 [b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
 powerFeatureLowPassFiltered25 = filtfilt(b,a,powerFeature); %filtered signal
 
+%% Absolute Values for testing
+%Absolute value of the filtered data
+AbsLFP_filtered = abs(LFP_filtered);            %Derived signal
+
+%Power of the Absolute signal 
+powerFeatureAbs = (AbsLFP_filtered).^2;       %3rd derived signal
+
+%Lowpass butter filter [2 Hz], to scan for offset
+fc = 2; % Cut off frequency
+[b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
+powerFeatureLowPassFilteredAbs2 = filtfilt(b,a,powerFeatureAbs); %filtered power signal of derivative
+
+% %Lowpass butter filter [25 Hz], to scan for onset
+% fc = 25; % Cut off frequency
+% [b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
+% powerFeatureLowPassFilteredAbs25 = filtfilt(b,a,powerFeatureAbs); %filtered power signal of derivative
+
 %% Scanning Low-Pass Filtered Power signal for more accurate onset/offset times
 %Preallocating for speed
 SLEonset_final = zeros (size(eventTimes,1), 1);
 SLEoffset_final = zeros (size(eventTimes,1), 1);
+SLEoffset_final_Abs = zeros (size(eventTimes,1), 1);
 
 for i = 1:size(eventTimes,1)
     %Putative SLE onset and offset times  
@@ -143,7 +161,7 @@ for i = 1:size(eventTimes,1)
     end
 
     %Range of LFP to scan for offset
-    if offsetBaselineEnd < numel(powerFeatureLowPassFiltered2)
+    if offsetBaselineEnd < numel(powerFeatureLowPassFiltered2)  %note this is a power feature of the derivative signal, which has one less point than the Abs values
         offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
     else
         offsetContext = int64(offsetBaselineStart:numel(powerFeatureLowPassFiltered2));
@@ -160,118 +178,158 @@ for i = 1:size(eventTimes,1)
     end
 
     %Locating the offset time    
-    meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
+%     if offsetContext > 1.5*frequency %hard-code, duration of baseline to calculate offset threshold
+%         meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
+%     else
+%         meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline of whatever remains
+%     end    
+
+    meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline of context
     OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
     offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the index for the offset location    
     offsetSLE_2 = (offsetContext(offset_loc));  %detecting the new offset location         
     SLEoffset_final(i,1) = t(offsetSLE_2);
+    
+    %Locating the offset time - using absolute value signal
+%     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
+    meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline of offset context
+    OffsetLocationAbs = powerFeatureLowPassFilteredAbs2(offsetContext) > meanOffsetAbsBaseline/2; 
+    offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
+    offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location         
+    SLEoffset_final_Abs(i,1) = t(offsetSLE_2_Abs);
 
     if LED 
         %make sure last spike is not light triggered
-        lastBurstEvent = offsetSLE:offsetSLE_2; %the duration of the last burst
+        lastBurstEvent = offsetSLE:offsetSLE_2; %the duration of the last burst, defined as putative detected offset, and crawler's detected offset
         lightTriggered = intersect(lastBurstEvent, lightTriggeredOffsetZones); %check if last burst event is due to a light trigger
         if lightTriggered %if it is light triggered, find last spike that is not light-triggered (new SLE offset)
             %find index of new SLE offset            
             offsetIndex = find(locs_spike(:,1) == int64(eventTimes(i,2)*frequency)); %find the preceding spike, using data from previous 'detectEvent function' in abs LFP
             precedingOffsetIndex = find(flipud(locs_spike(1:offsetIndex, 2))==1,1);        % Thomas flipped the array and looked for the first point where spike was not light-triggered; consider using the while-loop or for-loop backwards
-            newOffsetIndex = offsetIndex-(precedingOffsetIndex-1);  %I forgot why I subtract 1, I think it's because it's look at differences
-            offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
+            if isempty(precedingOffsetIndex)    %if the last spike can only be due to a light pulse; then it's not a SLE, break from this iteration
+                SLEoffset_final(i,1) = -1;  %This is considered to be an artifact and will be removed; it is a spike with all preceding spikes due to light                
+            else                
+                newOffsetIndex = offsetIndex-(precedingOffsetIndex-1);  %subtract 1 because you're subtracting indices
+                offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
 
-            %crawl to find the exact offset based on the new offset index
-            offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
-            offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));  %SLE "context" (end of post-ictal baseline)
+                %New range of LFP (context) to scan for the offset
+                offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
+                offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));  %SLE "context" (end of post-ictal baseline)
 
-            if numel(powerFeatureLowPassFiltered2)>(offsetSLE+(durationOffsetBaseline*frequency))
-                            else
-                offsetBaselineEnd = double(numel(powerFeatureLowPassFiltered2)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
-            end
-                       
-            %Range of LFP to scan 
-            offsetContext = (offsetBaselineStart:offsetBaselineEnd);
+                if offsetBaselineEnd < numel(powerFeatureLowPassFiltered2)
+                    offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
+                else
+                    offsetContext = int64(offsetBaselineStart:numel(powerFeatureLowPassFiltered2)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
+                end                                 
 
-            %Locating the new offset time    
-            meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency)));    %Mean baseline of the first 1.5 s
-            OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
-            offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
-            if offset_loc
-                SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detected new offset time             
-            else
-                SLEoffset_final(i,1) = -1;  %This is considerd to be an artifact and will be removed (revisit this logic), no idea why I did that 
+                %Locating the new offset time  - using the derivative signal  
+%                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency)));    %Mean baseline of the first 1.5 s
+                meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext));    %Mean baseline of the first 1.5 s
+                OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
+                offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
+    %             if offset_loc
+                    SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detected new offset time             
+    %             else
+    %                 SLEoffset_final(i,1) = -1;  %This is considered to be an artifact and will be removed (revisit this logic), no idea why I did that 
+    %             end
+
+                %Locating the offset time - using absolute value signal
+%                 meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
+                meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline of the first 1.5 s
+                OffsetLocationAbs = powerFeatureLowPassFilteredAbs2(offsetContext) > meanOffsetAbsBaseline/2; 
+                offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
+                offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location         
+                SLEoffset_final_Abs(i,1) = t(offsetSLE_2_Abs);
             end
         end
     end
         
     %% plotting the onset and offsets detected     
     if troubleshooting      
-       
-    %Plot onset detection
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));   
-    subplot (2,1,1)
-    plot(t(onsetContext),LFP_filtered(onsetContext))
-    hold on
-    plot(t(onsetSLE), LFP_filtered(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
-    plot(SLEonset_final(i,1), LFP_filtered(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
-    plot(t(onsetContext(onset_locs)), LFP_filtered(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %All potential detected onset points
-    
-    plot(t(onsetContext), LED(onsetContext)/8)
-    %Labels
-    title (sprintf('Event onset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
-    ylabel ('mV');
-    xlabel ('Time (sec)');
-    
-    subplot (2,1,2)
-    plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
-    hold on
-    plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(SLEonset_final(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
-    plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %All potential detected points
-    %Labels
-    title ('Power, Low Pass Filtered (25 Hz)');
-    ylabel ('mV');
-    xlabel ('Time (sec)');    
-    legend ('Low-pass filter, Power', 'Putative Onset', 'Detected (final) onsets', 'Potential onset(s)')
-    
-    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-    exportToPPTX('addpicture',figHandle);      
-    close(figHandle)
+%        
+%     %Plot onset detection
+%     figHandle = figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('SLE onset #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));   
+%     subplot (2,1,1)
+%     plot(t(onsetContext),LFP_filtered(onsetContext))
+%     hold on
+%     plot(t(onsetSLE), LFP_filtered(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial (rough) detection
+%     plot(SLEonset_final(i,1), LFP_filtered(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), LFP_filtered(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %All potential detected onset points
+%     
+%     plot(t(onsetContext), LED(onsetContext)/8)
+%     %Labels
+%     title (sprintf('Event onset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');
+%     
+%     subplot (2,1,2)
+%     plot(t(onsetContext), powerFeatureLowPassFiltered25(onsetContext))
+%     hold on
+%     plot(t(onsetSLE), powerFeatureLowPassFiltered25(onsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+%     plot(SLEonset_final(i,1), powerFeatureLowPassFiltered25(onsetContext(onset_locs(1))), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected onset point 
+%     plot(t(onsetContext(onset_locs)), powerFeatureLowPassFiltered25(onsetContext(onset_locs)), '*', 'color', 'green', 'MarkerSize', 14)    %All potential detected points
+%     %Labels
+%     title ('Power, Low Pass Filtered (25 Hz)');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');    
+%     legend ('Low-pass filter, Power', 'Putative Onset', 'Detected (final) onsets', 'Potential onset(s)')
+%     
+%     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+%     exportToPPTX('addpicture',figHandle);      
+%     close(figHandle)
     
     %Plot offset detection
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('SLE offset #%d', i)); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));   
-    subplot (2,1,1)
+    
+    %Plot filtered LFP signal
+    subplot (3,1,1)
     plot(t(offsetContext),LFP_filtered(offsetContext))
     hold on
     plot(t(offsetSLE), LFP_filtered(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial putative (rough) detection
     plot(SLEoffset_final(i,1), LFP_filtered(offsetContext(offset_loc)), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected offset point 
-    plot(t(offsetContext(offset_loc)), LFP_filtered(offsetContext(offset_loc)), '*', 'color', 'green', 'MarkerSize', 14)    %All detected potential offsets
-%     plot(t(offsetSLE_2), LFP_filtered(offsetSLE_2), '*', 'color', 'blue', 'MarkerSize', 14)  %test 
-    
+    plot(t(offsetContext(offset_loc)), LFP_filtered(offsetContext(offset_loc)), '*', 'color', 'green', 'MarkerSize', 14)    %All detected potential offsets    
     %Labels
     title (sprintf('Event offset #%d, LFP Bandpass Filtered (1-100 Hz)', i));
     ylabel ('mV');
     xlabel ('Time (sec)');
     
-    subplot (2,1,2)
+    %Plot of the Power of the derivative signal
+    subplot (3,1,2)
     plot(t(offsetContext), powerFeatureLowPassFiltered2(offsetContext))
     hold on
     plot(t(offsetSLE), powerFeatureLowPassFiltered2(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
     plot(SLEoffset_final(i,1), powerFeatureLowPassFiltered2(offsetContext(offset_loc)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
     plot(t(offsetContext(offset_loc)), powerFeatureLowPassFiltered2(offsetContext(offset_loc)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
-%     plot(t(offsetSLE_2), powerFeatureLowPassFiltered25(offsetSLE_2), '*', 'color', 'blue', 'MarkerSize', 14)  %test 
-    
+    %Plot dashed lines where the threshold for offset is
     xL = get(gca, 'XLim');
     plot(xL, [meanOffsetBaseline/2 meanOffsetBaseline/2], '--')
-
     %Labels
-    title ('Power, Low Pass Filtered (2 Hz)');
+    title (sprintf('Power of derivative signal, Low Pass Filtered (2 Hz): %.2f', SLEoffset_final(i,1)));
     ylabel ('mV');
     xlabel ('Time (sec)');
-    legend ('Low-pass filter, Power', 'Putative Offset', 'detected offset', 'Final Offset', 'Baseline mean/2')
+    legend ('Low-pass filtered, Power of derivative signal', 'Putative Offset', 'detected offset', 'Final Offset', 'Baseline mean/2')
+    
+    %Plot of the Power of the Absolute values signal
+    subplot (3,1,3)
+    plot(t(offsetContext), powerFeatureLowPassFilteredAbs2(offsetContext))
+    hold on
+    plot(t(offsetSLE), powerFeatureLowPassFilteredAbs2(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+    plot(SLEoffset_final_Abs(i,1), powerFeatureLowPassFilteredAbs2(offsetContext(offset_loc_Abs)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
+    plot(t(offsetContext(offset_loc_Abs)), powerFeatureLowPassFilteredAbs2(offsetContext(offset_loc_Abs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+    %Plot dashed lines where the threshold for offset is
+    xL = get(gca, 'XLim');
+    plot(xL, [meanOffsetAbsBaseline/2 meanOffsetAbsBaseline/2], '--')
+    %Labels
+    title (sprintf('Power of Absolute signal, Low Pass Filtered (2 Hz): %.2f',SLEoffset_final_Abs(i,1)));
+    ylabel ('mV');
+    xlabel ('Time (sec)');
+    legend ('Low-pass filtered, Power of Absolute signal', 'Putative Offset', 'detected offset', 'Final Offset', 'Baseline mean/2')
     
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);      
@@ -285,13 +343,16 @@ if troubleshooting
     exportToPPTX('saveandclose','troubleshooting'); 
 end
 
-%% Store output 
+%% Store output - using Abs signal to determine the offset 
+%use SLEoffset_final_Abs, as the final offset point
+SLEoffset_final = SLEoffset_final_Abs;  %remove this line in the future if you don't want to use the absolute value
+
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
 SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
 
 %Preallocate
-SLE_final(:,8)= 0;
+SLE_final(:,20)= 0;
 
 if LED
     %Classify which SLEs were light triggered
