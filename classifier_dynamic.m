@@ -113,7 +113,7 @@ end
 [algoIntensityIndex, algoIntensityThreshold] = findThresholdSLE (events(indexEventsToAnalyze,5));
 
 %use the lower threshold for Intensity, (with a floor at 5 mV^2/s)
-floorIntensityThreshold = 5;
+floorIntensityThreshold = 1;
 if algoIntensityThreshold < floorIntensityThreshold || michaelIntensityThreshold < floorIntensityThreshold
     thresholdIntensity = floorIntensityThreshold;
 else if algoIntensityThreshold<=michaelIntensityThreshold

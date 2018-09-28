@@ -33,7 +33,7 @@ t = (0:(length(LFP_filtered)- 1))/frequency;
 t = t';
 
 %hard-coded variables
-durationOffsetBaseline = 3;     %sec (context to analyze for finding the offset)
+durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
 
 % Find Light pulse
 if LED
@@ -345,7 +345,7 @@ end
 
 %% Store output - using Abs signal to determine the offset 
 %use SLEoffset_final_Abs, as the final offset point
-% SLEoffset_final = SLEoffset_final_Abs;  %remove this line in the future if you don't want to use the absolute value
+SLEoffset_final = SLEoffset_final_Abs;  %remove this line in the future if you don't want to use the absolute value
 
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts

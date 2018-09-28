@@ -8,7 +8,7 @@ function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, 
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 6.2
+%Version 6.4
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -49,7 +49,7 @@ minSLEduration = 3.5; %seconds; %change to 5 s if any detection issues
 %Label for titles
 excelFileName = FileName(1:8);
 uniqueTitle = '(epileptiformEvents)';
-finalTitle = '(V6,3)';
+finalTitle = '(V6,4)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -232,8 +232,8 @@ for i = 1:size(events,1)
     events (i,5) = totalPower(i) /sleDuration;    
     %The two halves
     midpoint = ((eventVector(1)+eventVector(end))/2);
-    events (i,15) = sum(powerFeature(eventVector(1):midpoint)) / (sleDuration/2);    
-    events (i,16) = sum(powerFeature(midpoint:eventVector(end))) / (sleDuration/2);
+    events (i,16) = sum(powerFeature(eventVector(1):midpoint)) / (sleDuration/2);    
+    events (i,17) = sum(powerFeature(midpoint:eventVector(end))) / (sleDuration/2);
     
     %Calculate peak-to-peak amplitude of epileptiform event
     eventVectorLFP = LFP_centered(eventVector);
