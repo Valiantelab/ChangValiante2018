@@ -209,7 +209,11 @@ for i = 1:size(events,1)
         spikeRateMinute(j,1) = startWindow; %time windows starts
         spikeRateMinute(j,2) = sum(spikeRate(:));   %number of spikes in the window
         %Calculate the intensity per minute for epileptiform events
-        PowerPerMinute = sum(powerFeature (startWindow:endWindow));        
+        if numel(powerFeature) > endWindow
+            PowerPerMinute = sum(powerFeature (startWindow:endWindow));        
+        else
+            PowerPerMinute = sum(powerFeature (startWindow:numel(powerFeature)))
+        end                    
         intensity(j,1) = startWindow; %time windows starts
         intensity(j,2) = PowerPerMinute;   %Total power within the (minute) window        
     end
@@ -405,6 +409,9 @@ else
 end
 
 %Sheet 1 = Details - To be completed at a later date with Liam's help.
+
+info
+
 % https://www.mathworks.com/help/matlab/matlab_prog/creating-a-map-object.html
 % details{1,1} = 'FileName:';     details {1,2} = sprintf('%s', FileName);
 % details{2,1} = 'LED:';     details {2,2} = sprintf('%s', FileName);

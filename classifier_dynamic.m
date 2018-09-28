@@ -56,7 +56,7 @@ end
 % classify based on average frequency 
 featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
-michaelsFrequencyThreshold = 0.6; %Hz Taufik recommended to drop the floor 
+michaelsFrequencyThreshold = 1; 
 %Algo determined threshold
 [~, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
 %Use the lowest threshold, unless it's below 1 Hz
