@@ -1,4 +1,4 @@
-function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike, troubleshooting)
+function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike, troubleshooting, durationOnsetBaseline, durationOffsetBaseline, calculateMeanOffsetBaseline)
 %'SLE Crawl' function detects exact onset and offset time of ictal event
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
 %   where all the SLEs (aka ictal events) roughly occur to the nearest 0.5
@@ -17,15 +17,27 @@ function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onse
 
   
 %% Default values, if frequenct is not specified 
-if nargin<4
+if nargin<5
     frequency = 10000;      % 10kHz is default sampling frequency    
     onsetDelay = 0.13;      % seconds after light pulse onset to be considered triggered
     offsetDelay = 1.5;      % seconds the event offset follows light pulse to be considered associated
     troubleshooting = [];    % plot onset and offset detections
+    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
+    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
+    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
 end
 
 if nargin<8
     troubleshooting = [];    % plot onset and offset detections
+    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
+    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
+    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
+end
+
+if nargin<9    
+    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
+    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
+    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
 end
 
 %create time vector
@@ -33,7 +45,8 @@ t = (0:(length(LFP_filtered)- 1))/frequency;
 t = t';
 
 %hard-coded variables
-durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
+
+
 
 % Find Light pulse
 if LED
@@ -148,7 +161,7 @@ for i = 1:size(eventTimes,1)
     offsetSLE = int64(eventTimes(i,2)*frequency);  %convert into a position
 
     %Baseline adjacent to SLE
-    onsetBaselineStart = (onsetSLE-(1*frequency));
+    onsetBaselineStart = (onsetSLE-(durationOnsetBaseline*frequency));
     onsetBaselineEnd = (onsetSLE+(0.5*frequency));
     offsetBaselineStart = (offsetSLE-(0.5*frequency));
     offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));
@@ -224,7 +237,13 @@ for i = 1:size(eventTimes,1)
 
                 %Locating the new offset time  - using the derivative signal  
 %                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency)));    %Mean baseline of the first 1.5 s
-                meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext));    %Mean baseline of the first 1.5 s
+%                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext));    %Mean baseline of the first 1.5 s
+                
+                if numel(offsetContext) > calculateMeanOffsetBaseline
+                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
+                else
+                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline calculated from whatever context there is
+                end                 
                 OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
                 offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
     %             if offset_loc
@@ -235,7 +254,12 @@ for i = 1:size(eventTimes,1)
 
                 %Locating the offset time - using absolute value signal
 %                 meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
-                meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline of the first 1.5 s
+
+                if numel(offsetContext) > calculateMeanOffsetBaseline
+                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
+                else
+                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline calculated from whatever context there is
+                end                                    
                 OffsetLocationAbs = powerFeatureLowPassFilteredAbs2(offsetContext) > meanOffsetAbsBaseline/2; 
                 offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
                 offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location         

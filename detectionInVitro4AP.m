@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -17,7 +17,7 @@ if ~exist('x','var') == 1
     clc
 
     %Manually set File Director
-    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -41,10 +41,15 @@ if ~exist('x','var') == 1
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
 end
     
-%% Hard Coded values | distance between spikes
+%% Hard Coded values | Detection settings
+%findEvent function
 distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
 minSLEduration = 3.5; %seconds; %change to 5 s if any detection issues 
+%SLECrawler function
+durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
+durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
+calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
 
 %Label for titles
 excelFileName = FileName(1:8);
@@ -241,8 +246,7 @@ for i = 1:size(events,1)
     events (i,6) = p2pAmplitude;
     
     %m calculation
-    
-    
+        
 %     %segments of SLE
 %     duration = numel(spikeRateMinute(:,2))
 %     window = (duration/10)
@@ -386,6 +390,40 @@ end
         
 % Store light-triggered events (s)
 % triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+
+%% Struct
+%File Details
+details.FileNameInput = FileName;
+details.inputdir = inputdir;
+details.FileNameOutput = excelFileName;
+details.frequency = frequency;
+%User Input and Hard-coded values
+details.spikeThreshold = (userInput(1));
+details.distanceSpike = distanceSpike;
+details.artifactThreshold = userInput(2);
+details.distanceArtifact = distanceArtifact;
+details.minSLEduration = minSLEduration;
+%Detect events (epileptiform/artifacts) | Absolute Values
+details.minPeakHeightAbs = minPeakHeight; 
+details.minPeakDistanceAbs = minPeakDistance;
+details.minArtifactHeightAbs = minArtifactHeight;
+details.minArtifactDistanceAbs = minArtifactDistance;
+%SLECrawler 
+details.durationOnsetBaseline = durationOnsetBaseline;
+details.durationOffsetBaseline = durationOffsetBaseline;
+details.calculateMeanOffsetBaseline = calculateMeanOffsetBaseline;
+
+%detection results
+details.IISsDetected = numel(IIS(:,1));
+details.eventsDetected = numel(events(:,1));
+details.SLEsDetected = numel (SLE_final(:,1));
+
+%LED details
+if userInput(4)>0
+    details.stimulusChannel = userInput(4);
+    details.onsetDelay = onsetDelay;
+    details.offsetDelay = offsetDelay;
+end
 
 %% Write to .xls
 %set subtitle
@@ -650,7 +688,6 @@ if userInput(3) == 1
 
     % save and close the .PPTX
     exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName)); 
-end
 
 fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector.\n')
 
