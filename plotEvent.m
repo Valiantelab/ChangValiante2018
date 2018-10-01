@@ -1,4 +1,4 @@
-function [figHandle, centerLFP] = plotEvent(timeSeriesLFP, t, eventTime, locs_spike, appliedStimulus, context, frequency)
+function [figHandle, centerLFP] = plotEvent(figHandle, timeSeriesLFP, t, eventTime, locs_spike, appliedStimulus, context, frequency)
 %plotEvent plots vectors of event vectors are detected by your algorithm
 %   plotEvent function can also plot addition markers and features about
 %   the event that were detected by the detection algorithm. There is also
@@ -10,12 +10,12 @@ function [figHandle, centerLFP] = plotEvent(timeSeriesLFP, t, eventTime, locs_sp
 %   of the spikes detected by the algorithm. 
 
 %% Set variables to default values, if not specified
-if nargin < 6
+if nargin < 7
     context = 5;     %sec
     frequency = 10000;  %Hz
 end
 
-if nargin < 5
+if nargin < 6
     context = 5;     %sec
     frequency = 10000;  %Hz
     appliedStimulus = [];
@@ -40,11 +40,12 @@ end
     end
 
     %Plot figures
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-%     set(gcf,'Name', sprintf ('%s Event #%d', finalTitle, i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));  
+%     figHandle = figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+% %     set(gcf,'Name', sprintf ('%s Event #%d', finalTitle, i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));  
 
+    figure(figHandle)
     centerLFP = (timeSeriesLFP(backgroundVector(1)));  %center the LFP 
     plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP ) %background
     hold on    

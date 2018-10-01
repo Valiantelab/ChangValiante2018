@@ -1,4 +1,4 @@
-% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -263,37 +263,20 @@ for i = 1:size(events,1)
     
                 
     %% Optional: plot vectors for Troubleshooting            
-    if userInput(5) == 1    
-       
-        %make background vector
-        if (onsetTime >= 50001 && (offsetTime+50000)<numel(timeSeriesLFP))
-            backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
-        elseif (onsetTime < 50001)
-            backgroundVector = (1:offsetTime+50000);
-        elseif ((offsetTime+50000)>numel(timeSeriesLFP))
-            backgroundVector = (onsetTime-50000:numel(timeSeriesLFP));
-        end
-    
-        %Plot figures
+    if userInput(5) == 1                    
+                
+        %Plot Figure
         figHandle = figure;
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', sprintf ('Putative SLE #%d', i)); %select the name you want
-        set(gcf, 'Position', get(0, 'Screensize'));   
-        
-        %Plot Frequency
+        set(gcf,'Name', sprintf ('Epileptiform Event #%d', i)); %select the name you want
+        set(gcf, 'Position', get(0, 'Screensize')); 
+      
+        %Plot Frequency               
         subplot (2,1,1)
-        centerLFP = (timeSeriesLFP(backgroundVector(1)));
-        centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));        
-        plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP)  %background
-        hold on
-        plot (t(eventVector),timeSeriesLFP(eventVector)-centerLFP)     %Epileptiform Event
-        plot (t(onsetTime), timeSeriesLFP(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-        plot (t(offsetTime), timeSeriesLFP(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
-        indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-        plot (t(locs_spike_2nd(indexSpikes)), (timeSeriesLFP(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-        plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-centerLED, 'b') %plot LED 
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);         
+
         %Labels
-        title (sprintf('LFP Recording, Epileptiform Event #%d | For troubleshooting onset/offset detection', i));
+        title (sprintf('LFP Recording, Epileptiform Event #%d | Frequency Change over time', i));
         ylabel ('mV');
         xlabel ('Time (sec)');   
         %Plot Frequency Content
@@ -307,16 +290,8 @@ for i = 1:size(events,1)
         
         %Plot Intensity
         subplot (2,1,2)
-        centerLFP = (timeSeriesLFP(backgroundVector(1)));
-        centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));        
-        plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP)  %background
-        hold on
-        plot (t(eventVector),timeSeriesLFP(eventVector)-centerLFP)     %Epileptiform Event
-        plot (t(onsetTime), timeSeriesLFP(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-        plot (t(offsetTime), timeSeriesLFP(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
-        indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-        plot (t(locs_spike_2nd(indexSpikes)), (timeSeriesLFP(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-        plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-centerLED, 'b') %plot LED 
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);         
+        
         %Labels
         title ('Intensity Change over time');
         ylabel ('mV');
@@ -330,7 +305,7 @@ for i = 1:size(events,1)
         set(gca,'fontsize',14)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Intensity')
         legend ('Location', 'northeastoutside')
-            
+              
         exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
         exportToPPTX('addpicture',figHandle);      
         close(figHandle)
@@ -446,8 +421,6 @@ else
     L = 'no outliers';
 end
 
-%Sheet 0 = Details
-writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))
 
 %Testing
 %detailsCell = table2cell(T)';  %his will plot all the values in a column.
@@ -519,6 +492,9 @@ else
     disp ('No SLEs were detected. Review the raw data and consider using a lower multiple of baseline sigma as the threshold');
 end
 
+%Sheet 0 = Details
+writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Plot at end to prevent extra worksheets being produced
+
 %% Optional: Plot Figures
 if userInput(3) == 1      
     %% Creating powerpoint slide
@@ -565,13 +541,14 @@ if userInput(3) == 1
     subplot (3,1,1)
     reduce_plot (t, LFP_centered, 'k');
     hold on
-    xL = get(gca, 'XLim');  %plot dashed reference line at y = 0
-    plot(xL, [0 0], '--')
-
-    if LED
-        reduce_plot (t, lightpulse - abs(min(LFP_centered)));
+    xL = get(gca, 'XLim');  %plot dashed reference line at y = 0    
+    
+    if LED    
+        reduce_plot (t, lightpulse - abs(min(LFP_centered))); %Plot light pulses, if present
     end
-
+    
+    plot(xL, [0 0], '--', 'color', [0.5 0.5 0.5])   %Plot dashed line at 0
+    
     %plot artifacts (red), found in 2nd search
     if artifactLocation
         for i = 1:numel(artifactLocation(:,1)) 
@@ -639,14 +616,15 @@ if userInput(3) == 1
     %% Plotting out detected SLEs with context | To figure out how off you are    
     for i = 1:size(SLE_final,1) 
        
-        %Plot figure  
-        [figHandle] = plotEvent (LFP_centered, t, SLE_final(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
-        
-        %Label Figure
+        %Label figure  
+        figHandle = figure;
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', sprintf ('%s SLE #%d', finalTitle, i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize'));  
         
+        %Plot figure  
+        figHandle = plotEvent (figHandle, LFP_centered, t, SLE_final(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
+                        
         %Title
         title (sprintf('LFP Recording, SLE #%d', i));
         ylabel ('mV');
