@@ -342,7 +342,7 @@ end
         exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
     end
     
-%% Secondary classification to detect class 1 seizure
+%% Classification  
 if events (:,1) < 1
     fprintf(2,'\nNo epileptiform events were detected.\n')
 else if events(:,1) < 2
@@ -447,17 +447,15 @@ else
 end
 
 %Sheet 0 = Details
+
 writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))
 
-%Testing
-%detailsCell = table2cell(T)';  %his will plot all the values in a column.
 
 % https://www.mathworks.com/help/matlab/matlab_prog/creating-a-map-object.html
 % details{1,1} = 'FileName:';     details {1,2} = sprintf('%s', FileName);
 % details{2,1} = 'LED:';     details {2,2} = sprintf('%s', FileName);
 % 
-% details {2,1} = 'LED:';  
-
+% details {2,1} = 'LED:';         
 % 'Sampling Frequency:'
 % 'Multiple of Sigma for spike threshold:' 
 % 'Epileptiform Spike Threshold:'
@@ -468,9 +466,9 @@ writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))
 % 'Minimum seizure duration:' 
 % 'Maximum onset delay for stimulus'
 
-%     subtitle0 = {details};
-%     xlswrite(sprintf('%s%s',excelFileName, finalTitle),subtitle0,'Details','A1');
-%     xlswrite(sprintf('%s%s',excelFileName, finalTitle),T,'Details','A2');
+    subtitle0 = {details};
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle),subtitle0,'Details','A1');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle),T,'Details','A2');
 
 %% Additional Examples of how to display results
 % disp(['Mean:                                ',num2str(mx)]);
@@ -660,7 +658,8 @@ if userInput(3) == 1
         set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize'));  
 
-        centerLFP = (data1(backgroundVector(1)));   %center the LFP
+        centerLFP = (data1(backgroundVector(1)));
+        centerLED = abs(min(data1(backgroundVector)-centerLFP));
         plot (t(backgroundVector),data1(backgroundVector)-centerLFP ) %background
         hold on    
         plot (t(sleVector),data1(sleVector)-centerLFP)     %SLE
@@ -669,7 +668,6 @@ if userInput(3) == 1
         indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
         plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
         if LED
-            centerLED = abs(min(data1(backgroundVector)-centerLFP));
             plot (t(backgroundVector),(lightpulse(backgroundVector))-centerLED , 'b') %plot LED 
         end
 
