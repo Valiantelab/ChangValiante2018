@@ -152,7 +152,7 @@ events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offset
 if userInput(5) == 1   
     
     %set variables
-    data1 = LFP_centered; %Time series to be plotted 
+    timeSeriesLFP = LFP_centered; %Time series to be plotted 
 
     %% Creating powerpoint slide
     isOpen  = exportToPPTX();
@@ -266,12 +266,12 @@ for i = 1:size(events,1)
     if userInput(5) == 1    
        
         %make background vector
-        if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
+        if (onsetTime >= 50001 && (offsetTime+50000)<numel(timeSeriesLFP))
             backgroundVector = (onsetTime-50000:offsetTime+50000);   %Background Vector
         elseif (onsetTime < 50001)
             backgroundVector = (1:offsetTime+50000);
-        elseif ((offsetTime+50000)>numel(data1))
-            backgroundVector = (onsetTime-50000:numel(data1));
+        elseif ((offsetTime+50000)>numel(timeSeriesLFP))
+            backgroundVector = (onsetTime-50000:numel(timeSeriesLFP));
         end
     
         %Plot figures
@@ -282,15 +282,15 @@ for i = 1:size(events,1)
         
         %Plot Frequency
         subplot (2,1,1)
-        centerLFP = (data1(backgroundVector(1)));
-        centerLED = abs(min(data1(backgroundVector)-centerLFP));        
-        plot (t(backgroundVector),data1(backgroundVector)-centerLFP)  %background
+        centerLFP = (timeSeriesLFP(backgroundVector(1)));
+        centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));        
+        plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP)  %background
         hold on
-        plot (t(eventVector),data1(eventVector)-centerLFP)     %Epileptiform Event
-        plot (t(onsetTime), data1(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-        plot (t(offsetTime), data1(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+        plot (t(eventVector),timeSeriesLFP(eventVector)-centerLFP)     %Epileptiform Event
+        plot (t(onsetTime), timeSeriesLFP(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+        plot (t(offsetTime), timeSeriesLFP(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
         indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-        plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
+        plot (t(locs_spike_2nd(indexSpikes)), (timeSeriesLFP(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
         plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-centerLED, 'b') %plot LED 
         %Labels
         title (sprintf('LFP Recording, Epileptiform Event #%d | For troubleshooting onset/offset detection', i));
@@ -307,15 +307,15 @@ for i = 1:size(events,1)
         
         %Plot Intensity
         subplot (2,1,2)
-        centerLFP = (data1(backgroundVector(1)));
-        centerLED = abs(min(data1(backgroundVector)-centerLFP));        
-        plot (t(backgroundVector),data1(backgroundVector)-centerLFP)  %background
+        centerLFP = (timeSeriesLFP(backgroundVector(1)));
+        centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));        
+        plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP)  %background
         hold on
-        plot (t(eventVector),data1(eventVector)-centerLFP)     %Epileptiform Event
-        plot (t(onsetTime), data1(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-        plot (t(offsetTime), data1(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
+        plot (t(eventVector),timeSeriesLFP(eventVector)-centerLFP)     %Epileptiform Event
+        plot (t(onsetTime), timeSeriesLFP(onsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
+        plot (t(offsetTime), timeSeriesLFP(offsetTime)-centerLFP, 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
         indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-        plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
+        plot (t(locs_spike_2nd(indexSpikes)), (timeSeriesLFP(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
         plot (t(backgroundVector),(lightpulse(backgroundVector)/4)-centerLED, 'b') %plot LED 
         %Labels
         title ('Intensity Change over time');
@@ -625,54 +625,29 @@ if userInput(3) == 1
     exportToPPTX('addpicture',figHandle);      
     close(figHandle)
 
-    %% Plot figures of thresholds for classification 
+    %% Plot figures of classification thresholds
     if userInput(3) == 1    
         figHandles = findall(0, 'Type', 'figure');  %find all open figures exported from classifer
         % Plot figure from Classifer
-        for i = numel(figHandles):-1:1      %plot them in the order they were exported
+        for i = numel(figHandles):-1:1      %plot them backwards (in the order they were exported)
             exportToPPTX('addslide'); %Add to new powerpoint slide
             exportToPPTX('addpicture',figHandles(i));      
             close(figHandles(i))
         end    
     end
 
-    %% Plotting out detected SLEs with context | To figure out how off you are
-    data1 = LFP_centered; %Time series to be plotted 
-
+    %% Plotting out detected SLEs with context | To figure out how off you are    
     for i = 1:size(SLE_final,1) 
-        %make SLE vector
-        onsetTime = (round(SLE_final(i,1)*10000));
-        offsetTime = (round(SLE_final(i,2)*10000));
-        sleVector = (onsetTime:offsetTime);  %SLE Vector    
-
-        %make background vector
-        if (onsetTime >= 50001 && (offsetTime+50000)<numel(data1))
-            backgroundVector = int64(onsetTime-50000:offsetTime+50000);   %Background Vector
-        elseif (onsetTime < 50001)
-            backgroundVector = int64(1:offsetTime+50000);
-        elseif ((offsetTime+50000)>numel(data1))
-            backgroundVector = int64(onsetTime-50000:numel(data1));
-        end
-
-        %Plot figures
-        figHandle = figure;
+       
+        %Plot figure  
+        [figHandle] = plotEvent (LFP_centered, t, SLE_final(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
+        
+        %Label Figure
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', sprintf ('V4.0 SLE #%d', i)); %select the name you want
+        set(gcf,'Name', sprintf ('%s SLE #%d', finalTitle, i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize'));  
-
-        centerLFP = (data1(backgroundVector(1)));   %center the LFP
-        plot (t(backgroundVector),data1(backgroundVector)-centerLFP ) %background
-        hold on    
-        plot (t(sleVector),data1(sleVector)-centerLFP)     %SLE
-        plot (t(onsetTime), data1(onsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
-        plot (t(offsetTime), data1(offsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
-        indexSpikes = and(onsetTime<locs_spike_2nd, offsetTime>locs_spike_2nd); %Locate spikes between the onset and offset  
-        plot (t(locs_spike_2nd(indexSpikes)), (data1(locs_spike_2nd(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-        if LED
-            centerLED = abs(min(data1(backgroundVector)-centerLFP));
-            plot (t(backgroundVector),(lightpulse(backgroundVector))-centerLED , 'b') %plot LED 
-        end
-
+        
+        %Title
         title (sprintf('LFP Recording, SLE #%d', i));
         ylabel ('mV');
         xlabel ('Time (sec)');

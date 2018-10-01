@@ -1,21 +1,20 @@
-function [figHandle, centerLFP] = plotEvent(timeSeriesLFP, t, eventTime, locs_spike, appliedStimulus, context, frequency)
+function [figHandle, centerLFP] = plotEvent(timeSeriesLFP, t, eventTime, appliedStimulus, locs_spike_2nd, context, frequency)
 %plotEvent plots vectors of event vectors are detected by your algorithm
 %   plotEvent function can also plot addition markers and features about
 %   the event that were detected by the detection algorithm. There is also
 %   an option to plot baseline recording preceding and following the event
 %   to provide 'context' of the baseline around the event. timeSeries is
 %   the LFP signal to be plotted. The background vector is the event
-%   vector with 'context' (aka background context). The input varible 't'
-%   is the timeSeries for 'time'. The function will also plot the location
-%   of the spikes detected by the algorithm. 
+%   vector with 'context' (aka background context). the input varible 't'
+%   is the timeSeries for 'time'. 
 
 %% Set variables to default values, if not specified
-if nargin < 6
+if nargin < 5
     context = 5;     %sec
     frequency = 10000;  %Hz
 end
 
-if nargin < 5
+if nargin < 4
     context = 5;     %sec
     frequency = 10000;  %Hz
     appliedStimulus = [];
@@ -52,10 +51,6 @@ end
     plot (t(onsetTime), timeSeriesLFP(onsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %onset marker
     plot (t(offsetTime), timeSeriesLFP(offsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
     
-    %Plot spikes detected by algorithm
-    indexSpikes = and(onsetTime<locs_spike, offsetTime>locs_spike); %Locate spikes between the onset and offset  
-    plot (t(locs_spike(indexSpikes)), (timeSeriesLFP(locs_spike(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-        
     %Plot applied stimulus (i.e., LED signal), if present
     if ~isempty(appliedStimulus)
         centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));
