@@ -1,11 +1,14 @@
-function [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, plotFigures)
+function [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, plotFigures, frequencyFloorThreshold)
 %classifier_dynamic will classify a population (>6) of epilpeptiform events
 %into two different populations (IIEs and SLEs)
 %   The threshold to classify populations of epileptiform events are based
 %   are drawn from three different methods of calculation, hard-codes based
 %   on the in vitro ictal event population, Michael's calculation based on
 %   emperical data, and k-means clustering (in combinations with the widest
-%   gap).
+%   gap). Note: threshold and duration do not require any floors, they tend
+%   to balance each other out, however, the floor threshold for intensity
+%   is set to 1 mV^2/s. I put this in place incase it was analyzing only
+%   interictal spikes and events.
 
 %% Set Variables according to Michael's terms
 userInput(3) = plotFigures;  %1 = yes; 0 = no
@@ -13,6 +16,11 @@ indexEventsToAnalyze = events(:,7)<4;
 
 if nargin < 2
     userInput(3) = 0;    %by default don't plot any figures
+    frequencyFloorThreshold = 1;    %Hz
+end
+
+if nargin < 3
+    frequencyFloorThreshold = 1;    %by default don't plot any figures
 end
 
 %% Stage 1: Artifact (Amplitude Outlier) removal 
@@ -56,7 +64,7 @@ end
 % classify based on average frequency 
 featureSet = events(:,4);   %Average Spike Rate (Hz)
 %Michael's threshold
-michaelsFrequencyThreshold = 1; 
+michaelsFrequencyThreshold = frequencyFloorThreshold;   %which is set to 1 Hz 
 %Algo determined threshold
 [~, algoFrequencyThreshold] = findThresholdSLE (events(indexEventsToAnalyze,4));
 %Use the lowest threshold, unless it's below 1 Hz

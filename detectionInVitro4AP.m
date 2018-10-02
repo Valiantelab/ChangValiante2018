@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -16,7 +16,7 @@ if ~exist('x','var') == 1
     clear all
     clc
 
-    %Manually set File Director
+    %Manually set File DirectorYou seem really sweet and genuine from your profile. 
     inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
@@ -140,11 +140,11 @@ IIS = epileptiformLocation(indexIIS,1:3)/frequency;
 
 %Putative SLE
 indexEvents = (epileptiformLocation (:,3)>=(minSLEduration*frequency));
-putativeEvents = epileptiformLocation(indexEvents,:);   
+epileptiformEvents = epileptiformLocation(indexEvents,:);   
 
 %% SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
-eventTimes = putativeEvents(:,1:2)/frequency;
+eventTimes = epileptiformEvents(:,1:2)/frequency;
 events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
 
 %% Feature Extraction 
@@ -245,6 +245,45 @@ for i = 1:size(events,1)
     p2pAmplitude = max(eventVectorLFP) - min (eventVectorLFP);
     events (i,6) = p2pAmplitude;
     
+    %% locating tonic-like and clonic-like firing
+    
+    %using frequency (working)
+    maxFrequency = max(spikeRateMinute)
+    
+    %Tonic-like firing
+    indexTonic = spikeRateMinute(2:end,2) > maxFrequency/3
+    indexTonicStart = find(indexTonic(:,2),1,'first')
+    tonicStart = spikeRateMinute(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
+    tonicStartTime = spikeRateMinute (tonicStart,:)
+    
+    %Clonic-like firing
+    indexClonic = spikeRateMinute(2:end,2) > maxFrequency/1.33
+    indexClonicStart = find(indexClonic(:,2),1,'first')
+    clonicStart = spikeRateMinute(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
+    
+    
+    %using intensity
+    maxIntensity = max(intensity)
+    
+    %Tonic-like firing
+    indexTonic = intensity(2:end,2) > maxIntensity/3
+    indexTonicStart = find(indexTonic(:,2),1,'first')
+    intensity(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
+    
+    %Clonic-like firing
+    indexClonic = intensity(2:end,2) > maxIntensity/1.33
+    indexClonicStart = find(indexClonic(:,2),1,'first')
+    intensity(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
+    
+    %k-means clustering
+    featureSet = intensity(:,2);
+     indexIntensity = kmeans(featureSet, 3);
+     
+     figure
+     gscatter(featureSet, featureSet, idx)
+    
+    
+    
     %m calculation
         
 %     %segments of SLE
@@ -263,23 +302,20 @@ for i = 1:size(events,1)
     
                 
     %% Optional: plot vectors for Troubleshooting            
-    if userInput(5) == 1                    
-                
+    if userInput(5) == 1
         %Plot Figure
         figHandle = figure;
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', sprintf ('Epileptiform Event #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize')); 
-      
-        %Plot Frequency               
+                 
         subplot (2,1,1)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);         
-
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
         %Labels
         title (sprintf('LFP Recording, Epileptiform Event #%d | Frequency Change over time', i));
         ylabel ('mV');
         xlabel ('Time (sec)');   
-        %Plot Frequency Content
+        %Plot Frequency Feature
         yyaxis right
         plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'MarkerFaceColor', 'c')
         plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'k')
@@ -288,24 +324,36 @@ for i = 1:size(events,1)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency')
         legend ('Location', 'northeastoutside')
         
-        %Plot Intensity
         subplot (2,1,2)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);         
-        
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);                 
         %Labels
         title ('Intensity Change over time');
         ylabel ('mV');
         xlabel ('Time (sec)');   
-        %Plot Intensity Content
+        %Plot Intensity Feature
         yyaxis right
         plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'MarkerFaceColor', 'm')
         plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'k')
+        
+%         index2 = intensity(:,3)==2;
+%         
+%         plot (intensity(index2,1)/frequency, intensity(index2,2), 'o', 'color', 'cyan', 'MarkerFaceColor', 'black')
+%         
+%         plot (intensity(index2,1)/frequency, intensity(index2,2), 'o')
+% 
+%         plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'MarkerFaceColor', 'm')
+%         plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'k')
+% 
+
+        
+
         ylabel ('intensity/minute');
         set(gca,'fontsize',16)
         set(gca,'fontsize',14)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Intensity')
         legend ('Location', 'northeastoutside')
-              
+        
+        %Export figures to .pptx
         exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
         exportToPPTX('addpicture',figHandle);      
         close(figHandle)
@@ -338,6 +386,33 @@ end
 indexSLE = events (:,7) == 1;  %index to indicate which ones are SLEs
 SLE_final = events(indexSLE, :);
 
+%Collect remaining epileptiform event
+indexEpileptiformEvents= events(:,7) == 2; %index to indicate the remaining epileptiform events
+epileptiformEvents = events(indexEpileptiformEvents,:);
+
+% %% Tertiary Classification to detect Class 5 (questionable) seizures
+% if epileptiformEvents (:,1) < 1
+%     fprintf(2,'\nNo questionable epileptiform events were detected in Tertiary Classification.\n')
+% else if epileptiformEvents(:,1) < 2
+%          fprintf(2,'\nLimited epileptiform events were detected for Tertiary Classification; epileptiform events will be classified with hard-coded (floor) thresholds.\n')
+%          epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
+%     else       
+%         epileptiformEvents = classifier_dynamic (epileptiformEvents, userInput(3), 0.6);
+%     end
+% end
+% 
+% %if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
+% if sum(epileptiformEvents (:,7) == 1)<1 || numel(epileptiformEvents (:,7)) < 6    
+%     fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
+%     epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
+% end
+% 
+% indexClass5 = epileptiformEvents(:,7) == 1;
+% SLE_Class5 = epileptiformEvents(indexClass5,:);
+% 
+% indexClass6 = epileptiformEvents(:,7) == 4;
+% SLE_Class6 = epileptiformEvents(indexClass6,:);
+
 %% IIE Crawler: Determine exact onset and offset times | Power Feature
 % indexIIE = events(:,7) == 2;
 % IIE_times = events(indexIIE,1:2);
@@ -369,8 +444,6 @@ end
 %% Struct
 %File Details
 details.FileNameInput = FileName;
-details.inputdir = inputdir;
-details.FileNameOutput = excelFileName;
 details.frequency = frequency;
 %User Input and Hard-coded values
 details.spikeThreshold = (userInput(1));
@@ -420,7 +493,6 @@ if sum(indexArtifact)>0
 else
     L = 'no outliers';
 end
-
 
 %Testing
 %detailsCell = table2cell(T)';  %his will plot all the values in a column.
