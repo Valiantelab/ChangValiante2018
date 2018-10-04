@@ -1,4 +1,4 @@
-function [tonicPhase,figHandle, spikeRateMinute] = findIctalPhases(spikeRateMinute,frequency)
+function [tonicPhase, spikeRateMinute] = findIctalPhases(spikeRateMinute,frequency)
 %findIctalPhases function identifies the different ictal event phases
 %   The ictal event is comprised of the sentinel spike, the preictal phase, 
 %   tonic-like phase, and clonic-like phase. The tonic-like firing is the 
@@ -46,17 +46,17 @@ end
     indexFrequencyAlgo = kmeans(featureSet, k);
     spikeRateMinute(:,4) = indexFrequencyAlgo; 
     
-%     %locate contingous segments above threshold    
-%     for i = 2: numel (indexTonic)
-%         if indexTonic(i) > 0 && indexTonic(i+1) > 0                        
-%             startTonicTime = spikeRateMinute(i);
-%             while indexTonic(i) > 0
-%                 i = i+1;
-%             end            
-%             endTonicTime = spikeRateMinute(i-1);
-%             break
-%         end
-%     end       
+    %locate contingous segments above threshold    
+    for i = 2: numel (indexTonic)
+        if indexTonic(i) > 0 && indexTonic(i+1) > 0                        
+            startTonicTime = spikeRateMinute(i);
+            while indexTonic(i) > 0
+                i = i+1;
+            end            
+            endTonicTime = spikeRateMinute(i-1);
+            break
+        end
+    end       
     
     %Plot Figure
     figHandle = figure;
@@ -112,7 +112,7 @@ end
     set(gca,'fontsize',14)
     legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency - Gp1', 'Frequency - Gp2', 'Frequency - Gp3')
     legend ('Location', 'northeastoutside')
-
+ 
 
 
 %     %using intensity

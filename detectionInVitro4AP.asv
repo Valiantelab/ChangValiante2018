@@ -243,47 +243,8 @@ for i = 1:size(events,1)
     %Calculate peak-to-peak amplitude of epileptiform event
     eventVectorLFP = LFP_centered(eventVector);
     p2pAmplitude = max(eventVectorLFP) - min (eventVectorLFP);
-    events (i,6) = p2pAmplitude;
-    
-    %locating tonic-like and clonic-like firing
-    
-    %using frequency (working)
-    maxFrequency = max(spikeRateMinute)
-    
-    %Tonic-like firing
-    indexTonic = spikeRateMinute(2:end,2) > maxFrequency/3
-    indexTonicStart = find(indexTonic(:,2),1,'first')
-    tonicStart = spikeRateMinute(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
-    tonicStartTime = spikeRateMinute (tonicStart,:)
-    
-    %Clonic-like firing
-    indexClonic = spikeRateMinute(2:end,2) > maxFrequency/1.33
-    indexClonicStart = find(indexClonic(:,2),1,'first')
-    clonicStart = spikeRateMinute(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
-    
-    
-    %using intensity
-    maxIntensity = max(intensity)
-    
-    %Tonic-like firing
-    indexTonic = intensity(2:end,2) > maxIntensity/3
-    indexTonicStart = find(indexTonic(:,2),1,'first')
-    intensity(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
-    
-    %Clonic-like firing
-    indexClonic = intensity(2:end,2) > maxIntensity/1.33
-    indexClonicStart = find(indexClonic(:,2),1,'first')
-    intensity(indexTonicStart+1,:)    %add 1 to add back in the sentinel spike (index) you removed
-    
-    %k-means clustering
-    featureSet = intensity(:,2);
-     indexIntensity = kmeans(featureSet, 3);
-     
-     figure
-     gscatter(featureSet, featureSet, idx)
-    
-    
-    
+    events (i,6) = p2pAmplitude;   
+   
     %m calculation
         
 %     %segments of SLE
@@ -333,19 +294,7 @@ for i = 1:size(events,1)
         %Plot Intensity Feature
         yyaxis right
         plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'MarkerFaceColor', 'm')
-        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'k')
-        
-        index2 = intensity(:,3)==2;
-        
-        plot (intensity(index2,1)/frequency, intensity(index2,2), 'o', 'color', 'cyan', 'MarkerFaceColor', 'black')
-        
-        plot (intensity(index2,1)/frequency, intensity(index2,2), 'o')
-
-        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'MarkerFaceColor', 'm')
-        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'k')
-
-
-        
+        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'k')      
 
         ylabel ('intensity/minute');
         set(gca,'fontsize',16)
@@ -385,6 +334,118 @@ end
 %Collect detected SLEs
 indexSLE = events (:,7) == 1;  %index to indicate which ones are SLEs
 SLE_final = events(indexSLE, :);
+
+%% locating tonic-like and clonic-like firing
+% for i = indexSLE
+%     [tonicPhase, spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});
+% end
+
+  %% Using Michael's Threshold    
+    for i = indexSLE
+  %locate putatitve tonic phase
+    maxFrequency = double(max(spikeFrequency{i}(:,2)));    %Calculate the maximum frequency         
+    indexTonic = spikeFrequency{i}(:,2) > maxFrequency/3; %Locate putative Tonic Phase    
+    spikeFrequency{i}(:,3) = indexTonic;
+    
+    %locate contingous segments above threshold    
+    for i = 2: numel (indexTonic)
+        if indexTonic(i) > 0 && indexTonic(i+1) > 0                        
+            startTonicTime = spikeFrequency{i}(i);
+            while indexTonic(i) > 0
+                i = i+1;
+            end            
+            endTonicTime = spikeFrequency{i}(i-1);
+            break
+        end
+    end          
+    
+    tonicPhase (1,1) = startTonicTime;
+    tonicPhase (1,2) = endTonicTime;
+    
+    %% Using k-means clustering (algo threshold)
+    k = 3;
+    featureSet = spikeFrequency{i}(:,2);
+    indexFrequencyAlgo = kmeans(featureSet, k);
+    spikeFrequency{i}(:,4) = indexFrequencyAlgo; 
+    
+% %     %locate contingous segments above threshold    
+%     for i = 2: numel (indexTonic)
+%         if indexTonic(i) > 0 && indexTonic(i+1) > 0                        
+%             startTonicTime = spikeFrequency{i}(i);
+%             while indexTonic(i) > 0
+%                 i = i+1;
+%             end            
+%             endTonicTime = spikeFrequency{i}(i-1);
+%             break
+%         end
+%     end       
+    
+    %Plot Figure
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('Frequency Feature Set, Epileptiform Event #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize')); 
+
+    subplot (2,1,1)
+    figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
+    %Labels
+    title (sprintf('Epileptiform Event #%d, Michaels Threshold', i));
+    ylabel ('mV');
+    xlabel ('Time (sec)');   
+    %Plot Frequency Feature
+    yyaxis right
+    
+    activeIndex = spikeFrequency{i}(:,3) == 1;
+    inactiveIndex = spikeRateMinute(:,3) == 0;
+    
+    plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'MarkerFaceColor', 'cyan')
+    
+    plot (spikeRateMinute(inactiveIndex ,1)/frequency, spikeRateMinute(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
+    plot (spikeRateMinute(inactiveIndex ,1)/frequency, spikeRateMinute(inactiveIndex ,2), 'o', 'color', 'k')
+    
+    plot ([startTonicTime/frequency startTonicTime/frequency], ylim)
+    plot ([endTonicTime/frequency endTonicTime/frequency], ylim)
+    
+    ylabel ('Spike rate/second (Hz)');
+    set(gca,'fontsize',14)
+    legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency above threshold', 'Frequency below threshold')
+    legend ('Location', 'northeastoutside')
+
+    
+    subplot (2,1,2)    
+    figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
+    %Labels
+    title ('Algo Threshold (K-means clustering)');
+    ylabel ('mV');
+    xlabel ('Time (sec)');   
+    %Plot Frequency Feature
+    yyaxis right
+    
+    bottomIndex = spikeRateMinute(:,4) == 3;
+    middleIndex = spikeRateMinute(:,4) == 2;
+    topIndex = spikeRateMinute(:,4) == 1;
+        
+    plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'MarkerFaceColor', 'cyan')    
+    plot (spikeRateMinute(middleIndex ,1)/frequency, spikeRateMinute(middleIndex ,2), 'o', 'MarkerFaceColor', 'yellow')    
+    plot (spikeRateMinute(bottomIndex ,1)/frequency, spikeRateMinute(bottomIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
+    plot (spikeRateMinute(:,1)/frequency, spikeRateMinute(:,2), 'o', 'color', 'k')
+    
+    ylabel ('Spike rate/second (Hz)');
+    set(gca,'fontsize',14)
+    legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency - Gp1', 'Frequency - Gp2', 'Frequency - Gp3')
+    legend ('Location', 'northeastoutside')
+    end
+
+    
+
+
+
+
+
+
+
+
+    
 
 %Collect remaining epileptiform event
 indexEpileptiformEvents= events(:,7) == 2; %index to indicate the remaining epileptiform events
