@@ -404,11 +404,11 @@ SLE_final = events(indexSLE, :);
     tonicPhase (1,1) = startTonicTime;
     tonicPhase (1,2) = endTonicTime;
     
-    %% Using k-means clustering (algo threshold)
+    %% Using k-means clustering (algo threshold) for intensity
     k = 3;
-    featureSet = spikeFrequency{i}(:,2);
-    indexFrequencyAlgo = kmeans(featureSet, k);
-    spikeFrequency{i}(:,4) = indexFrequencyAlgo; 
+    featureSet = intensityPerMinute{i}(:,2);
+    indexIntensityAlgo = kmeans(featureSet, k);
+    intensityPerMinute{i}(:,4) = indexIntensityAlgo; 
     
 % %     %locate contingous segments above threshold    
 %     for i = 2: numel (indexTonic)
@@ -463,18 +463,18 @@ SLE_final = events(indexSLE, :);
     %Plot Frequency Feature
     yyaxis right
     
-    bottomIndex = spikeFrequency{i}(:,4) == 3;
-    middleIndex = spikeFrequency{i}(:,4) == 2;
-    topIndex = spikeFrequency{i}(:,4) == 1;
+    bottomIndex = intensityPerMinute{i}(:,4) == 3;
+    middleIndex = intensityPerMinute{i}(:,4) == 2;
+    topIndex = intensityPerMinute{i}(:,4) == 1;
         
-    plot (spikeFrequency{i}(:,1)/frequency, spikeFrequency{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')    
-    plot (spikeFrequency{i}(middleIndex ,1)/frequency, spikeFrequency{i}(middleIndex ,2), 'o', 'MarkerFaceColor', 'yellow')    
-    plot (spikeFrequency{i}(bottomIndex ,1)/frequency, spikeFrequency{i}(bottomIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
-    plot (spikeFrequency{i}(:,1)/frequency, spikeFrequency{i}(:,2), 'o', 'color', 'k')
+    plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')    
+    plot (intensityPerMinute{i}(middleIndex ,1)/frequency, intensityPerMinute{i}(middleIndex ,2), 'o', 'MarkerFaceColor', 'yellow')    
+    plot (intensityPerMinute{i}(bottomIndex ,1)/frequency, intensityPerMinute{i}(bottomIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
+    plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'color', 'k')
     
-    ylabel ('Spike rate/second (Hz)');
+    ylabel ('Intensity (mW^2/s)');
     set(gca,'fontsize',14)
-    legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency - Gp1', 'Frequency - Gp2', 'Frequency - Gp3')
+    legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Intensity - Gp1', 'Intensity - Gp2', 'Intensity - Gp3')
     legend ('Location', 'northeastoutside')
 
     %Export figures to .pptx
@@ -485,7 +485,7 @@ SLE_final = events(indexSLE, :);
 
     
     % save and close the .PPTX
-    exportToPPTX('saveandclose',sprintf('%s(tonic phase)', excelFileName)); 
+    exportToPPTX('saveandclose',sprintf('%s(freq,intensity)', excelFileName)); 
 
     
 
