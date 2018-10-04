@@ -245,12 +245,12 @@ for i = 1:size(eventTimes,1)
                     meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline calculated from whatever context there is
                 end                 
                 OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
-                offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the offset     
-    %             if offset_loc
+                offset_loc = find(OffsetLocation, 1, 'last'); %Last point (index) is the offset     
+                if offset_loc
                     SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detected new offset time             
-    %             else
-    %                 SLEoffset_final(i,1) = -1;  %This is considered to be an artifact and will be removed (revisit this logic), no idea why I did that 
-    %             end
+                else
+                    SLEoffset_final(i,1) = t(offsetContext(numel(OffsetLocation)));  %If the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.
+                end
 
                 %Locating the offset time - using absolute value signal
 %                 meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
@@ -262,8 +262,14 @@ for i = 1:size(eventTimes,1)
                 end                                    
                 OffsetLocationAbs = powerFeatureLowPassFilteredAbs2(offsetContext) > meanOffsetAbsBaseline/2; 
                 offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
-                offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location         
-                SLEoffset_final_Abs(i,1) = t(offsetSLE_2_Abs);
+                
+                if offset_loc_Abs
+                    offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
+                else
+                    offsetSLE_2_Abs = (offsetContext(numel(OffsetLocationAbs)));  %In case the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.                    
+                end                
+                         
+                SLEoffset_final_Abs(i,1) = t(offsetSLE_2_Abs);  %Store time of the new offset location
             end
         end
     end
