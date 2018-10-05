@@ -383,32 +383,76 @@ SLE_final = events(indexSLE, :);
     for i = index'
   %locate putatitve tonic phase
     maxFrequency = double(max(spikeFrequency{i}(:,2)));    %Calculate the maximum frequency         
-    indexTonic = spikeFrequency{i}(:,2) >= maxFrequency/4; %Locate putative Tonic Phase    
+    indexTonic = spikeFrequency{i}(:,2) >= maxFrequency/3; %Locate putative Tonic Phase    
     spikeFrequency{i}(:,3) = indexTonic;
-    
+
     %locate contingous segments above threshold    
-    for j = 2: numel (indexTonic)
-        if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
+    for j = 2: numel (indexTonic) 
+        if j+1 > numel(indexTonic)
+            %Tonic-like firing
+            j = find(indexTonic(2:end),1,'first');
             startTonicTime = spikeFrequency{i}(j);
-            while indexTonic(j) > 0
-                j = j+1;
-                if j > numel(indexTonic)
-                    j = numel(indexTonic);
-                end                                    
-            end            
-            endTonicTime = spikeFrequency{i}(j-1);
-            break
-        end
-    end          
+            fprintf(2,'\nWarning: Start of Tonic Phase not detected in SLE #%d from File: %s. Review your data.\n', i, FileName)                    
+            endTonicTime = spikeFrequency{i}(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
+        else                        
+            if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
+                startTonicTime = spikeFrequency{i}(j);
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & spikeFrequency{i}(j,2) ~= 0;
+                    j = j+1;
+                    if j+1 > numel(indexTonic)
+                        j = numel(indexTonic);
+                        endTonicTime = spikeFrequency{i}(j);    %if no tonic period is found; just state whole ictal event as a tonic phase
+                        fprintf(2,'\nWarning: No clonic period detected in SLE #%d from File: %s. Review your data.\n', i, FileName)                    
+                        break
+                    end                                    
+                end            
+                endTonicTime = spikeFrequency{i}(j-1);
+                break
+            end
+        end        
+    end  
+    
+%     %locate contingous segments above threshold    
+%     for j = 2: numel (indexTonic)
+%         if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
+%             startTonicTime = spikeFrequency{i}(j);
+%             while and(~and(spikeFrequency{i}(j,2) == 1, spikeFrequency{i}(j+1,2) == 1), spikeFrequency{i}(j,2) ~= 0);
+%                 j = j+1;
+%                 if j > numel(indexTonic)
+%                     j = numel(indexTonic);
+%                 end                                    
+%             end            
+%             endTonicTime = spikeFrequency{i}(j-1);
+%             break
+%         end
+%     end      
+    
+%     %locate contingous segments above threshold    
+%     for j = 2: numel (indexTonic)
+%         if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
+%             startTonicTime = spikeFrequency{i}(j);
+%             while indexTonic(j) > 0
+%                 j = j+1;
+%                 if j > numel(indexTonic)
+%                     j = numel(indexTonic);
+%                 end                                    
+%             end            
+%             endTonicTime = spikeFrequency{i}(j-1);
+%             break
+%         end
+%     end          
     
     tonicPhase (1,1) = startTonicTime;
     tonicPhase (1,2) = endTonicTime;
     
     %% Using k-means clustering (algo threshold) for intensity
-    k = 3;
-    featureSet = intensityPerMinute{i}(:,2);
+    k = 2;
+    maxIntensity = double(max(intensityPerMinute{i}(:,2)));
+    indexAnalyze = intensityPerMinute{i}(:,2) > (maxIntensity/10); 
+    featureSet = intensityPerMinute{i}(indexAnalyze,2);
     indexIntensityAlgo = kmeans(featureSet, k);
-    intensityPerMinute{i}(:,4) = indexIntensityAlgo; 
+    intensityPerMinute{i}(:,4) = 0; 
+    intensityPerMinute{i}(indexAnalyze,4) = indexIntensityAlgo; 
     
 % %     %locate contingous segments above threshold    
 %     for i = 2: numel (indexTonic)
@@ -463,13 +507,18 @@ SLE_final = events(indexSLE, :);
     %Plot Frequency Feature
     yyaxis right
     
+    fourthIndex = intensityPerMinute{i}(:,4) == 4;
     bottomIndex = intensityPerMinute{i}(:,4) == 3;
     middleIndex = intensityPerMinute{i}(:,4) == 2;
     topIndex = intensityPerMinute{i}(:,4) == 1;
-        
+    zeroIndex = intensityPerMinute{i}(:,4) == 0;
+
     plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')    
     plot (intensityPerMinute{i}(middleIndex ,1)/frequency, intensityPerMinute{i}(middleIndex ,2), 'o', 'MarkerFaceColor', 'yellow')    
     plot (intensityPerMinute{i}(bottomIndex ,1)/frequency, intensityPerMinute{i}(bottomIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
+    plot (intensityPerMinute{i}(fourthIndex ,1)/frequency, intensityPerMinute{i}(fourthIndex ,2), 'o', 'MarkerFaceColor', 'black')
+    plot (intensityPerMinute{i}(zeroIndex ,1)/frequency, intensityPerMinute{i}(zeroIndex ,2), 'o', 'MarkerFaceColor', 'black')
+
     plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'color', 'k')
     
     ylabel ('Intensity (mW^2/s)');
