@@ -239,10 +239,10 @@ for i = 1:size(eventTimes,1)
 %                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency)));    %Mean baseline of the first 1.5 s
 %                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext));    %Mean baseline of the first 1.5 s
                 
-                if numel(offsetContext) > calculateMeanOffsetBaseline
-                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
+                if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
+                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s                    
                 else
-                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline calculated from whatever context there is
+                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline calculated from whatever context there is                    
                 end                 
                 OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
                 offset_loc = find(OffsetLocation, 1, 'last'); %Last point (index) is the offset     
@@ -255,7 +255,7 @@ for i = 1:size(eventTimes,1)
                 %Locating the offset time - using absolute value signal
 %                 meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
 
-                if numel(offsetContext) > calculateMeanOffsetBaseline
+                if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
                     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
                 else
                     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline calculated from whatever context there is
