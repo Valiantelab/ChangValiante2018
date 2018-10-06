@@ -1,63 +1,73 @@
-function [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, plotFigures, frequencyFloorThreshold)
+function [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, plotFigures, frequencyFloorThreshold, IIE_classifier)
 %classifier_dynamic will classify a population (>6) of epilpeptiform events
 %into two different populations (IIEs and SLEs)
 %   The threshold to classify populations of epileptiform events are based
 %   are drawn from three different methods of calculation, hard-codes based
 %   on the in vitro ictal event population, Michael's calculation based on
 %   emperical data, and k-means clustering (in combinations with the widest
-%   gap). Note: threshold and duration do not require any floors, they tend
+%   gap). Note: intensity and duration do not require any floors, they tend
 %   to balance each other out, however, the floor threshold for intensity
 %   is set to 1 mV^2/s. I put this in place incase it was analyzing only
 %   interictal spikes and events.
 
 %% Set Variables according to Michael's terms
 userInput(3) = plotFigures;  %1 = yes; 0 = no
-indexEventsToAnalyze = events(:,7)<4;
-
-if nargin < 2
-    userInput(3) = 0;    %by default don't plot any figures
-    frequencyFloorThreshold = 1;    %Hz
-end
 
 if nargin < 3
-    frequencyFloorThreshold = 1;    %by default don't plot any figures
+    userInput(3) = 0;    %by default don't plot any figures
+    frequencyFloorThreshold = 1;    %Hz
+    IIE_classifier = 0;
 end
 
-%% Stage 1: Artifact (Amplitude Outlier) removal 
-%Remove outliers based on peak-to-peak amplitude
-featureSet = events(:,6);   %peak-to-peak amplitude values
+if nargin < 4
+    frequencyFloorThreshold = 1;    %by default don't plot any figures
+    IIE_classifier = 0;
+end
 
-%algo-determined threshold | Find widest gap (below the detected outlier)
-thresholdAmplitudeOutlier = findThresholdArtifact (featureSet);
+if IIE_classifier
+    indexEventsToAnalyze = events(:,7)==2;  %if it exists
+else
+    indexEventsToAnalyze = events(:,7)<4;   %if it doesn't exist
+end
 
-%segment events into Artifacts and Epileptiform Events, using algo-deteremined threshold
-indexArtifact = featureSet>thresholdAmplitudeOutlier;
-index = indexArtifact; %Generic Terms
 
-if sum(index)>0   
-    %Plot figure if artifacts detected within events
-    if userInput(3) == 1      
-        figArtifact = figure;
-        gscatter(events(:,6) , events(:,6), index);    %plot index determined by Michael's Threshold
-        hold on
-        %plot the determined threshold values 
-        plot ([thresholdAmplitudeOutlier thresholdAmplitudeOutlier], ylim);
-        %Label
-        set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', 'Remove events containing artifact, using Peak-to-Peak Amplitude (mV)'); %select the name you want
-        title ('Unsupervised classication, using k-means clustering');
-        ylabel ('Peak-to-Peak Amplitude (mV)');
-        xlabel ('Peak-to-Peak Amplitude (mV)');   
-        legend('Epileptiform Events', 'Artifact', 'Michaels Artifact Threshold')
-        legend ('Location', 'southeast')
-        set(gca,'fontsize',12)
+if IIE_classifier == 0    
+    %% Stage 1: Artifact (Amplitude Outlier) removal
+    %Remove outliers based on peak-to-peak amplitude
+    featureSet = events(:,6);   %peak-to-peak amplitude values
+
+    %algo-determined threshold | Find widest gap (below the detected outlier)
+    thresholdAmplitudeOutlier = findThresholdArtifact (featureSet);
+
+    %segment events into Artifacts and Epileptiform Events, using algo-deteremined threshold
+    indexArtifact = featureSet>thresholdAmplitudeOutlier;
+    index = indexArtifact; %Generic Terms
+
+    if sum(index)>0   
+        %Plot figure if artifacts detected within events
+        if userInput(3) == 1      
+            figArtifact = figure;
+            gscatter(events(:,6) , events(:,6), index);    %plot index determined by Michael's Threshold
+            hold on
+            %plot the determined threshold values 
+            plot ([thresholdAmplitudeOutlier thresholdAmplitudeOutlier], ylim);
+            %Label
+            set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+            set(gcf,'Name', 'Remove events containing artifact, using Peak-to-Peak Amplitude (mV)'); %select the name you want
+            title ('Unsupervised classication, using k-means clustering');
+            ylabel ('Peak-to-Peak Amplitude (mV)');
+            xlabel ('Peak-to-Peak Amplitude (mV)');   
+            legend('Epileptiform Events', 'Artifact', 'Michaels Artifact Threshold')
+            legend ('Location', 'southeast')
+            set(gca,'fontsize',12)
+        end
+
+        %Remove artifact
+        events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
+        events (indexArtifact, 12) = 1;
+        %Make new index without the artifacts
+        indexEventsToAnalyze = events(:,7)<4;
     end
-
-    %Remove artifact
-    events (indexArtifact, 7) = 4;  %%Label the event containing an artifact as '4'
-    events (indexArtifact, 12) = 1;
-    %Make new index without the artifacts
-    indexEventsToAnalyze = events(:,7)<4;
 end
 
 %% Stage 2: Unsupervised Classifier 
@@ -167,18 +177,30 @@ events (:,10) = indexIntensity; %store in array
     legend ('Location', 'southeast')
     set(gca,'fontsize',12)
     end
- 
-%% Initial Classifier (Filter)
-for i = 1: numel(events(:,1))
-    if (indexFrequency(i) + indexIntensity(i)) == 2 & events(i,7) <4    %and not an artifact
-        events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified
-    else if (indexFrequency(i) + indexIntensity(i)) < 2 & events(i,7) <4
+
+    %% Switch to alternate function between SLE classifier and IIE classifier
+if IIE_classifier == 0    
+    %% Initial SLE Classifier (Filter)
+    for i = 1: numel(events(:,1))
+        if (indexFrequency(i) + indexIntensity(i)) == 2 & events(i,7) <4    %and not an artifact
+            events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified
+        else if (indexFrequency(i) + indexIntensity(i)) < 2 & events(i,7) <4
+                events (i,7) = 2;   %2 = IIE
+            else            
+                events (i,7) = 4;   %4 = event contains an artifact
+            end
+        end    
+    end
+else
+    %% Initial IIE Classifier (Filter)
+    for i = 1: numel(events(:,1))
+        if (indexFrequency(i) + indexIntensity(i)) == 2 & events(i,7) <4    %and not an artifact
+            events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified; 4 = artifact; 5 = Class 5 SLE (questionable)
+        else
             events (i,7) = 2;   %2 = IIE
-        else            
-            events (i,7) = 4;   %4 = event contains an artifact
-        end
-    end    
-end
+        end        
+    end
+end   
 
 indexPutativeSLE = events (:,7) == 1;  %classify which ones are SLEs
 putativeSLE = events(indexPutativeSLE, :);
@@ -244,18 +266,29 @@ events(:,11) = indexDuration;
     set(gca,'fontsize',12)
     end
 
-%% Final Classifier (assignment)
-
-for i = 1: numel(events(:,1))
-    if indexFrequency(i) + indexIntensity(i) + indexDuration(i) == 3 & events (i,7) <4
-        events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified.
-        else if indexFrequency(i) + indexIntensity(i) + indexDuration(i) < 3 & events (i,7) < 4
-                events (i,7) = 2;
-                else
-                events (i,7) = 4;
-            end
+%% Final Classifier (assignment) | Swtich to alternate the function between SLE vs IIE classifier
+if IIE_classifier == 0
+    %Final SLE Classifier
+    for i = 1: numel(events(:,1))
+        if indexFrequency(i) + indexIntensity(i) + indexDuration(i) == 3 & events (i,7) <4
+            events (i,7) = 1;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified.
+            else if indexFrequency(i) + indexIntensity(i) + indexDuration(i) < 3 & events (i,7) < 4
+                    events (i,7) = 2;
+                    else
+                    events (i,7) = 4;
+                end
+        end
+    end        
+else
+    %Final IIE Classifier
+    for i = 1: numel(events(:,1))
+        if indexFrequency(i) + indexIntensity(i) + indexDuration(i) == 3 & events (i,7) <4
+            events (i,7) = 5;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified; 4 = artifact; 5 = class 5 (questionable) seizure 
+        else
+            events (i,7) = 2;
+        end
     end
-end        
+end 
 
-end
+
 

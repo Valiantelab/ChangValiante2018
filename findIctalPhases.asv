@@ -5,16 +5,18 @@ function [eventPhases,spikeFrequency] = findIctalPhases(spikeFrequency,frequency
 %   period of the ictal event where there is contiguous frequency (>2 s)
 %   above or equal to 1/3 maximum frequency of the event. The tonic phase
 %   is considered over when there is continguous frequency (>2 s) below 1/3
-%   maximum frequency of the event or if frequency is 0 for at least 1 s.
-%   The clonic phase is characterized as the period following the tonic
+%   maximum frequency of the event or if it becomes 0 for 
+%   clonic-like phase is characterized as the period following the tonic
 %   phase when the frequency is inconsistent interspersed with values of 0
-%   throughout the phase. The preictal phase is the period between the
+%   throughout the phase. The preictal phase is the period of time between the
 %   sentinel spike and start of the tonic-phase. This function uses the
 %   frequency feature set (spike rate per second) to chracterize the
-%   different phases of an ictal event. If no tonic phase is identified 
-%   The intensity feature set can also reveal additional insights into the 
-%   shape and morphology of the ictal event. However, it is currently not
-%   implemented. Additional Notes about the output:
+%   different phases of an ictal event. If no tonic phase is identified
+
+The intensity feature set can
+%   reveal additional insights into the shape and morphology of the ictal
+%   event. However, it is not currently implemented. Additional Notes about
+%   the output:
 %     eventPhases(1) = startTonicTime;
 %     eventPhases(2) = endTonicTime;
 %     eventPhases(3) = classification;

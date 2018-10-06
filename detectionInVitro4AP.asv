@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -130,7 +130,7 @@ if isempty(epileptiformLocation)
     return
 end
 
-%% Stage 0: Initial Classifier (duration)
+%% Classify (duration)
 %Putative IIS
 indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
@@ -160,7 +160,6 @@ if userInput(5) == 1
         % If PowerPoint already started, then close first and then open a new one
         exportToPPTX('close');
     end
-
     exportToPPTX('new','Dimensions',[12 6], ...
         'Title','Epileptiform Event Detector V4.0', ...
         'Author','Michael Chang', ...
@@ -190,7 +189,7 @@ if userInput(5) == 1
                  'Horiz','left', 'Vert','middle', 'FontSize', 16);      
 end    
 
-%Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-peak Amplitude
+%Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
 for i = 1:size(events,1)   
     %make epileptiform event vector
     onsetTime = int64(events(i,1)*frequency);
@@ -204,7 +203,7 @@ for i = 1:size(events,1)
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
     end
     
-    %Calculate the spiking rate for epileptiform events
+    %Calculate the spiking rate and intensity (per sec) for epileptiform events
     clear spikeRateMinute intensity
     for j = 1:sleDuration
         startWindow = onsetTime+((windowSize*frequency)*(j-1));
@@ -228,39 +227,21 @@ for i = 1:size(events,1)
     
     %Calculate average spike rate of epileptiform event
     events (i,4) = mean(spikeRateMinute(:,2));
-    %the two halves
-    events (i,13) = mean(spikeRateMinute(1:round(sleDuration/2),2));
-    events (i,14) = mean(spikeRateMinute(round(sleDuration/2):sleDuration,2));
-
+   
     %Calculate average intensity of epileptiform event
     totalPower(i) = sum(powerFeature(eventVector));
     events (i,5) = totalPower(i) /sleDuration;    
-    %The two halves
-    midpoint = ((eventVector(1)+eventVector(end))/2);
-    events (i,16) = sum(powerFeature(eventVector(1):midpoint)) / (sleDuration/2);    
-    events (i,17) = sum(powerFeature(midpoint:eventVector(end))) / (sleDuration/2);
     
     %Calculate peak-to-peak amplitude of epileptiform event
     eventVectorLFP = LFP_centered(eventVector);
     p2pAmplitude = max(eventVectorLFP) - min (eventVectorLFP);
-    events (i,6) = p2pAmplitude;   
-   
-    %m calculation
-        
-%     %segments of SLE
-%     duration = numel(spikeRateMinute(:,2))
-%     window = (duration/10)
-%     %Frequency Features| preallocate
-%     events (i,13) = mean(spikeRateMinute(1:round(1*window),2));
-%     events (i,14) = mean(spikeRateMinute(1*window:2*window,2));
-%     events (i,15) = mean(spikeRateMinute(2*window:5*window,2));
-%     events (i,16) = mean(spikeRateMinute(5*window:10*window,2));
-%     %intensity Features
-%     events (i,17) = mean(intensity(1:1*window,2));
-%     events (i,18) = mean(intensity(1*window:2*window,2));
-%     events (i,19) = mean(intensity(2*window:5*window,2));
-%     events (i,20) = mean(intensity(5*window:10*window,2));
+    events (i,6) = p2pAmplitude;     
     
+    %Locate tonic phase, if present
+    [eventPhases, spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});
+    
+    
+    %m calculation   
                 
     %% Optional: plot vectors for Troubleshooting            
     if userInput(5) == 1
@@ -309,12 +290,12 @@ for i = 1:size(events,1)
     end        
 end
 
-    if userInput(5) == 1   
-        % save and close the .PPTX
-        exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
-    end
+if userInput(5) == 1   
+    % save and close the .PPTX
+    exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
+end
     
-%% Secondary classification to detect class 1 seizure
+%% Classify (extracted features)
 if events (:,1) < 1
     fprintf(2,'\nNo epileptiform events were detected.\n')
 else if events(:,1) < 2
@@ -331,13 +312,7 @@ if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
     [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end
     
-%Collect detected SLEs
-indexSLE = events (:,7) == 1;  %index to indicate which ones are SLEs
-SLE_final = events(indexSLE, :);
-
-
-
-%% locating tonic-like and clonic-like firing
+%% Confirm class 1 SLEs, by locating tonic-like and clonic-like firing
 % for i = indexSLE
 %     [tonicPhase, spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});
 % end
@@ -377,73 +352,58 @@ SLE_final = events(indexSLE, :);
     exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 16);    
              
-  %% Using Michael's Threshold    
-  
-  [index, value] = find(indexSLE>0);
-    for i = index'
-  %locate putatitve tonic phase
-    maxFrequency = double(max(spikeFrequency{i}(:,2)));    %Calculate the maximum frequency         
-    indexTonic = spikeFrequency{i}(:,2) >= maxFrequency/3; %Locate putative Tonic Phase    
-    spikeFrequency{i}(:,3) = indexTonic;
+  %% Locate SLE phases
+    for i = indexSLE'
+  %Use freqency feature set to classify SLEs
+    maxFrequency = double(max(spikeFrequency{i}(:,2)));    %Calculate Maximum frequency during the SLE
+    indexTonic = spikeFrequency{i}(:,2) >= maxFrequency/3; %Use Michael's threshold to seperate frequency feature set into two populations, high and low.
+    spikeFrequency{i}(:,3) = indexTonic;    %store Boolean index 
 
-    %locate contingous segments above threshold    
-    for j = 2: numel (indexTonic) 
-        if j+1 > numel(indexTonic)
-            %Tonic-like firing
-            j = find(indexTonic(2:end,2),1,'first')     
-        else
-            
-            
-        if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
-            startTonicTime = spikeFrequency{i}(j);
-            while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & spikeFrequency{i}(j,2) ~= 0;
-                j = j+1;
-                if j+1 > numel(indexTonic)
-                    j = numel(indexTonic);
-                    endTonicTime = spikeFrequency{i}(j);    %if no tonic period is found; just state whole ictal event as a tonic phase
-                    fprintf(2,'\nWarning: No clonic period detected in SLE #%d from File: %s. Review your data.\n', i, FileName)                    
-                    break
-                end                                    
-            end            
-            endTonicTime = spikeFrequency{i}(j-1);
-            break
-        end
-    end  
+    %locate start of Tonic phase | Contingous segments above threshold    
+    for j = 2: numel (indexTonic) %slide along the SLE; ignore the first spike, which is the sentinel spike
+        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, reclassify event as a IIE            
+            j = find(indexTonic(2:end),1,'first');  %Take the first second frequency is 'high' as onset if back-to-back high frequency are not found
+            startTonic = spikeFrequency{i}(j);  %store the onset time                                   
+            endTonic = spikeFrequency{i}(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
+            events (i,7) = 2;   %Update the event's classification as a IIE (since its lacking a tonic phase)
+            events (i,13) = 0;
+            fprintf(2,'\nWarning: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
+        else                        
+            if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
+                startTonic = spikeFrequency{i}(j);  %store the onset time
+                events(i,13) = 1;   %1 = tonic-clonic SLE;   2 = tonic-only
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & spikeFrequency{i}(j,2) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                    j = j+1;    %keep sliding along the SLE until the statement above is false.
+                    if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase
+%                         endTonic = spikeFrequency{i}(j);    %if no tonic period is found; just state whole ictal event as a tonic phase
+                        events(i,13) = 2;   %1 = SLE;   2 = Tonic-only                        
+                        fprintf(2,'\nWarning: No clonic period detected in SLE #%d from File: %s. Review your data.\n', i, FileName)                        
+                        break
+                    end                                    
+                end            
+                endTonic = spikeFrequency{i}(j-1);
+                break
+            end
+        end        
+    end        
+
+%     %Label all the features of the SLE
+%     startSLETime = spikeFrequency{i}(1,1);
+%     endSLETime = spikeFrequency{i}(end,1);
+%     startTonicTime = startTonic/frequency;
+%     endTonicTime = endTonic/frequency;
+%     
+%     preictalPhase = startTonicTime - startSLETime;
+%     tonicPhase = endTonicTime  - startTonicTime;
+%     clonicPhase = endSLETime - endTonicTime; 
+%     
+%     events(i,13) = spikeFrequency{i}(end,1)
+%     events(i,14) =
+%     events(i,15) = 
     
-%     %locate contingous segments above threshold    
-%     for j = 2: numel (indexTonic)
-%         if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
-%             startTonicTime = spikeFrequency{i}(j);
-%             while and(~and(spikeFrequency{i}(j,2) == 1, spikeFrequency{i}(j+1,2) == 1), spikeFrequency{i}(j,2) ~= 0);
-%                 j = j+1;
-%                 if j > numel(indexTonic)
-%                     j = numel(indexTonic);
-%                 end                                    
-%             end            
-%             endTonicTime = spikeFrequency{i}(j-1);
-%             break
-%         end
-%     end      
-    
-%     %locate contingous segments above threshold    
-%     for j = 2: numel (indexTonic)
-%         if indexTonic(j) > 0 && indexTonic(j+1) > 0                        
-%             startTonicTime = spikeFrequency{i}(j);
-%             while indexTonic(j) > 0
-%                 j = j+1;
-%                 if j > numel(indexTonic)
-%                     j = numel(indexTonic);
-%                 end                                    
-%             end            
-%             endTonicTime = spikeFrequency{i}(j-1);
-%             break
-%         end
-%     end          
-    
-    tonicPhase (1,1) = startTonicTime;
-    tonicPhase (1,2) = endTonicTime;
-    
-    %% Using k-means clustering (algo threshold) for intensity
+    if userInput(5) == 1     
+    %% Using k-means clustering (algo threshold) for intensity | Store for future use (when you know what to do with it)
     k = 2;
     maxIntensity = double(max(intensityPerMinute{i}(:,2)));
     indexAnalyze = intensityPerMinute{i}(:,2) > (maxIntensity/10); 
@@ -455,11 +415,11 @@ SLE_final = events(indexSLE, :);
 % %     %locate contingous segments above threshold    
 %     for i = 2: numel (indexTonic)
 %         if indexTonic(i) > 0 && indexTonic(i+1) > 0                        
-%             startTonicTime = spikeFrequency{i}(i);
+%             startTonic = spikeFrequency{i}(i);
 %             while indexTonic(i) > 0
 %                 i = i+1;
 %             end            
-%             endTonicTime = spikeFrequency{i}(i-1);
+%             endTonic = spikeFrequency{i}(i-1);
 %             break
 %         end
 %     end       
@@ -487,8 +447,8 @@ SLE_final = events(indexSLE, :);
     plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
     plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'color', 'k')
     
-    plot ([startTonicTime/frequency startTonicTime/frequency], ylim)
-    plot ([endTonicTime/frequency endTonicTime/frequency], ylim)
+    plot ([startTonic/frequency startTonic/frequency], ylim)
+    plot ([endTonic/frequency endTonic/frequency], ylim)
     
     ylabel ('Spike rate/second (Hz)');
     set(gca,'fontsize',14)
@@ -529,39 +489,225 @@ SLE_final = events(indexSLE, :);
     exportToPPTX('addpicture',figHandle);      
     close(figHandle)
     end
-
-    
+    end
+        
+if userInput(5) == 1
     % save and close the .PPTX
     exportToPPTX('saveandclose',sprintf('%s(freq,intensity)', excelFileName)); 
-
+end
     
+%Collect detected SLEs
+%indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
+indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
+SLE_final = events(indexSLE, [1:8 13]);
 
 %Collect remaining epileptiform event
-indexEpileptiformEvents= events(:,7) == 2; %index to indicate the remaining epileptiform events
+% indexEpileptiformEvents= events(:,7) == 2; %Boolean index to indicate the remaining epileptiform events
+indexEpileptiformEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
 epileptiformEvents = events(indexEpileptiformEvents,:);
 
-% %% Tertiary Classification to detect Class 5 (questionable) seizures
-% if epileptiformEvents (:,1) < 1
-%     fprintf(2,'\nNo questionable epileptiform events were detected in Tertiary Classification.\n')
-% else if epileptiformEvents(:,1) < 2
-%          fprintf(2,'\nLimited epileptiform events were detected for Tertiary Classification; epileptiform events will be classified with hard-coded (floor) thresholds.\n')
-%          epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
-%     else       
-%         epileptiformEvents = classifier_dynamic (epileptiformEvents, userInput(3), 0.6);
-%     end
-% end
+%% Tertiary Classification to detect Class 5 (questionable) seizures
+if epileptiformEvents (:,1) < 1
+    fprintf(2,'\nNo questionable epileptiform events were detected in Tertiary Classification.\n')
+else if epileptiformEvents(:,1) < 2
+         fprintf(2,'\nLimited epileptiform events were detected for Tertiary Classification; epileptiform events will be classified with hard-coded (floor) thresholds.\n')
+         epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
+    else       
+        epileptiformEvents = classifier_dynamic (epileptiformEvents, userInput(3), 0.6, 1);
+    end
+end
+
+%if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
+if sum(epileptiformEvents (:,7) == 5)<1 || numel(epileptiformEvents (:,7)) < 6    
+    fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
+    epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
+end
+
+%% Quaternary Classifier to confirm Class 5 SLEs detected have a tonic phase
+if userInput(5) == 1
+ %% Creating powerpoint slide
+    isOpen  = exportToPPTX();
+    if ~isempty(isOpen),
+        % If PowerPoint already started, then close first and then open a new one
+        exportToPPTX('close');
+    end
+
+    exportToPPTX('new','Dimensions',[12 6], ...
+        'Title','Characterize Ictal Events', ...
+        'Author','Michael Chang', ...
+        'Subject','Automatically generated PPTX file', ...
+        'Comments','This file has been automatically generated by exportToPPTX');
+
+    exportToPPTX('addslide');
+    exportToPPTX('addtext', 'Detecting the tonic-like firing period', 'Position',[2 1 8 2],...
+                 'Horiz','center', 'Vert','middle', 'FontSize', 36);
+    exportToPPTX('addtext', sprintf('File: %s', FileName), 'Position',[3 3 6 2],...
+                 'Horiz','center', 'Vert','middle', 'FontSize', 20);
+    exportToPPTX('addtext', 'By: Michael Chang and Christopher Lucasius', 'Position',[4 4 4 2],...
+                 'Horiz','center', 'Vert','middle', 'FontSize', 20);     
+
+    exportToPPTX('addslide');
+    exportToPPTX('addtext', 'Legend', 'Position',[0 0 4 1],...
+                 'Horiz','left', 'Vert','middle', 'FontSize', 24);
+    exportToPPTX('addtext', 'Epileptiform spike is average + 6*SD of the baseline', 'Position',[0 1 6 1],...
+                 'Horiz','left', 'Vert','middle', 'FontSize', 14);
+    exportToPPTX('addtext', 'Artifacts are average + 100*SD', 'Position',[0 2 5 1],...
+                 'Horiz','left', 'Vert','middle', 'FontSize', 14);
+    exportToPPTX('addtext', 'SLE onset is the first peak in power (minimum 1/3 of the max amplitude spike)', 'Position',[0 3 5 1],...
+                 'Horiz','left', 'Vert','middle', 'FontSize', 14);
+    exportToPPTX('addtext', 'SLE offset is when power returns below baseline/2', 'Position',[0 4 5 1],...
+                 'Horiz','left', 'Vert','middle', 'FontSize', 14);
+    exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
+                 'Horiz','left', 'Vert','middle', 'FontSize', 16);   
+end
+             
+  %% Locate SLE phases    
+    for i = indexEpileptiformEvents'
+  %Use freqency feature set to classify SLEs
+    maxFrequency = double(max(spikeFrequency{i}(:,2)));    %Calculate Maximum frequency during the SLE
+    indexTonic = spikeFrequency{i}(:,2) >= maxFrequency/3; %Use Michael's threshold to seperate frequency feature set into two populations, high and low.
+    spikeFrequency{i}(:,3) = indexTonic;    %store Boolean index 
+
+    %locate start of Tonic phase | Contingous segments above threshold    
+    for j = 2: numel (indexTonic) %slide along the SLE; ignore the first spike, which is the sentinel spike
+        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, reclassify event as a IIE            
+            j = find(indexTonic(2:end),1,'first');  %Take the first second frequency is 'high' as onset if back-to-back high frequency are not found
+            startTonic = spikeFrequency{i}(j);  %store the onset time                                   
+            endTonic = spikeFrequency{i}(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
+            events (i,7) = 2;   %Update the event's classification as a IIE (since its lacking a tonic phase)
+            events (i,13) = 0;
+            fprintf(2,'\nWarning: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
+        else                        
+             if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
+                startTonic = spikeFrequency{i}(j);  %store the onset time
+                events(i,13) = 1;   %1 = tonic-clonic SLE;   2 = tonic-only
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & spikeFrequency{i}(j,2) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                    j = j+1;    %keep sliding along the SLE until the statement above is false.
+                    if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase
+%                         endTonic = spikeFrequency{i}(j);    %if no tonic period is found; just state whole ictal event as a tonic phase
+                        events(i,13) = 2;   %1 = SLE;   2 = Tonic-only                        
+                        fprintf(2,'\nWarning: No clonic period detected in SLE #%d from File: %s. Review your data.\n', i, FileName)                        
+                        break
+                    end                                    
+                end            
+                endTonic = spikeFrequency{i}(j-1);
+                break
+            end
+        end        
+    end        
+
+%     %Label all the features of the SLE
+%     startSLETime = spikeFrequency{i}(1,1);
+%     endSLETime = spikeFrequency{i}(end,1);
+%     startTonicTime = startTonic/frequency;
+%     endTonicTime = endTonic/frequency;
+%     
+%     preictalPhase = startTonicTime - startSLETime;
+%     tonicPhase = endTonicTime  - startTonicTime;
+%     clonicPhase = endSLETime - endTonicTime; 
+%     
+%     events(i,13) = spikeFrequency{i}(end,1)
+%     events(i,14) =
+%     events(i,15) = 
+    
+    if userInput(5) == 1     
+    %% Using k-means clustering (algo threshold) for intensity | Store for future use (when you know what to do with it)
+%     k = 2;
+%     maxIntensity = double(max(intensityPerMinute{i}(:,2)));
+%     indexAnalyze = intensityPerMinute{i}(:,2) > (maxIntensity/10); 
+%     featureSet = intensityPerMinute{i}(indexAnalyze,2);
+%     indexIntensityAlgo = kmeans(featureSet, k);
+%     intensityPerMinute{i}(:,4) = 0; 
+%     intensityPerMinute{i}(indexAnalyze,4) = indexIntensityAlgo; 
+    
+% %     %locate contingous segments above threshold    
+%     for i = 2: numel (indexTonic)
+%         if indexTonic(i) > 0 && indexTonic(i+1) > 0                        
+%             startTonic = spikeFrequency{i}(i);
+%             while indexTonic(i) > 0
+%                 i = i+1;
+%             end            
+%             endTonic = spikeFrequency{i}(i-1);
+%             break
+%         end
+%     end       
+    
+    %Plot Figure
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('Frequency Feature Set, Epileptiform Event #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize')); 
+
+%     subplot (2,1,1)
+    figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
+    %Labels
+    title (sprintf('Epileptiform Event #%d, Michaels Threshold', i));
+    ylabel ('mV');
+    xlabel ('Time (sec)');   
+    %Plot Frequency Feature
+    yyaxis right
+    
+    activeIndex = spikeFrequency{i}(:,3) == 1;
+    inactiveIndex = spikeFrequency{i}(:,3) == 0;
+    
+    plot (spikeFrequency{i}(:,1)/frequency, spikeFrequency{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')
+    
+    plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
+    plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'color', 'k')
+    
+    plot ([startTonic/frequency startTonic/frequency], ylim)
+    plot ([endTonic/frequency endTonic/frequency], ylim)
+    
+    ylabel ('Spike rate/second (Hz)');
+    set(gca,'fontsize',14)
+    legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency above threshold', 'Frequency below threshold')
+    legend ('Location', 'northeastoutside')
+
+    
+%     subplot (2,1,2)    
+%     figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
+%     %Labels
+%     title ('Algo Threshold (K-means clustering)');
+%     ylabel ('mV');
+%     xlabel ('Time (sec)');   
+%     %Plot Frequency Feature
+%     yyaxis right
+%     
+%     fourthIndex = intensityPerMinute{i}(:,4) == 4;
+%     bottomIndex = intensityPerMinute{i}(:,4) == 3;
+%     middleIndex = intensityPerMinute{i}(:,4) == 2;
+%     topIndex = intensityPerMinute{i}(:,4) == 1;
+%     zeroIndex = intensityPerMinute{i}(:,4) == 0;
 % 
-% %if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
-% if sum(epileptiformEvents (:,7) == 1)<1 || numel(epileptiformEvents (:,7)) < 6    
-%     fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
-%     epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
-% end
+%     plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')    
+%     plot (intensityPerMinute{i}(middleIndex ,1)/frequency, intensityPerMinute{i}(middleIndex ,2), 'o', 'MarkerFaceColor', 'yellow')    
+%     plot (intensityPerMinute{i}(bottomIndex ,1)/frequency, intensityPerMinute{i}(bottomIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
+%     plot (intensityPerMinute{i}(fourthIndex ,1)/frequency, intensityPerMinute{i}(fourthIndex ,2), 'o', 'MarkerFaceColor', 'black')
+%     plot (intensityPerMinute{i}(zeroIndex ,1)/frequency, intensityPerMinute{i}(zeroIndex ,2), 'o', 'MarkerFaceColor', 'black')
 % 
-% indexClass5 = epileptiformEvents(:,7) == 1;
-% SLE_Class5 = epileptiformEvents(indexClass5,:);
-% 
-% indexClass6 = epileptiformEvents(:,7) == 4;
-% SLE_Class6 = epileptiformEvents(indexClass6,:);
+%     plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'color', 'k')
+%     
+%     ylabel ('Intensity (mW^2/s)');
+%     set(gca,'fontsize',14)
+%     legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Intensity - Gp1', 'Intensity - Gp2', 'Intensity - Gp3')
+%     legend ('Location', 'northeastoutside')
+
+    %Export figures to .pptx
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);      
+    close(figHandle)
+    end
+    end
+        
+if userInput(5) == 1
+    % save and close the .PPTX
+    exportToPPTX('saveandclose',sprintf('%s(freq,intensity of IIEs)', excelFileName)); 
+end
+
+%Collect Class 5 SLEs
+indexclass5SLE = find(events(:,7)==5 & events(:,13)>0);
+class5SLE = events(indexclass5SLE,:)
 
 %% IIE Crawler: Determine exact onset and offset times | Power Feature
 % indexIIE = events(:,7) == 2;
