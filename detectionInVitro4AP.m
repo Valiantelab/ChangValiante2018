@@ -53,8 +53,8 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 
 %Label for titles
 excelFileName = FileName(1:8);
-uniqueTitle = '(epileptiformEvents)';
-finalTitle = '(V6,4)';
+uniqueTitle = '(detectedEvents)';
+finalTitle = '(V6,5)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
