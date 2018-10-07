@@ -423,7 +423,7 @@ if userInput(5) == 1
         ylabel ('intensity/minute');
         set(gca,'fontsize',16)
         set(gca,'fontsize',14)
-        legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'lLw intensity')
+        legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'Low intensity')
         legend ('Location', 'northeastoutside')
 
         %Export figures to .pptx

@@ -39,6 +39,9 @@ if numel(spikeFrequency(:,1)) > 3
     for j = 2: numel (indexTonic) %slide along the SLE; ignore the first spike, which is the sentinel spike
         if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, reclassify event as a IIE            
             j = find(indexTonic(2:end),1,'first');  %Take the first second frequency is 'high' as onset if back-to-back high frequency are not found
+                if isempty(j)
+                    j = 1;  %honory position, just to push the function through
+                end                
             startTonic = spikeFrequency(j+1);  %j+1 because you started the find function (line above) starting from position "2:end"
             endTonic = spikeFrequency(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
             classification = 0; % 0 = no tonic phase, 1 = tonic-clonic SLE, 2 - tonic-only        
@@ -50,7 +53,7 @@ if numel(spikeFrequency(:,1)) > 3
                     j = j+1;    %keep sliding along the SLE until the statement above is false.
                     if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
                         j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
-                        classification = 2;   %1 = SLE;   2 = Tonic-only                                                                    
+                        classification = 2;   %1 = SLE;   2 = Tonic-only     
                         break
                     end                                    
                 end            
