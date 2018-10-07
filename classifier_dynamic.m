@@ -25,9 +25,9 @@ if nargin < 4
 end
 
 if IIE_classifier
-    indexEventsToAnalyze = events(:,7)==2;  %if it exists
+    indexEventsToAnalyze = events(:,7)==2;  %Analyze IIEs
 else
-    indexEventsToAnalyze = events(:,7)<4;   %if it doesn't exist
+    indexEventsToAnalyze = events(:,7)<4;   %Analyze SLEs
 end
 
 
@@ -283,9 +283,9 @@ else
     %Final IIE Classifier
     for i = 1: numel(events(:,1))
         if indexFrequency(i) + indexIntensity(i) + indexDuration(i) == 3 & events (i,7) <4
-            events (i,7) = 5;   %1 = SLE; 2 = IIE; 3 = IIS; 0 = unclassified; 4 = artifact; 5 = class 5 (questionable) seizure 
+            events (i,7) = 1.5;   %1 = SLE; 1.5 = Questionable seizure; 2 = IIE; 3 = IIS; 0 = unclassified; 4 = artifact; 
         else
-            events (i,7) = 2;
+            events (i,7) = 2.5;
         end
     end
 end 

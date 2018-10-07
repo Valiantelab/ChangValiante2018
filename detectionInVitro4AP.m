@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -17,7 +17,7 @@ if ~exist('x','var') == 1
     clc
 
     %Manually set File DirectorYou seem really sweet and genuine from your profile. 
-    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -130,7 +130,7 @@ if isempty(epileptiformLocation)
     return
 end
 
-%% Classify (duration)
+%% 1st Classification (Isolate SLE based on duration)
 %Putative IIS
 indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
@@ -202,17 +202,7 @@ for i = 1:size(events,1)
   
 end        
 
-%% Remove mislabelled IIEs and transfer them into IIS array, if present 
-indexReclassify = events(:,15) == -1;   %Locate all the IIEs that are less than 3 seconds; please note that this may affect your classification algorithm.
-
-if sum(indexReclassify)>0
-    reclassifyEvents = (events(indexReclassify, 1:3));   %Put them into an array
-    IIS = [IIS; reclassifyEvents];   %move them into the IIS array
-    %Remove IISs from events array
-%     events(indexReclassify, :) = [];    %This may affect how your classification algorithm works | may have to revisit
-end
-
-%% Classify (extracted features)
+%% 2nd Classificaiton (isolate SLE, IIE, artifacts based on extracted features)
 if events (:,1) < 1
     fprintf(2,'\nNo epileptiform events were detected.\n')
 else if events(:,1) < 2
@@ -229,17 +219,12 @@ if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
     [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end
         
-%Collect detected SLEs
-%indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
-indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
-SLE_final = events(indexSLE, [1:8 13]);
 
-%Collect remaining epileptiform event
+%% 3rd Classification (identify questionable seizures from IIEs based on extracted features)
 % indexEpileptiformEvents= events(:,7) == 2; %Boolean index to indicate the remaining epileptiform events
 indexEpileptiformEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
-epileptiformEvents = events(indexEpileptiformEvents,:);
+epileptiformEvents = events(indexEpileptiformEvents,:); %Collect IIEs 
 
-%% Tertiary Classification, suggested by Taufik to detect Class 5 (questionable) seizures
 if epileptiformEvents (:,1) < 1
     fprintf(2,'\nNo questionable epileptiform events were detected in Tertiary Classification.\n')
 else if epileptiformEvents(:,1) < 2
@@ -250,45 +235,75 @@ else if epileptiformEvents(:,1) < 2
     end
 end
 
-%if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
-if sum(epileptiformEvents (:,7) == 5)<1 || numel(epileptiformEvents (:,7)) < 6    
-    fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
-    epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
-end
+% %if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
+% if sum(epileptiformEvents (:,7) == 5)<1 || numel(epileptiformEvents (:,7)) < 6    
+%     fprintf(2,'\nDynamic Classifier did not detect any IIEs that may be a Questionable SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
+%     epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
+% end
 
-%Recombine outcome into the main events array
+%update the events array with results
 events(indexEpileptiformEvents, 7) = epileptiformEvents(:,7);
 
-%% Quaternary Classifier to confirm all SLEs detected have a tonic phase | At Taufik's suggestion
+%% 4th Classifier (confirm SLEs based on tonic phase) 
 for i = 1:numel(events(:,1))
-    %Class 1 SLEs confirmation
-    if events(i,7) == 1 && events(i,15) == 0
+    %IIE confirmation (previously labeled SLE)
+    if events(i,7) == 1 && events(i,15) == 0    %These are seizures without a tonic phase, definitely a IIE
         events(i,7) = 2;
-        fprintf(2,'\nWarning: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
+        fprintf(1,'\nNote: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
     
-    %IIS confirmation
-    else if events(i,7) == 2 && events(i,15) == 0
-        events(i,7) = 3;
-        fprintf(2,'\nWarning: The Tonic Phase was not detected in Epileptiform Event #%d from File: %s; so it was reclassified as a IIS.\n', i, FileName)
+    %IIE confirmation (correctly labelled IIE)
+    else if events(i,7) == 1.5 && events(i,15) == 0 %these are IIEs without a tonic phase, defintely a IIE
+            events(i,7) = 2;  %Legit IIE   
         
-        %IIE confirmation
-        else if events(i,7) == 5 && events(i,15) == 0
-                events(i,7) = 2; 
-                 
-            else if events(i,7) == 1 && events(i,15) > 0
-                    events(i,7) = 1;
-                else if events(i,7) == 5 && events(i,15) > 0
-                    events(i,7) = 5;                       
-                    else
-                    events(i,7)= 2;
-                    end
+        %IIE confirmation | Hypothesis Testing (these are IIEs incorrectly labelled as IIS
+        else if events(i,7) == 2.5 && events(i,15) > 0
+                events(i,7) = 2.5; 
+                fprintf(2,'\nYour hypothesis failed! A Tonic Phase was detected in IIE Event #%d from File: %s; You hypothesized that lower class (2) IIEs from second round of classification are collection of spikes lacing a tonic phase.\n', i, FileName)
+                            
+            %IIS confirmation (labelled by second round of classification)
+            else if events(i,7) == 2.5 && events(i,15) <= 0   %IIEs without tonic Phase or <3 s duration are really IISs (or a collection of them)
+                events(i,7) = 3;
+                if events(i,15) == -1
+                    fprintf(2,'\nAs previously mentioned: The Epileptiform Event #%d from File: %s is less than 3 s; so it was reclassified as a IIS (3).\n', i, FileName)
+                end
+                else
+                    continue
                 end
             end
         end
     end
-end                             
+end                       
 
-%% Plot all figures for trouble-shooting
+%% Collect and group all detected events
+%SLE
+%indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
+indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
+SLE_final = events(indexSLE, [1:8 13]);
+
+%Questionable SLEs
+indexQuestionableSLE = find(events(:,7)==1.5);
+questionableSLE = events(indexQuestionableSLE,:);
+
+%IIE
+indexEpileptiformEvents= find(events(:,7) == 2); 
+epileptiformEvents = events(indexEpileptiformEvents,:); 
+
+%Hypothesis: IIS w/ tonic phase, do not exist!
+indexHypothesisTesting = find(events(:,7)==2.5);
+hypothesisTesting = events(indexHypothesisTesting,:);
+
+%Epileptiform Spikes (mislabelled as IIEs) will be released back into the wild
+indexEpileptiformSpikes = find(events(:,7)==3);
+epileptiformSpikes = events(indexEpileptiformSpikes,:);
+
+%Artifacts
+indexArtifacts = find(events(:,7)==4);
+artifacts = events (indexArtifacts,:);
+
+%light-triggered events
+% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+
+%% Troubleshooting: Plot all figures 
 if userInput(5) == 1   
     
     %set variables
@@ -305,7 +320,7 @@ if userInput(5) == 1
         'Author','Michael Chang', ...
         'Subject','Automatically generated PPTX file', ...
         'Comments','This file has been automatically generated by exportToPPTX');
-
+    %Add New Slide
     exportToPPTX('addslide');
     exportToPPTX('addtext', 'Troubleshooting: Epileptiform Events detected', 'Position',[2 1 8 2],...
                  'Horiz','center', 'Vert','middle', 'FontSize', 36);
@@ -313,11 +328,11 @@ if userInput(5) == 1
                  'Horiz','center', 'Vert','middle', 'FontSize', 20);
     exportToPPTX('addtext', 'By: Michael Chang and Christopher Lucasius', 'Position',[4 4 4 2],...
                  'Horiz','center', 'Vert','middle', 'FontSize', 20);     
-
+    %Add New Slide
     exportToPPTX('addslide');
     exportToPPTX('addtext', 'Legend', 'Position',[0 0 4 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 24);
-    exportToPPTX('addtext', 'Epileptiform spike is average + 6*SD of the baseline', 'Position',[0 1 6 1],...
+    exportToPPTX('addtext', 'Epileptiform spike is average + 3.9*SD of the baseline', 'Position',[0 1 6 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
     exportToPPTX('addtext', 'Artifacts are average + 100*SD', 'Position',[0 2 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
@@ -326,77 +341,43 @@ if userInput(5) == 1
     exportToPPTX('addtext', 'SLE offset is when power returns below baseline/2', 'Position',[0 4 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
     exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
-                 'Horiz','left', 'Vert','middle', 'FontSize', 16);        
-
+                 'Horiz','left', 'Vert','middle', 'FontSize', 16);          
+             
     %Plot epileptifrom events detected
     for i = 1:size(events,1)                      
+        %Classification labels for plotting
+        [label, classification] = decipher (events,i);
+        
         %Plot Figure
         figHandle = figure;
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', sprintf ('Epileptiform Event #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize')); 
-
+                
         subplot (2,1,1)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
-        %Labels
-
-        if events(i,7) == 1 
-            label = 'SLE';
-        else if events(i,7) == 2
-                label = 'IIE';
-            else if events(i,7) == 3
-                    label = 'IIS';
-                else if events(i,7) == 4
-                        label = 'artifact';
-                    else if events(i,15) == -1
-                            label = 'IIS';
-                            break%revisit
-                        else
-                            label = 'Questionable SLE';
-                        end                    
-                    end
-                end
-            end
-        end                   
-
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);                                
         title (sprintf('LFP Recording, %s Event #%d | Frequency Change over time', label, i));
         ylabel ('mV');
         xlabel ('Time (sec)');   
         %Plot Frequency Feature
         yyaxis right        
-
         plot (spikeFrequency{i}(:,1)/frequency, spikeFrequency{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')
-  
-        if events(i,15) ~= -1    %if it is a IIS, skip this step or it will cause an error
-            %set up the index to split frequency feature set
+        
+        %set up the index to split frequency feature set
+        if events(i,15) ~= -1    %if it is a IIS, skip this step or it will cause an error            
 %             activeIndex = spikeFrequency{i}(:,3) == 1;
             inactiveIndex = spikeFrequency{i}(:,3) == 0;
             plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
         end        
 
-        plot ([events(i,13) events(i,13)], ylim)
-        plot ([events(i,14) events(i,14)], ylim)
-
-        %Plot again to give markers black border
-        plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')
+        plot ([events(i,13) events(i,13)], ylim)    %Plot when tonic phase starts
+        plot ([events(i,14) events(i,14)], ylim)    %Plot when tonic phase ends
         
-        if events(i,15) == -1    %the extra plot so in the legend we can reveal the classification
+        plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')    %Plot again to give markers black border
+        
+        if events(i,15) == -1    %the extra plot so in the legend we can reveal the classification (if it is a IIS)
             plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')
-        end
-        
-
-        %Classification
-        if events(i,15) == 0
-            classification = 'No tonic phase';
-        else if events(i,15) == 1
-                classification = 'Tonic-Clonic SLE';
-            else if events(i,15) == 2
-                    classification = 'Tonic-only SLE';
-                else
-                    classification = 'IIS';
-                end
-            end
-        end   
+        end       
 
         ylabel ('Spike rate/second (Hz)');
         set(gca,'fontsize',14)
@@ -432,15 +413,10 @@ if userInput(5) == 1
         close(figHandle)
 
     end
-
+   
     % save and close the .PPTX
     exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
 end
-
-
-%% Collect Class 5 SLEs
-indexQuestionableSLE = find(events(:,7)==5);
-questionableSLE = events(indexQuestionableSLE,:);
 
 %% IIE Crawler: Determine exact onset and offset times | Power Feature
 % indexIIE = events(:,7) == 2;
@@ -466,11 +442,8 @@ if userInput(3) == 1
     legend ('IIE', 'SLE', 'Artifact')
     legend ('Location', 'southeastoutside')
 end
-        
-% Store light-triggered events (s)
-% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
 
-%% Struct
+%% Struct to capture all parameters for analysis
 %File Details
 details.FileNameInput = FileName;
 details.frequency = frequency;
@@ -550,7 +523,17 @@ else
     disp ('No IISs were detected.');
 end
 
-%Sheet 3.5 = Questionable SLE
+%Sheet Hypothesis Testing 
+if isempty(hypothesisTesting) 
+    disp ('Hypothesis confirmed! All group 2 epileptiform events are IISs grouped together, none with tonic phase observed.');
+else
+    subtitle4 = {A, B, C, D, E, F, G, H};
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'hypothesisTesting' ,'A1');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),hypothesisTesting(:, 1:8),'hypothesisTesting' ,'A2');
+    fprintf(1,'\nHypothesis failed! A IIS with tonic phase was detected! Review data.\n')
+end
+
+%Sheet 4.5 = Questionable SLE
 if isempty(questionableSLE) == 0   
     subtitle4 = {A, B, C, D, E, F, G, H};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'QuestionableSLE' ,'A1');
@@ -559,7 +542,7 @@ else
     disp ('No Questionable SLEs were detected. Review the raw data to confirm');
 end
 
-%Sheet 4 = SLE
+%Sheet 5 = SLE
 if isempty(SLE_final) == 0   
     subtitle4 = {A, B, C, D, E, F, G, H};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');

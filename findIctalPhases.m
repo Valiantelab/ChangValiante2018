@@ -78,7 +78,7 @@ else
     startTonicTime = startTime;  %secs
     endTonicTime = endTime;  %secs
     
-    classification = -1;
+    classification = -1;    %-1 = IIS (<3s duration)  
     fprintf(2,'\nWarning: The event at %d-%d s is not a IIE (duration <2 s) so it was reclassified as a IIS (-1).\n', startTime, endTime)
 
     preictalPhaseDuration = startTonicTime - startTime;
