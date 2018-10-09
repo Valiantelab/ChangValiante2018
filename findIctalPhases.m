@@ -34,8 +34,8 @@ if numel(spikeFrequency(:,1)) > 3   %Analyze if the event is greater than 3 seco
     maxFrequency = double(max(spikeFrequency(:,2)));    %Calculate Maximum frequency during the SLE
     thresholdTonicFrequency = maxFrequency/3;
 
-    if thresholdTonicFrequency <= 1
-        thresholdTonicFrequency = 1.01;    %set floor frequency to >1 hz (justify with data analysis)
+    if thresholdTonicFrequency < 1
+        thresholdTonicFrequency = 1;    %set floor frequency to >1 hz (justify with data analysis)
     end
             
     indexTonic = spikeFrequency(:,2) >= thresholdTonicFrequency; %Use Michael's threshold to seperate frequency feature set into two populations, high and low; with floor frequency at 1 Hz
@@ -107,15 +107,13 @@ else    %this event is a IIS mascurading as a IIE
 end
     
 %Store event's characteristics for output
-% eventPhases(1) = startTonicTime;
-% eventPhases(2) = endTonicTime;
 eventPhases(1) = classification;
 eventPhases(2) = preictalPhaseFrequency;    %avg
 eventPhases(3) = tonicPhaseFrequency;   %avg
 eventPhases(4) = clonicPhaseFrequency;  %avg
 eventPhases(5) = minTonicPhaseFrequency;    %the min value
-% eventPhases(7) = startTime;
-% eventPhases(8) = endTime;
+eventPhases(6) = startTonicTime;
+eventPhases(7) = endTonicTime;
 
 
 

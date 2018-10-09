@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -54,7 +54,7 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 %Label for titles
 excelFileName = FileName(1:8);
 uniqueTitle = '(detectedEvents)';
-finalTitle = '(V6,5)';
+finalTitle = '(V6,6)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -195,7 +195,7 @@ for i = 1:size(events,1)
     events (i,6) = p2pAmplitude;     
     
     %Identify epileptiform event phases
-    [events(i,13:17), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});    
+    [events(i,[13:17 21:22]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});    
     
 
     %Calculate the intensity ratio (high to low)
@@ -211,7 +211,8 @@ for i = 1:size(events,1)
   
 end        
 
-%% 2nd Classificaiton (Seperate SLEs, IIEs, artifacts using extracted features)
+%% 2nd Classificaiton (Seperate SLEs, IIEs, artifacts using extracted features, averages)
+%SLE, isolation
 if events (:,1) < 1
     fprintf(2,'\nNo epileptiform events were detected.\n')
 else if events(:,1) < 2
@@ -228,7 +229,7 @@ if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
     [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end        
 
-%% 3rd Classification (Seperate questionable seizures from IIEs using extracted features)
+%Questionable SLE, isoluation 
 % indexEpileptiformEvents= events(:,7) == 2; %Boolean index to indicate the remaining epileptiform events
 indexInterictalEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
 interictalEvents = events(indexInterictalEvents,:); %Collect IIEs 
@@ -252,55 +253,45 @@ end
 %update the events array with results
 events(indexInterictalEvents, 7) = interictalEvents(:,7);
 
-%% 4th Classifier (Confirm SLEs, IIEs, IISs using tonic phase) - updates classifications
+%% 3rd Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
+%Classify using Tonic Phase feature set (does it exist or not?)
 for i = 1:numel(events(:,1))
-    %IIE confirmation (Reclassify SLE lacking Tonic Phase)
+    
+    %Verify SLEs (Reclassify SLE lacking Tonic Phase)
     if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
         events(i,7) = 2;
         fprintf(1,'\nNote: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
-    
-    %IIE confirmation (Confirm IIE lacking Tonic Phase)
-    elseif events(i,7) == 1.5 && events(i,13) == 0 %these are IIEs without a tonic phase, defintely a IIE
-        events(i,7) = 2;  %Legit IIE   
-        
-    %IIE confirmation (Confirm IIE that is small with a tonic phase 
-    elseif events(i,7) == 2.5 && events(i,13) > 0
-        events(i,7) = 2; 
-%         fprintf(2,'\nYour hypothesis failed! A smaller IIE Event #%d from File: %s does have a tonic phase (likely because there are interictal events relatively larger.\n', i, FileName)
+    end   
 
-    %Questionable IIEs (small w/o tonic phase; may also be collection of IISs)
-    else if events(i,7) == 2.5 && events(i,13) <= 0   %IIEs without tonic Phase or or a collection of IIS
-        events(i,7) = 2.5;
-        if events(i,13) == -1   %<3 s duration are IISs 
-            events(i,7) = 3;
-%             fprintf(2,'\nAs previously mentioned: The Epileptiform Event #%d from File: %s is less than 3 s; so it was reclassified as a IIS (3).\n', i, FileName)
-        end
-        else
-            continue
-        end
+    %Verify IIEs (Confirm IIE lacking Tonic Phase)
+    if events(i,7) == 1.5 && events(i,13) == 0 %these are IIEs without a tonic phase, defintely a IIE
+        events(i,7) = 2;  %Legit IIE   
     end
+    
+    %Verify IIE (Confirm IIE that is small with a tonic phase) 
+    if events(i,7) == 2.5 && events(i,13) > 0
+        events(i,7) = 2; 
+    end    
+    
+    %Reclassify IIS (<3 s) 
+    if events(i,13) == -1   
+        events(i,7) = 3;
+    end
+
 end
 
-
-%% 5th Classifier - Intensity Ratio (Confirm QSLEs, IIEs, and IISs)
-
-% averageRatioSLE = mean(events(indexSLE, 18));
-% averageRatioQSLE = mean(events(indexQuestionableSLE, 18));
-% averageRatioQIIE = mean(events(indexQIIEs, 18));
-% averageRatioIIS = mean(events(indexEpileptiformSpikes, 18));
-
-%% Split Questionable SLEs with a dynamic classifier 
-%SLE, confirmed
-indexSLE = find(events (:,7) == 1); 
-SLE_final = events(indexSLE, [1:8 13:18]);
-minRatioSLE = min(events(indexSLE, 18));    %Calculate minimum Intensity Ratios (for machine learning)    
-
-%Questionable SLEs
-indexQuestionableSLE = find(events(:,7)==1.5);
+%Classify using Intensity Ratio feature set (is it about the threshold or not?)
+%% Questionable SLEs
+indexQuestionableSLE = find(events(:,7)==1.5);  
 questionableSLE = events(indexQuestionableSLE,:);
 featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)];
 
-%Find threshold, dynamic
+%SLE (confirmed)
+indexSLE = find(events (:,7) == 1); 
+minRatioSLE = min(events(indexSLE, 18));    %Calculate minimum values (for machine learning thresholds)        
+minDurationSLE = min(events(indexSLE, 3));  %Calculate minimum values (for machine learning thresholds)
+
+%Determine threshold, dynamic
 floorThresholdIntensityRatio = 0.3;    %High Intensity:Low Intensity
 MachineLearningThresholdIntensityRatio = minRatioSLE;  %minimum ratio of confirmed IIEs
 if numel(indexQuestionableSLE) >2
@@ -313,31 +304,33 @@ end
 thresholdIntensityRatioSLE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
 
 %Split the questionable SLEs
-indexIntensityRatioSLE = featureSet(:,2) >= thresholdIntensityRatioSLE;   %I'm being liberal in what's considered an IIE. If it's below threshold, it's a collection of IISs
-events(indexQuestionableSLE,19) = indexIntensityRatioSLE;
+indexIntensityRatioSLE = events(:,18) >= thresholdIntensityRatioSLE;   %I'm being liberal in what's considered an SLE. If it's above (or equal to) threshold, it's a SLE
+events(:,19) = indexIntensityRatioSLE;
 
-%Classify
+%Update Classification
 for i = 1:numel(events(:,1))
-    if events(i,7) == 1.5 && events(i,19) == 1
-        events(i,7) = 1.5;  %Putative (sub-)seizure
-    elseif events(i,7) == 1.5 && events(i,19) == 0
-        events(i,7) = 0;    %Review! There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
-    else
-        continue
+    
+    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) < (minDurationSLE/2)  
+        events(i,7) = 2;    %This is an IIE
     end
+    
+    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE/2)  
+        events(i,7) = 0;    %Review! I have no idea wtf this is There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
+        fprintf(2,'\nReview Results! Unusual event (#%d) was detected. Maybe a SLE surrounded by noise or need to reanalyze with higher detection threshold (sigma).\n', i)
+    end
+
 end
 
-       
-%% Split Questionable IIEs with a dynamic classifier 
+
+%% Questionable IIE (w/o tonic phase)
+indexQuestionableIIEs = find(events(:,7)==2.5);
+% QuestionableIIE = events(indexQuestionableIIEs,:);
+% featureSet = [indexQuestionableIIEs events(indexQuestionableIIEs,18)];
+
 %IIE (confirmed)
 indexInterictalEvents= find(events(:,7) == 2); 
-interictalEvents = events(indexInterictalEvents,:); 
 minRatioIIE = min(events(indexInterictalEvents, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
-
-%Questionable IIE (w/o tonic phase)
-indexQuestionableIIEs = find(events(:,7)==2.5);
-QuestionableIIE = events(indexQuestionableIIEs,:);
-featureSet = [indexQuestionableIIEs events(indexQuestionableIIEs,18)];
+minDurationIIE = min(events(indexInterictalEvents,3));  %Calculate the minimum duration (for machine learning)
 
 %find threshold, dynamic
 floorThresholdIntensityRatio = 0.2;    %High Intensity:Low Intensity
@@ -352,25 +345,40 @@ end
 thresholdIntensityRatioIIE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
 
 %Split the questionable IIEs
-indexIntensityRatioIIE = featureSet(:,2) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's below threshold, it's a collection of IISs
-events(indexQuestionableIIEs,20) = indexIntensityRatioIIE;
+indexIntensityRatioIIE = events(:,18) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's above (or equal to) the threshold, it's an IIE.
+events(:,20) = indexIntensityRatioIIE;  %store the index for classification later on
 
 %Classify
 for i = 1:numel(events(:,1))
+    
     if events(i,7) == 2.5 && events(i,20) == 1
         events(i,7) = 2;    %IIE
-    elseif events(i,7) == 2.5 && events(i,20) == 0
-        events(i,7) = 3;    %IIS
-    else
-       continue
     end
+    
+    if events(i,7) == 2.5 && events(i,20) == 0
+        events(i,7) = 3;    %IIS
+    end
+    
+end
+
+%% IIE Classifier - Final
+indexIIE = find(events(:,7) == 2);
+
+for i = indexIIE'
+    
+    if events(i,13) == 1 && events(i, 20) == 1
+        ;
+    else
+        events(i,7) = 3;    %It's a IIS
+    end
+    
 end
 
 %% Collect and group all detected events
 %SLE
 %indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
 indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
-SLE_final = events(indexSLE, [1:8 13:18]);
+SLE_final = events(indexSLE, [1:8 13:20]);
 
 %Questionable SLEs
 indexQuestionableSLE = find(events(:,7)==1.5);
@@ -462,8 +470,8 @@ if userInput(5) == 1
             plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
         end        
 
-        plot ([events(i,13) events(i,13)], ylim)    %Plot when tonic phase starts
-        plot ([events(i,14) events(i,14)], ylim)    %Plot when tonic phase ends
+        plot ([events(i,21) events(i,21)], ylim)    %Plot when tonic phase starts
+        plot ([events(i,22) events(i,22)], ylim)    %Plot when tonic phase ends
         
         plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')    %Plot again to give markers black border
         
@@ -509,11 +517,6 @@ if userInput(5) == 1
     % save and close the .PPTX
     exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
 end
-
-%% IIE Crawler: Determine exact onset and offset times | Power Feature
-% indexIIE = events(:,7) == 2;
-% IIE_times = events(indexIIE,1:2);
-% IIE_final = crawlerIIE(LFP, IIE_times, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd, 1);  
 
 %% Final Summary Report
 %Plot a 3D scatter plot of events
@@ -633,15 +636,15 @@ if indexReviewSLE
     subtitle4 = {A, B, C, D, E, F, G, H};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'Review Event' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),reviewSLE(:, 1:8),'Review Event' ,'A2');
-    fprintf(2,'\nWarning: A unusual epileptiform event was detected (#%d). Review data.\n', indexReviewSLE)
+    fprintf(2,'\nNote: Unusual epileptiform event(s) detected. See "Review Event" tab in %s%s.xls.\n', excelFileName, finalTitle)
 end
 
 %Sheet 4.5 = Questionable SLE
-if questionableSLE
+if ~isempty(questionableSLE)
     subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'QuestionableSLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),questionableSLE(:, [1:8 13:17]),'QuestionableSLE' ,'A2');
-    disp ('Questionable SLEs (#%d) were detected. Review data', questionableSLE);
+    disp ('Questionable SLE(s) were detected. May require human intuition, please review data under QuestionableSLE tab in %s%s.xls', excelFileName, finalTitle);
 end
 
 %Sheet 5 = SLE
