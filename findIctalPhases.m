@@ -29,25 +29,34 @@ if nargin <2
     frequency = 10000;  %Hz
 end
 
-if numel(spikeFrequency(:,1)) > 3
+if numel(spikeFrequency(:,1)) > 3   %Analyze if the event is greater than 3 seconds
     %% Use freqency feature set to classify epileptiform event
     maxFrequency = double(max(spikeFrequency(:,2)));    %Calculate Maximum frequency during the SLE
-    indexTonic = spikeFrequency(:,2) >= maxFrequency/3; %Use Michael's threshold to seperate frequency feature set into two populations, high and low.
+    thresholdTonicFrequency = maxFrequency/3;
+
+    if thresholdTonicFrequency <= 1
+        thresholdTonicFrequency = 1.01;    %set floor frequency to >1 hz (justify with data analysis)
+    end
+            
+    indexTonic = spikeFrequency(:,2) >= thresholdTonicFrequency; %Use Michael's threshold to seperate frequency feature set into two populations, high and low; with floor frequency at 1 Hz
     spikeFrequency(:,3) = indexTonic;    %store Boolean index 
 
     %locate start of Tonic phase | Contingous segments above threshold    
     for j = 2: numel (indexTonic) %slide along the SLE; ignore the first spike, which is the sentinel spike
-        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, reclassify event as a IIE            
-            j = find(indexTonic(2:end),1,'first');  %Take the first second frequency is 'high' as onset if back-to-back high frequency are not found
+        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, classify event as a IIE            
+            j = find(indexTonic(2:end),1,'first');  %Take the 1st sec where frequency is 'high' as the onset if back-to-back high frequency are not found
                 if isempty(j)
                     j = 1;  %honory position, just to push the function through
                 end                
-            startTonic = spikeFrequency(j+1);  %j+1 because you started the find function (line above) starting from position "2:end"
-            endTonic = spikeFrequency(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
+            startTonic(1,1) = spikeFrequency(j+1);  %j+1 because you started the find function (line above) starting from position "2:end"
+            startTonic(1,2) = j+1;    %store the index
+            endTonic(1,1) = spikeFrequency(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
+            endTonic(1,2) = numel(indexTonic);  %store the index            
             classification = 0; % 0 = no tonic phase, 1 = tonic-clonic SLE, 2 - tonic-only        
         else                        
             if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
-                startTonic = spikeFrequency(j);  %store the onset time
+                startTonic(1,1) = spikeFrequency(j);  %store the onset time
+                startTonic(1,2) = j;    %store the index
                 classification = 1;   %1 = tonic-clonic SLE;   2 = tonic-only
                 while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & spikeFrequency(j,2) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
                     j = j+1;    %keep sliding along the SLE until the statement above is false.
@@ -57,7 +66,8 @@ if numel(spikeFrequency(:,1)) > 3
                         break
                     end                                    
                 end            
-                endTonic = spikeFrequency(j-1);
+                endTonic(1,1) = spikeFrequency(j-1); %take the point before the frequency drops to be the end of the tonic-phase
+                endTonic(1,2) = j-1;  %store the index   
                 break
             end
         end        
@@ -66,33 +76,44 @@ if numel(spikeFrequency(:,1)) > 3
     %Characterize the epileptiform event | Label all the features of the SLE
     startTime = spikeFrequency(1,1)/frequency;  %secs
     endTime = spikeFrequency(end,1)/frequency;  %secs
-    startTonicTime = startTonic/frequency;  %secs
-    endTonicTime = endTonic/frequency;  %secs
+    startTonicTime = startTonic(1)/frequency;  %secs
+    endTonicTime = endTonic(1)/frequency;  %secs
 
-    preictalPhaseDuration = startTonicTime - startTime;
-    tonicPhaseDuration = endTonicTime  - startTonicTime;
-    clonicPhaseDuration = endTime - endTonicTime; 
-else
+    preictalPhaseFrequency = mean(spikeFrequency (1:startTonic(1,2),2));
+    tonicPhaseFrequency = mean(spikeFrequency (startTonic(1,2):endTonic(1,2),2));
+    minTonicPhaseFrequency = min(spikeFrequency (startTonic(1,2):endTonic(1,2),2));
+    clonicPhaseFrequency = mean(spikeFrequency (endTonic(1,2):end,2));
+    
+%     preictalPhaseDuration = startTonicTime - startTime;
+%     tonicPhaseDuration = endTonicTime  - startTonicTime;
+%     clonicPhaseDuration = endTime - endTonicTime; 
+else    %this event is a IIS mascurading as a IIE
     startTime = spikeFrequency(1,1)/frequency;  %secs
     endTime = spikeFrequency(end,1)/frequency;  %secs
-    startTonicTime = startTime;  %secs
-    endTonicTime = endTime;  %secs
+    startTonicTime = startTime;  %secs; just to push it through the function
+    endTonicTime = endTime;  %secs; just to push it through the function
     
-    classification = -1;
-    fprintf(2,'\nWarning: The event at %d-%d s is not a IIE (duration <2 s) so it was reclassified as a IIS (-1).\n', startTime, endTime)
+    classification = -1;    %-1 = IIS (<3s duration)  
+    fprintf(2,'\nWarning: The event at %d-%d s is not a IIE (duration <2 s), reclassify as a IIS.\n', startTime, endTime)
+    
+    preictalPhaseFrequency = 0;
+    tonicPhaseFrequency = 0;
+    minTonicPhaseFrequency = 0;
+    clonicPhaseFrequency = 0;
 
-    preictalPhaseDuration = startTonicTime - startTime;
-    tonicPhaseDuration = endTonicTime  - startTonicTime;
-    clonicPhaseDuration = endTime - endTonicTime; 
+%     preictalPhaseDuration = startTonicTime - startTime;
+%     tonicPhaseDuration = endTonicTime  - startTonicTime;
+%     clonicPhaseDuration = endTime - endTonicTime; 
 end
     
 %Store event's characteristics for output
-eventPhases(1) = startTonicTime;
-eventPhases(2) = endTonicTime;
-eventPhases(3) = classification;
-eventPhases(4) = preictalPhaseDuration;
-eventPhases(5) = tonicPhaseDuration;
-eventPhases(6) = clonicPhaseDuration;
+% eventPhases(1) = startTonicTime;
+% eventPhases(2) = endTonicTime;
+eventPhases(1) = classification;
+eventPhases(2) = preictalPhaseFrequency;    %avg
+eventPhases(3) = tonicPhaseFrequency;   %avg
+eventPhases(4) = clonicPhaseFrequency;  %avg
+eventPhases(5) = minTonicPhaseFrequency;    %the min value
 % eventPhases(7) = startTime;
 % eventPhases(8) = endTime;
 

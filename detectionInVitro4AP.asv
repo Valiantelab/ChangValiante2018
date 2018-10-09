@@ -17,7 +17,7 @@ if ~exist('x','var') == 1
     clc
 
     %Manually set File DirectorYou seem really sweet and genuine from your profile. 
-    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -53,8 +53,8 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 
 %Label for titles
 excelFileName = FileName(1:8);
-uniqueTitle = '(epileptiformEvents)';
-finalTitle = '(V6,4)';
+uniqueTitle = '(detectedEvents)';
+finalTitle = '(V6,5)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -130,11 +130,10 @@ if isempty(epileptiformLocation)
     return
 end
 
-%% Classify (duration)
+%% 1st Classification (Seperate SLEs from spikes using duration)
 %Putative IIS
 indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
-
 %temp for troublshooting
 IIS = epileptiformLocation(indexIIS,1:3)/frequency;
 
@@ -196,104 +195,23 @@ for i = 1:size(events,1)
     events (i,6) = p2pAmplitude;     
     
     %Identify epileptiform event phases
-    [events(i,13:18), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});    
+    [events(i,13:17), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});    
     
-    %m calculation   
-                
-    %% Optional: plot vectors for Troubleshooting            
-    if userInput(5) == 1
-        %Plot Figure
-        figHandle = figure;
-        set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-        set(gcf,'Name', sprintf ('Epileptiform Event #%d', i)); %select the name you want
-        set(gcf, 'Position', get(0, 'Screensize')); 
-                 
-        subplot (2,1,1)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
-        %Labels
-        title (sprintf('LFP Recording, Epileptiform Event #%d | Frequency Change over time', i));
-        ylabel ('mV');
-        xlabel ('Time (sec)');   
-        %Plot Frequency Feature
-        yyaxis right
-        
-        %set up the index to split frequency feature set
-        activeIndex = spikeFrequency{i}(:,3) == 1;
-        inactiveIndex = spikeFrequency{i}(:,3) == 0;
 
-        plot (spikeFrequency{i}(:,1)/frequency, spikeFrequency{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')
-        plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
-        
-        plot ([events(i,13) events(i,13)], ylim)
-        plot ([events(i,14) events(i,14)], ylim)
-        
-        %Plot again to give markers black border
-        plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')
-        
-        %Classification
-        if events(i,15) == 0
-            classification = 'no tonic phase';
-        else if events(i,15) == 1
-                classification = 'Tonic-Clonic SLE';
-            else if events(i,15) == 2
-                    classification = 'Tonic-only SLE';
-                else
-                    classification = 'IIS';
-                end
-            end
-        end   
-                   
-        ylabel ('Spike rate/second (Hz)');
-        set(gca,'fontsize',14)
-        legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency above threshold', 'Frequency below threshold', 'Tonic Phase onset', 'Clonic Phase onset', sprintf('Classification: %s', classification))
-        legend ('Location', 'northeastoutside')
-        
-        subplot (2,1,2)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);                 
-        %Labels
-        title ('Intensity Change over time');
-        ylabel ('mV');
-        xlabel ('Time (sec)');   
-        %Plot Intensity Feature
-        yyaxis right
-        
-        %Set up the index to split intensity population
+    %Calculate the intensity ratio (high to low)
+%     for i = 1:numel(events(:,1))
         maxIntensity = double(max(intensityPerMinute{i}(:,2)));
-        zeroIndex = intensityPerMinute{i}(:,2) <= (maxIntensity/10); 
-        
-        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'MarkerFaceColor', 'm')
-        plot (intensityPerMinute{i}(zeroIndex ,1)/frequency, intensityPerMinute{i}(zeroIndex ,2), 'o', 'MarkerFaceColor', 'black')
-        plot (intensity(:,1)/frequency, intensity(:,2), 'o', 'color', 'k')      
+        indexHighIntensity = intensityPerMinute{i}(:,2) >= (maxIntensity/10); %Locate indices that are larger than (or equal to) the threshold
+        intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
+        intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
+        events(i,18) = intensityRatio;
+%     end
+    
+    %m calculation                   
+  
+end        
 
-        ylabel ('intensity/minute');
-        set(gca,'fontsize',16)
-        set(gca,'fontsize',14)
-        legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Intensity', 'low intensity')
-        legend ('Location', 'northeastoutside')
-        
-        %Export figures to .pptx
-        exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-        exportToPPTX('addpicture',figHandle);      
-        close(figHandle)
-    end        
-end
-
-if userInput(5) == 1   
-    % save and close the .PPTX
-    exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
-end
-
-%% Remove mislabelled IIEs and transfer them into IIS array, if present 
-indexReclassify = events(:,15) == -1;   %Locate all the IIEs that are less than 3 seconds; please note that this may affect your classification algorithm.
-
-if sum(indexReclassify)>0
-    reclassifyEvents = (events(indexReclassify, 1:3));   %Put them into an array
-    IIS = [IIS; reclassifyEvents];   %move them into the IIS array
-    %Remove IISs from events array
-%     events(indexReclassify, :) = [];    %This may affect how your classification algorithm works | may have to revisit
-end
-
-%% Classify (extracted features)
+%% 2nd Classificaiton (Seperate SLEs, IIEs, artifacts using extracted features)
 if events (:,1) < 1
     fprintf(2,'\nNo epileptiform events were detected.\n')
 else if events(:,1) < 2
@@ -308,68 +226,176 @@ end
 if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6    
     fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
     [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
-end
-        
-%Collect detected SLEs
-%indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
-indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
-SLE_final = events(indexSLE, [1:8 13]);
+end        
 
-%Collect remaining epileptiform event
+%% 3rd Classification (Seperate questionable seizures from IIEs using extracted features)
 % indexEpileptiformEvents= events(:,7) == 2; %Boolean index to indicate the remaining epileptiform events
-indexEpileptiformEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
-epileptiformEvents = events(indexEpileptiformEvents,:);
+indexInterictalEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
+interictalEvents = events(indexInterictalEvents,:); %Collect IIEs 
 
-%% Tertiary Classification, suggested by Taufik to detect Class 5 (questionable) seizures
-if epileptiformEvents (:,1) < 1
+if interictalEvents (:,1) < 1
     fprintf(2,'\nNo questionable epileptiform events were detected in Tertiary Classification.\n')
-else if epileptiformEvents(:,1) < 2
+else if interictalEvents(:,1) < 2
          fprintf(2,'\nLimited epileptiform events were detected for Tertiary Classification; epileptiform events will be classified with hard-coded (floor) thresholds.\n')
-         epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
+         interictalEvents = classifier_in_vitro (interictalEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
     else       
-        epileptiformEvents = classifier_dynamic (epileptiformEvents, userInput(3), 0.6, 1); %the last input "1" is to indicate it's a IIE classifier
+        interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 0.6, 1); %the last input "1" is to indicate it's a IIE classifier
     end
 end
 
-%if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
-if sum(epileptiformEvents (:,7) == 5)<1 || numel(epileptiformEvents (:,7)) < 6    
-    fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
-    epileptiformEvents = classifier_in_vitro (epileptiformEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
-end
+% %if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
+% if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6    
+%     fprintf(2,'\nDynamic Classifier did not detect any IIEs that may be a Questionable SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
+%     interictalEvents = classifier_in_vitro (interictalEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
+% end
 
-%Recombine outcome into the main events array
-events(indexEpileptiformEvents, 7) = epileptiformEvents(:,7);
+%update the events array with results
+events(indexInterictalEvents, 7) = interictalEvents(:,7);
 
-%% Quaternary Classifier to confirm all SLEs detected have a tonic phase | At Taufik's suggestion
+%% 4th Classifier (Confirm SLEs, IIEs, IISs using tonic phase) - updates classifications
 for i = 1:numel(events(:,1))
-    %Class 1 SLEs confirmation
-    if events(i,7) == 1 && events(i,15) == 0
+    %IIE confirmation (Reclassify SLE lacking Tonic Phase)
+    if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
         events(i,7) = 2;
-        fprintf(2,'\nWarning: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
+        fprintf(1,'\nNote: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
     
-    %IIS confirmation
-    else if events(i,7) == 2 && events(i,15) == 0
-        events(i,7) = 3;
-        fprintf(2,'\nWarning: The Tonic Phase was not detected in Epileptiform Event #%d from File: %s; so it was reclassified as a IIS.\n', i, FileName)
+    %IIE confirmation (Confirm IIE lacking Tonic Phase)
+    elseif events(i,7) == 1.5 && events(i,13) == 0 %these are IIEs without a tonic phase, defintely a IIE
+        events(i,7) = 2;  %Legit IIE   
         
-        %IIE confirmation
-        else if events(i,7) == 5 && events(i,15) == 0
-                events(i,7) = 2; 
-                 
-            else if events(i,7) == 1 && events(i,15) > 0
-                    events(i,7) = 1;
-                else if events(i,7) == 5 && events(i,15) > 0
-                    events(i,7) = 5;                       
-                    else
-                    events(i,7)= 2;
-                    end
-                end
-            end
+    %IIE confirmation (Confirm IIE that is small with a tonic phase 
+    elseif events(i,7) == 2.5 && events(i,13) > 0
+        events(i,7) = 2; 
+%         fprintf(2,'\nYour hypothesis failed! A smaller IIE Event #%d from File: %s does have a tonic phase (likely because there are interictal events relatively larger.\n', i, FileName)
+
+    %Questionable IIEs (small w/o tonic phase; may also be collection of IISs)
+    else if events(i,7) == 2.5 && events(i,13) <= 0   %IIEs without tonic Phase or or a collection of IIS
+        events(i,7) = 2.5;
+        if events(i,13) == -1   %<3 s duration are IISs 
+            events(i,7) = 3;
+%             fprintf(2,'\nAs previously mentioned: The Epileptiform Event #%d from File: %s is less than 3 s; so it was reclassified as a IIS (3).\n', i, FileName)
+        end
+        else
+            continue
         end
     end
-end                             
+end
 
-%% Plot all figures for trouble-shooting
+
+%% 5th Classifier - Intensity Ratio (Confirm QSLEs, IIEs, and IISs)
+
+% averageRatioSLE = mean(events(indexSLE, 18));
+% averageRatioQSLE = mean(events(indexQuestionableSLE, 18));
+% averageRatioQIIE = mean(events(indexQIIEs, 18));
+% averageRatioIIS = mean(events(indexEpileptiformSpikes, 18));
+
+%% Split Questionable SLEs with a dynamic classifier 
+%SLE, confirmed
+indexSLE = find(events (:,7) == 1); 
+SLE_final = events(indexSLE, [1:8 13:18]);
+minRatioSLE = min(events(indexSLE, 18));    %Calculate minimum Intensity Ratios (for machine learning)    
+
+%Questionable SLEs
+indexQuestionableSLE = find(events(:,7)==1.5);
+questionableSLE = events(indexQuestionableSLE,:);
+featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)]
+
+%Find threshold, dynamic
+floorThresholdIntensityRatio = 0.3;    %High Intensity:Low Intensity
+MachineLearningThresholdIntensityRatio = minRatioSLE;  %minimum ratio of confirmed IIEs
+if numel(indexQuestionableSLE) >2
+    [~, algoThresholdIntensityRatio] = findThresholdSLE (events(indexQuestionableSLE,18));   %widest gap south of k-means clustering
+else
+    algoThresholdIntensityRatio = 0;
+end
+
+%use the largest threshold
+thresholdIntensityRatioSLE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
+
+%Split the questionable SLEs
+indexIntensityRatioSLE = featureSet(:,2) >= thresholdIntensityRatioSLE;   %I'm being liberal in what's considered an IIE. If it's below threshold, it's a collection of IISs
+events(indexQuestionableSLE,19) = indexIntensityRatioSLE;
+
+%Classify
+for i = 1:numel(events(:,1))
+    if events(i,7) == 1.5 && events(i,19) == 1
+        events(i,7) = 1.5;  %Putative (sub-)seizure
+    elseif events(i,7) == 1.5 && events(i,19) == 0
+        events(i,7) = 0;    %Review! There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
+    else
+        continue
+    end
+end
+
+       
+%% Split Questionable IIEs with a dynamic classifier 
+%IIE (confirmed)
+indexInterictalEvents= find(events(:,7) == 2); 
+interictalEvents = events(indexInterictalEvents,:); 
+minRatioIIE = min(events(indexInterictalEvents, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
+
+%Questionable IIE (w/o tonic phase)
+indexQuestionableIIEs = find(events(:,7)==2.5);
+QuestionableIIE = events(indexQuestionableIIEs,:);
+featureSet = [indexQuestionableIIEs events(indexQuestionableIIEs,18)];
+
+%find threshold, dynamic
+floorThresholdIntensityRatio = 0.2;    %High Intensity:Low Intensity
+MachineLearningThresholdIntensityRatio = minRatioIIE;  %minimum ratio of confirmed IIEs
+if numel(indexQuestionableIIEs) >2
+    [~, algoThresholdIntensityRatio] = findThresholdSLE (events(indexQuestionableIIEs,18));   %widest gap south of k-means clustering
+else
+    algoThresholdIntensityRatio = 0;
+end
+
+%use the largest threshold
+thresholdIntensityRatioIIE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
+
+%Split the questionable IIEs
+indexIntensityRatioIIE = featureSet(:,2) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's below threshold, it's a collection of IISs
+events(indexQuestionableIIEs,20) = indexIntensityRatioIIE;
+
+%Classify
+for i = 1:numel(events(:,1))
+    if events(i,7) == 2.5 && events(i,20) == 1
+        events(i,7) = 2;    %IIE
+    elseif events(i,7) == 2.5 && events(i,20) == 0
+        events(i,7) = 3;    %IIS
+    else
+       continue
+    end
+end
+
+%% Collect and group all detected events
+%SLE
+%indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
+indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
+SLE_final = events(indexSLE, [1:8 13:18]);
+
+%Questionable SLEs
+indexQuestionableSLE = find(events(:,7)==1.5);
+questionableSLE = events(indexQuestionableSLE,:);
+
+%IIE
+indexInterictalEvents= find(events(:,7) == 2); 
+interictalEvents = events(indexInterictalEvents,:); 
+
+%Epileptiform Spikes (mislabelled as IIEs) will be released back into the wild
+indexEpileptiformSpikes = find(events(:,7)==3);
+epileptiformSpikes = events(indexEpileptiformSpikes,:);
+
+%Artifacts
+indexArtifacts = find(events(:,7)==4);
+artifacts = events (indexArtifacts,:);
+
+%Review
+indexReviewSLE = find(events(:,7)==0);
+reviewSLE = events(indexReviewSLE,:);
+
+%light-triggered events
+% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+    
+%% Troubleshooting: Plot all figures 
 if userInput(5) == 1   
     
     %set variables
@@ -386,7 +412,7 @@ if userInput(5) == 1
         'Author','Michael Chang', ...
         'Subject','Automatically generated PPTX file', ...
         'Comments','This file has been automatically generated by exportToPPTX');
-
+    %Add New Slide
     exportToPPTX('addslide');
     exportToPPTX('addtext', 'Troubleshooting: Epileptiform Events detected', 'Position',[2 1 8 2],...
                  'Horiz','center', 'Vert','middle', 'FontSize', 36);
@@ -394,11 +420,11 @@ if userInput(5) == 1
                  'Horiz','center', 'Vert','middle', 'FontSize', 20);
     exportToPPTX('addtext', 'By: Michael Chang and Christopher Lucasius', 'Position',[4 4 4 2],...
                  'Horiz','center', 'Vert','middle', 'FontSize', 20);     
-
+    %Add New Slide
     exportToPPTX('addslide');
     exportToPPTX('addtext', 'Legend', 'Position',[0 0 4 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 24);
-    exportToPPTX('addtext', 'Epileptiform spike is average + 6*SD of the baseline', 'Position',[0 1 6 1],...
+    exportToPPTX('addtext', 'Epileptiform spike is average + 3.9*SD of the baseline', 'Position',[0 1 6 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
     exportToPPTX('addtext', 'Artifacts are average + 100*SD', 'Position',[0 2 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
@@ -407,77 +433,43 @@ if userInput(5) == 1
     exportToPPTX('addtext', 'SLE offset is when power returns below baseline/2', 'Position',[0 4 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 14);
     exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
-                 'Horiz','left', 'Vert','middle', 'FontSize', 16);        
-
+                 'Horiz','left', 'Vert','middle', 'FontSize', 16);          
+             
     %Plot epileptifrom events detected
     for i = 1:size(events,1)                      
+        %Classification labels for plotting
+        [label, classification] = decipher (events,i);
+        
         %Plot Figure
         figHandle = figure;
         set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
         set(gcf,'Name', sprintf ('Epileptiform Event #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize')); 
-
+                
         subplot (2,1,1)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);        
-        %Labels
-
-        if events(i,7) == 1 
-            label = 'SLE';
-        else if events(i,7) == 2
-                label = 'IIE';
-            else if events(i,7) == 3
-                    label = 'IIS';
-                else if events(i,7) == 4
-                        label = 'artifact';
-                    else if events(i,15) == -1
-                            label = 'IIS';
-                            break%revisit
-                        else
-                            label = 'Questionable SLE';
-                        end                    
-                    end
-                end
-            end
-        end                   
-
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);                                
         title (sprintf('LFP Recording, %s Event #%d | Frequency Change over time', label, i));
         ylabel ('mV');
         xlabel ('Time (sec)');   
         %Plot Frequency Feature
         yyaxis right        
-
         plot (spikeFrequency{i}(:,1)/frequency, spikeFrequency{i}(:,2), 'o', 'MarkerFaceColor', 'cyan')
-  
-        if event(i,15) ~= -1    %if it is a IIS, skip this step or it will cause an error
-            %set up the index to split frequency feature set
+        
+        %set up the index to split frequency feature set
+        if events(i,13) ~= -1    %if it is a IIS, skip this step or it will cause an error            
 %             activeIndex = spikeFrequency{i}(:,3) == 1;
             inactiveIndex = spikeFrequency{i}(:,3) == 0;
             plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
         end        
 
-        plot ([events(i,13) events(i,13)], ylim)
-        plot ([events(i,14) events(i,14)], ylim)
-
-        %Plot again to give markers black border
-        plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')
+        plot ([events(i,13) events(i,13)], ylim)    %Plot when tonic phase starts
+        plot ([events(i,14) events(i,14)], ylim)    %Plot when tonic phase ends
         
-        if event(i,15) == -1    %the extra plot so in the legend we can reveal the classification
+        plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')    %Plot again to give markers black border
+        
+        if events(i,13) == -1    %the extra plot so in the legend we can reveal the classification (if it is a IIS)
             plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')
-        end
-        
-
-        %Classification
-        if events(i,15) == 0
-            classification = 'No tonic phase';
-        else if events(i,15) == 1
-                classification = 'Tonic-Clonic SLE';
-            else if events(i,15) == 2
-                    classification = 'Tonic-only SLE';
-                else
-                    classification = 'IIS';
-                end
-            end
-        end   
+        end       
 
         ylabel ('Spike rate/second (Hz)');
         set(gca,'fontsize',14)
@@ -504,7 +496,7 @@ if userInput(5) == 1
         ylabel ('intensity/minute');
         set(gca,'fontsize',16)
         set(gca,'fontsize',14)
-        legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'lLw intensity')
+        legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'Low intensity')
         legend ('Location', 'northeastoutside')
 
         %Export figures to .pptx
@@ -513,15 +505,10 @@ if userInput(5) == 1
         close(figHandle)
 
     end
-
+   
     % save and close the .PPTX
     exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
 end
-
-
-%% Collect Class 5 SLEs
-indexQuestionableSLE = find(events(:,7)==5);
-questionableSLE = events(indexQuestionableSLE,:)
 
 %% IIE Crawler: Determine exact onset and offset times | Power Feature
 % indexIIE = events(:,7) == 2;
@@ -547,11 +534,8 @@ if userInput(3) == 1
     legend ('IIE', 'SLE', 'Artifact')
     legend ('Location', 'southeastoutside')
 end
-        
-% Store light-triggered events (s)
-% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
 
-%% Struct
+%% Struct to capture all parameters for analysis
 %File Details
 details.FileNameInput = FileName;
 details.frequency = frequency;
@@ -583,6 +567,10 @@ if userInput(4)>0
     details.offsetDelay = offsetDelay;
 end
 
+%Thresholds
+details.thresholdIntensityRatioSLE = thresholdIntensityRatioSLE;
+details.thresholdIntensityRatioIIE = thresholdIntensityRatioIIE;
+
 %% Write to .xls
 %set subtitle
 A = 'Onset (s)';
@@ -604,9 +592,18 @@ else
     L = 'no outliers';
 end
 
+M = 'Tonic Phase';
+N = 'Preictal Freq, Avg';
+O = 'Tonic Freq, Avg';
+P = 'Clonic Freq, Avg';
+Q = 'Tonic Freq, Min';  %17
+R = 'Intensity Ratio';  %18
+S = sprintf('%.02f', thresholdIntensityRatioSLE);
+T = sprintf('%.02f', thresholdIntensityRatioIIE);
+
 %Sheet 1 = Events
-if isempty(events) == 0
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L};
+if ~isempty(events)
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
@@ -614,16 +611,15 @@ else
 end
 
 %Sheet 2 = Artifacts   
-if isempty(artifactLocation) == 0
+if artifactLocation
     subtitle2 = {A, B, C};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle2,'Artifacts','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),artifactLocation/frequency,'Artifacts','A2');
-else
-    disp ('No artifacts were detected.');
+    disp ('Artifacts were detected.');
 end
 
 %Sheet 3 = IIS
-if isempty(IIS) == 0  
+if IIS
     subtitle3 = {A, B, C, G};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle3,'IIS' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),IIS,'IIS' ,'A2');
@@ -631,20 +627,27 @@ else
     disp ('No IISs were detected.');
 end
 
-%Sheet 3.5 = Questionable SLE
-if isempty(questionableSLE) == 0   
+%Sheet Review Events 
+if indexReviewSLE
     subtitle4 = {A, B, C, D, E, F, G, H};
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'QuestionableSLE' ,'A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),questionableSLE(:, 1:8),'QuestionableSLE' ,'A2');
-else
-    disp ('No Questionable SLEs were detected. Review the raw data to confirm');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'Review Event' ,'A1');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),reviewSLE(:, 1:8),'Review Event' ,'A2');
+    fprintf(2,'\nWarning: A unusual epileptiform event was detected (#%d). Review data.\n', indexReviewSLE)
 end
 
-%Sheet 4 = SLE
-if isempty(SLE_final) == 0   
-    subtitle4 = {A, B, C, D, E, F, G, H};
+%Sheet 4.5 = Questionable SLE
+if questionableSLE
+    subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'QuestionableSLE' ,'A1');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),questionableSLE(:, [1:8 13:17]),'QuestionableSLE' ,'A2');
+    disp ('Questionable SLEs (#%d) were detected. Review data', questionableSLE);
+end
+
+%Sheet 5 = SLE
+if SLE_final
+    subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE_final(:, 1:8),'SLE' ,'A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE_final,'SLE' ,'A2');
 else
     disp ('No SLEs were detected. Review the raw data and consider using a lower multiple of baseline sigma as the threshold');
 end
