@@ -632,7 +632,7 @@ if ~isempty(questionableSLE)
     subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'QuestionableSLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),questionableSLE(:, [1:8 13:17]),'QuestionableSLE' ,'A2');
-    disp ('Questionable SLE(s) were detected. May require human intuition, please review data under QuestionableSLE tab in %s%s.xls', excelFileName, finalTitle);
+    fprintf(1,'\nQuestionable SLE(s) were detected. Human intuition may be required, please review data under "QuestionableSLE" tab in %s%s.xls.\n', excelFileName, finalTitle)
 end
 
 %Sheet 5 = SLE
