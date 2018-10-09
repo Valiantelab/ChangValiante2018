@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@ function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, 
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 6.6
+%Version 6.5
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -298,7 +298,7 @@ minRatioSLE = min(events(indexSLE, 18));    %Calculate minimum Intensity Ratios 
 %Questionable SLEs
 indexQuestionableSLE = find(events(:,7)==1.5);
 questionableSLE = events(indexQuestionableSLE,:);
-featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)];
+featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)]
 
 %Find threshold, dynamic
 floorThresholdIntensityRatio = 0.3;    %High Intensity:Low Intensity
@@ -611,16 +611,15 @@ else
 end
 
 %Sheet 2 = Artifacts   
-if ~isempty(artifactLocation)
+if artifactLocation
     subtitle2 = {A, B, C};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle2,'Artifacts','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),artifactLocation/frequency,'Artifacts','A2');
-else    
-    disp ('No artifacts were detected.');
+    disp ('Artifacts were detected.');
 end
 
 %Sheet 3 = IIS
-if ~isempty(IIS)
+if IIS
     subtitle3 = {A, B, C, G};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle3,'IIS' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),IIS,'IIS' ,'A2');
@@ -645,7 +644,7 @@ if questionableSLE
 end
 
 %Sheet 5 = SLE
-if ~isempty(SLE_final)
+if SLE_final
     subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE_final,'SLE' ,'A2');
