@@ -1,4 +1,4 @@
-% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 6.6
+%Version 6.7
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -54,7 +54,7 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 %Label for titles
 excelFileName = FileName(1:8);
 uniqueTitle = '(detectedEvents)';
-finalTitle = '(V6,6)';
+finalTitle = '(V6,7)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -213,42 +213,30 @@ end
 
 %% 2nd Classificaiton (Seperate SLEs, IIEs, artifacts using extracted features, averages)
 %SLE, isolation
-if events (:,1) < 1
-    fprintf(2,'\nNo epileptiform events were detected.\n')
-else if events(:,1) < 2
-         fprintf(2,'\nLimited Events were detected in the in vitro recording; epileptiform events will be classified with hard-coded thresholds.\n')
-         [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
-    else       
-        [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, userInput(3));
-    end
-end
-
+[events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier, algoFrequencyThreshold] = classifier_dynamic (events, userInput(3));
 %if no SLEs detected (because IIEs are absent) | Repeat classification using hard-coded thresholds, 
 if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6    
     fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
-    [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_in_vitro (events, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
+    [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, userInput(3), 0, 1, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end        
 
-%Questionable SLE, isoluation 
+%Questionable SLE, isoluation         
 % indexEpileptiformEvents= events(:,7) == 2; %Boolean index to indicate the remaining epileptiform events
 indexInterictalEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
 interictalEvents = events(indexInterictalEvents,:); %Collect IIEs 
 
-if interictalEvents (:,1) < 1
-    fprintf(2,'\nNo questionable epileptiform events were detected in Tertiary Classification.\n')
-else if interictalEvents(:,1) < 2
-         fprintf(2,'\nLimited epileptiform events were detected for Tertiary Classification; epileptiform events will be classified with hard-coded (floor) thresholds.\n')
-         interictalEvents = classifier_in_vitro (interictalEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected       
-    else       
-        interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 0.6, 1); %the last input "1" is to indicate it's a IIE classifier
-    end
+if algoFrequencyThreshold < 1 && algoFrequencyThreshold >= 0.6 
+    floorThresholdFrequency = algoFrequencyThreshold;
+else
+    floorThresholdFrequency = 0.6;  %for SLE at Taufik's suggestion
 end
 
-% %if no Class 5 (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
-% if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6    
-%     fprintf(2,'\nDynamic Classifier did not detect any IIEs that may be a Questionable SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
-%     interictalEvents = classifier_in_vitro (interictalEvents, userInput(3));   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
-% end
+interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency); %the input "1" is to indicate it's a IIE classifier
+%if no (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
+if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6    
+    fprintf(2,'\nDynamic Classifier detect a limited number of Questionable SLEs (<2). Beginning second attempt with hard-coded thresholds to classify interictal events.\n')
+    interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
+end
 
 %update the events array with results
 events(indexInterictalEvents, 7) = interictalEvents(:,7);
@@ -294,7 +282,7 @@ minDurationSLE = min(events(indexSLE, 3));  %Calculate minimum values (for machi
 %Determine threshold, dynamic
 floorThresholdIntensityRatio = 0.3;    %High Intensity:Low Intensity
 MachineLearningThresholdIntensityRatio = minRatioSLE;  %minimum ratio of confirmed IIEs
-if numel(indexQuestionableSLE) >2
+if numel(indexQuestionableSLE) >=2
     [~, algoThresholdIntensityRatio] = findThresholdSLE (events(indexQuestionableSLE,18));   %widest gap south of k-means clustering
 else
     algoThresholdIntensityRatio = 0;
@@ -316,7 +304,7 @@ for i = 1:numel(events(:,1))
     
     if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE/2)  
         events(i,7) = 0;    %Review! I have no idea wtf this is There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
-        fprintf(2,'\nReview Results! Unusual event (#%d) was detected. Maybe a SLE surrounded by noise or need to reanalyze with higher detection threshold (sigma).\n', i)
+        fprintf(2,'\nReview Results! Unusual event (#%d) was detected. Maybe a SLE surrounded by noise or post-ictal bursting activity. If there are alot of these unusual events, try reanalyzing with higher detection threshold (sigma).\n', i)
     end
 
 end
@@ -335,7 +323,7 @@ minDurationIIE = min(events(indexInterictalEvents,3));  %Calculate the minimum d
 %find threshold, dynamic
 floorThresholdIntensityRatio = 0.2;    %High Intensity:Low Intensity
 MachineLearningThresholdIntensityRatio = minRatioIIE;  %minimum ratio of confirmed IIEs
-if numel(indexQuestionableIIEs) >2
+if numel(indexQuestionableIIEs) >=2
     [~, algoThresholdIntensityRatio] = findThresholdSLE (events(indexQuestionableIIEs,18));   %widest gap south of k-means clustering
 else
     algoThresholdIntensityRatio = 0;
