@@ -42,7 +42,7 @@ switch IIE_classifier
             fprintf(2,'\nNo interictal events were detected for further analysis.\n')
             return
         elseif hardCodedThreshold < 2
-            fprintf(2,'\nOnly 1 interictal event detected; interictal event(s) will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease.\n')                    
+            fprintf(2,'\nInterictal event(s) will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease (because limited number of events were detected).\n')                    
         end
         %Set Floor threshold, if not specified
         if nargin < 4
@@ -59,7 +59,7 @@ switch IIE_classifier
             fprintf(2,'\nNo epileptiform events were detected.\n')
             return
         elseif hardCodedThreshold < 2
-            fprintf(2,'\nOnly 1 events was detected in the in vitro recording; the events will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease.\n')        
+            fprintf(2,'\nEpileptiform events will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease (because limited number of events were detected).\n')        
         end
         %Set Floor threshold, if not specified
         if nargin < 4
