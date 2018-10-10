@@ -248,7 +248,6 @@ for i = 1:numel(events(:,1))
     %Verify SLEs (Reclassify SLE lacking Tonic Phase)
     if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
         events(i,7) = 2;
-        fprintf(1,'\nNote: The Tonic Phase was not detected in SLE #%d from File: %s; so it was reclassified as a IIE.\n', i, FileName)
     end   
 
     %Verify IIEs (Confirm IIE lacking Tonic Phase)
@@ -624,7 +623,7 @@ if indexReviewSLE
     subtitle4 = {A, B, C, D, E, F, G, H};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'Review Event' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),reviewSLE(:, 1:8),'Review Event' ,'A2');
-    fprintf(2,'\nNote: Unusual epileptiform event(s) detected. See "Review Event" tab in %s%s.xls.\n', excelFileName, finalTitle)
+    fprintf(1,'\nUnusual epileptiform event(s) were detected. See "Review Event" tab in %s%s.xls.\n', excelFileName, finalTitle)
 end
 
 %Sheet 4.5 = Questionable SLE
