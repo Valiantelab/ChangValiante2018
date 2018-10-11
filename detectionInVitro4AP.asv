@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@ function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, 
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 6.8
+%Version 6.7
 
 if ~exist('x','var') == 1
     %clear all (reset)
