@@ -10,6 +10,10 @@ function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, 
 %Copyright (c) 2018, Valiante Lab
 %Version 6.8
 
+%Label for titles
+uniqueTitle = '(detectedEvents)';
+finalTitle = '(V6,8)';
+
 if ~exist('x','var') == 1
     %clear all (reset)
     close all
@@ -53,8 +57,7 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 
 %Label for titles
 excelFileName = FileName(1:8);
-uniqueTitle = '(detectedEvents)';
-finalTitle = '(V6,7)';
+
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
