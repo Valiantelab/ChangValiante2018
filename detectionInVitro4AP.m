@@ -611,7 +611,7 @@ end
 if ~isempty(interictalEvents)
     subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'interictalEvents','A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'interictalEvents','A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),interictalEvents,'interictalEvents','A2');
 else
     disp ('No interictal events were detected.');
 end
