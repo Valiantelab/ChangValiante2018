@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -392,7 +392,7 @@ indexReviewSLE = find(events(:,7)==0);  %Events I have no idea about
 reviewSLE = events(indexReviewSLE,:);
 
 %light-triggered events
-% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+% triggeredEvents = SLE(SLE(:,4)>0, :);
     
 %% Troubleshooting: Plot all figures 
 if userInput(5) == 1   
