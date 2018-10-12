@@ -392,7 +392,7 @@ indexReviewSLE = find(events(:,7)==0);  %Events I have no idea about
 reviewSLE = events(indexReviewSLE,:);
 
 %light-triggered events
-% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+% triggeredEvents = SLE(SLE(:,4)>0, :);
     
 %% Troubleshooting: Plot all figures 
 if userInput(5) == 1   
