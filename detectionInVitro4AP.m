@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -611,7 +611,7 @@ end
 if ~isempty(interictalEvents)
     subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'interictalEvents','A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'interictalEvents','A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),interictalEvents,'interictalEvents','A2');
 else
     disp ('No interictal events were detected.');
 end
