@@ -316,9 +316,9 @@ indexQuestionableIIEs = find(events(:,7)==2.5);
 % featureSet = [indexQuestionableIIEs events(indexQuestionableIIEs,18)];
 
 %IIE (confirmed)
-indexInterictalEvents= find(events(:,7) == 2); 
-minRatioIIE = min(events(indexInterictalEvents, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
-minDurationIIE = min(events(indexInterictalEvents,3));  %Calculate the minimum duration (for machine learning)
+indexIIE= find(events(:,7) == 2.1); %Confirmed IIEs
+minRatioIIE = min(events(indexIIE, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
+minDurationIIE = min(events(indexIIE,3));  %Calculate the minimum duration (for machine learning)
 
 %find threshold, dynamic
 floorThresholdIntensityRatio = 0.2;    %High Intensity:Low Intensity
@@ -350,9 +350,9 @@ for i = 1:numel(events(:,1))
 end
 
 %% IIE Classifier - Final
-indexIIE = find(events(:,7) == 2);
+indexIIEs = find(events(:,7) == 2);
 
-for i = indexIIE'
+for i = indexIIEs'
     
     if events(i,13) >= 1 || events(i, 20) == 1
         ;
