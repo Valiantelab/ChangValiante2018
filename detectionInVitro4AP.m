@@ -1,4 +1,4 @@
-function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -10,10 +10,6 @@ function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, 
 %Copyright (c) 2018, Valiante Lab
 %Version 6.8
 
-%Label for titles
-uniqueTitle = '(detectedEvents)';
-finalTitle = '(V6,8)';
-
 if ~exist('x','var') == 1
     %clear all (reset)
     close all
@@ -21,7 +17,7 @@ if ~exist('x','var') == 1
     clc
 
     %Manually set File DirectorYou seem really sweet and genuine from your profile. 
-    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -57,7 +53,8 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 
 %Label for titles
 excelFileName = FileName(1:8);
-
+uniqueTitle = '(detectedEvents)';
+finalTitle = '(V6,8)';
 
 %% create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -223,16 +220,18 @@ if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
     [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, userInput(3), 0, 1, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end        
 
-%Questionable SLE, isolation         
+%Collect all the interictal events       
 indexInterictalEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
 interictalEvents = events(indexInterictalEvents,:); %Collect IIEs 
 
+%Set the floor threshold for frequency, for Questionable SLEs
 if algoFrequencyThreshold < 1 && algoFrequencyThreshold >= 0.6 
     floorThresholdFrequency = algoFrequencyThreshold;
 else
     floorThresholdFrequency = 0.6;  %for SLE at Taufik's suggestion
 end
 
+%Questionable SLE, isolation
 [interictalEvents, thresholdFrequencyQSLE, thresholdIntensityQSLE, thresholdDurationQSLE] = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency); %the input "1" is to indicate it's a IIE classifier
 %if no (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
 if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6    
@@ -240,7 +239,7 @@ if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6
     interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end
 
-%update the events array with results
+%Transfer the results to the Events array 
 events(indexInterictalEvents, 7) = interictalEvents(:,7);
 
 %% 3rd Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
@@ -249,7 +248,7 @@ for i = 1:numel(events(:,1))
     
     %Verify SLEs (Reclassify SLE lacking Tonic Phase)
     if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
-        events(i,7) = 2;
+        events(i,7) = 2.1;  %Legit IIE (2.1)
     end   
 
     %Verify IIEs (Confirm IIE lacking Tonic Phase)
@@ -282,7 +281,7 @@ minDurationSLE = min(events(indexSLE, 3));  %Calculate minimum values (for machi
 
 %Determine threshold, dynamic
 floorThresholdIntensityRatio = 0.3;    %High Intensity:Low Intensity
-MachineLearningThresholdIntensityRatio = minRatioSLE;  %minimum ratio of confirmed IIEs
+MachineLearningThresholdIntensityRatio = minRatioSLE;  %minimum ratio of confirmed SLEs
 if numel(indexQuestionableSLE) >=2
     [~, algoThresholdIntensityRatio] = findThresholdSLE (events(indexQuestionableSLE,18));   %widest gap south of k-means clustering
 else
@@ -370,15 +369,15 @@ events(indexLegitIIE,7) = 2;    %Classify as IIE, even without tonic phase and h
 %SLE
 %indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
 indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
-SLE_final = events(indexSLE, [1:8 13:20]);
+SLE = events(indexSLE, [1:8 13:18]);
 
 %Questionable SLEs
-indexQuestionableSLE = find(events(:,7)==1.5);
+indexQuestionableSLE = find(events(:,7)==1.5);  %events that may be potential ictal events
 questionableSLE = events(indexQuestionableSLE,:);
 
 %IIE
-indexInterictalEvents= find(events(:,7) == 2); 
-interictalEvents = events(indexInterictalEvents,:); 
+% indexIIE= find(events(:,7) == 2); 
+% IIE = events(indexInterictalEvents,:); 
 
 %Epileptiform Spikes (mislabelled as IIEs) will be released back into the wild
 indexEpileptiformSpikes = find(events(:,7)==3);
@@ -389,7 +388,7 @@ indexArtifacts = find(events(:,7)==4);
 artifacts = events (indexArtifacts,:);
 
 %Review
-indexReviewSLE = find(events(:,7)==0);
+indexReviewSLE = find(events(:,7)==0);  %Events I have no idea about
 reviewSLE = events(indexReviewSLE,:);
 
 %light-triggered events
@@ -553,7 +552,7 @@ details.calculateMeanOffsetBaseline = calculateMeanOffsetBaseline;
 %detection results
 details.IISsDetected = numel(IIS(:,1));
 details.eventsDetected = numel(events(:,1));
-details.SLEsDetected = numel (SLE_final(:,1));
+details.SLEsDetected = numel (SLE(:,1));
 
 %LED details
 if userInput(4)>0
@@ -595,14 +594,25 @@ Q = 'Tonic Freq, Min';  %17
 R = 'Intensity Ratio';  %18
 S = sprintf('%.02f', thresholdIntensityRatioSLE);
 T = sprintf('%.02f', thresholdIntensityRatioIIE);
+U = 'Start Time (Tonic Phase)';
+V = 'End Time (Tonic Phase)';
 
 %Sheet 1 = Events
 if ~isempty(events)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
     disp ('No events were detected.');
+end
+
+%Sheet = Interictal Events
+if ~isempty(interictalEvents)
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'interictalEvents','A1');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'interictalEvents','A2');
+else
+    disp ('No interictal events were detected.');
 end
 
 %Sheet 2 = Artifacts   
@@ -616,7 +626,7 @@ end
 
 %Sheet 3 = IIS
 if ~isempty(IIS)
-    subtitle3 = {A, B, C, G};
+    subtitle3 = {A, B, C};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle3,'IIS' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),IIS,'IIS' ,'A2');
 else
@@ -640,10 +650,10 @@ if ~isempty(questionableSLE)
 end
 
 %Sheet 5 = SLE
-if ~isempty(SLE_final)
+if ~isempty(SLE)
     subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE_final,'SLE' ,'A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE,'SLE' ,'A2');
 else
     disp ('No SLEs were detected. Review the raw data and consider using a lower multiple of baseline sigma as the threshold');
 end
@@ -713,13 +723,13 @@ if userInput(3) == 1
     end
 
     %plot onset/offset markers
-    if SLE_final(:,1)
-        for i=1:numel(SLE_final(:,1))
-        reduce_plot ((SLE_final(i,1)), (LFP_centered(int64(SLE_final(i,1)*frequency))), 'o'); %onset markers
+    if SLE(:,1)
+        for i=1:numel(SLE(:,1))
+        reduce_plot ((SLE(i,1)), (LFP_centered(int64(SLE(i,1)*frequency))), 'o'); %onset markers
         end
 
-        for i=1:numel(SLE_final(:,2))
-        reduce_plot ((SLE_final(i,2)), (LFP_centered(int64(SLE_final(i,2)*frequency))), 'x'); %offset markers
+        for i=1:numel(SLE(:,2))
+        reduce_plot ((SLE(i,2)), (LFP_centered(int64(SLE(i,2)*frequency))), 'x'); %offset markers
         end
     end
 
@@ -770,7 +780,7 @@ if userInput(3) == 1
     end
 
     %% Plotting out detected SLEs with context | To figure out how off you are    
-    for i = 1:size(SLE_final,1) 
+    for i = 1:size(SLE,1) 
        
         %Label figure  
         figHandle = figure;
@@ -779,7 +789,7 @@ if userInput(3) == 1
         set(gcf, 'Position', get(0, 'Screensize'));  
         
         %Plot figure  
-        figHandle = plotEvent (figHandle, LFP_centered, t, SLE_final(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
+        figHandle = plotEvent (figHandle, LFP_centered, t, SLE(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
                         
         %Title
         title (sprintf('LFP Recording, SLE #%d', i));
