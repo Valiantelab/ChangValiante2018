@@ -1,4 +1,4 @@
-function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -487,13 +487,13 @@ if userInput(5) == 1
 
         %Set up the index to split intensity population
         maxIntensity = double(max(intensityPerMinute{i}(:,2)));
-        zeroIndex = intensityPerMinute{i}(:,2) <= (maxIntensity/10); 
+        zeroIndex = intensityPerMinute{i}(:,2) < (maxIntensity/10); 
 
         plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'MarkerFaceColor', 'm')
         plot (intensityPerMinute{i}(zeroIndex ,1)/frequency, intensityPerMinute{i}(zeroIndex ,2), 'o', 'MarkerFaceColor', 'black')
         plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'color', 'k')      
 
-        ylabel ('intensity/minute');
+        ylabel ('intensity (mV^2/s)');
         set(gca,'fontsize',16)
         set(gca,'fontsize',14)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'Low intensity')
@@ -580,6 +580,10 @@ I = sprintf('%.02f Hz', thresholdFrequency);
 J = sprintf('%.02f mV^2/s', thresholdIntensity);
 K = sprintf('%.02f s', thresholdDuration);     
 
+II = sprintf('%.02f Hz', thresholdFrequencyQSLE);
+JJ = sprintf('%.02f mV^2/s', thresholdIntensityQSLE);
+KK = sprintf('%.02f s', thresholdDurationQSLE);     
+
 %Report outliers detected using peak-to-peak amplitude feature
 if sum(indexArtifact)>0
     L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
@@ -609,7 +613,7 @@ end
 
 %Sheet = Interictal Events
 if ~isempty(interictalEvents)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
+    subtitle1 = {A, B, C, D, E, F, G, H, II, JJ, KK, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'interictalEvents','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),interictalEvents,'interictalEvents','A2');
 else

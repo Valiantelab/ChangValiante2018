@@ -1,4 +1,4 @@
-% function [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -53,7 +53,7 @@ calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should 
 
 %Label for titles
 excelFileName = FileName(1:8);
-uniqueTitle = '(detectedEvents)';
+uniqueTitle = '(interictalEvents)';
 finalTitle = '(V6,8)';
 
 %% create time vector
@@ -316,9 +316,9 @@ indexQuestionableIIEs = find(events(:,7)==2.5);
 % featureSet = [indexQuestionableIIEs events(indexQuestionableIIEs,18)];
 
 %IIE (confirmed)
-indexInterictalEvents= find(events(:,7) == 2); 
-minRatioIIE = min(events(indexInterictalEvents, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
-minDurationIIE = min(events(indexInterictalEvents,3));  %Calculate the minimum duration (for machine learning)
+indexIIE= find(events(:,7) == 2.1); %Confirmed IIEs
+minRatioIIE = min(events(indexIIE, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
+minDurationIIE = min(events(indexIIE,3));  %Calculate the minimum duration (for machine learning)
 
 %find threshold, dynamic
 floorThresholdIntensityRatio = 0.2;    %High Intensity:Low Intensity
@@ -350,9 +350,9 @@ for i = 1:numel(events(:,1))
 end
 
 %% IIE Classifier - Final
-indexIIE = find(events(:,7) == 2);
+indexIIEs = find(events(:,7) == 2);
 
-for i = indexIIE'
+for i = indexIIEs'
     
     if events(i,13) >= 1 || events(i, 20) == 1
         ;
@@ -392,7 +392,7 @@ indexReviewSLE = find(events(:,7)==0);  %Events I have no idea about
 reviewSLE = events(indexReviewSLE,:);
 
 %light-triggered events
-% triggeredEvents = SLE_final(SLE_final(:,4)>0, :);
+% triggeredEvents = SLE(SLE(:,4)>0, :);
     
 %% Troubleshooting: Plot all figures 
 if userInput(5) == 1   
@@ -487,13 +487,13 @@ if userInput(5) == 1
 
         %Set up the index to split intensity population
         maxIntensity = double(max(intensityPerMinute{i}(:,2)));
-        zeroIndex = intensityPerMinute{i}(:,2) <= (maxIntensity/10); 
+        zeroIndex = intensityPerMinute{i}(:,2) < (maxIntensity/10); 
 
         plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'MarkerFaceColor', 'm')
         plot (intensityPerMinute{i}(zeroIndex ,1)/frequency, intensityPerMinute{i}(zeroIndex ,2), 'o', 'MarkerFaceColor', 'black')
         plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'color', 'k')      
 
-        ylabel ('intensity/minute');
+        ylabel ('intensity (mV^2/s)');
         set(gca,'fontsize',16)
         set(gca,'fontsize',14)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'Low intensity')
@@ -580,6 +580,10 @@ I = sprintf('%.02f Hz', thresholdFrequency);
 J = sprintf('%.02f mV^2/s', thresholdIntensity);
 K = sprintf('%.02f s', thresholdDuration);     
 
+II = sprintf('%.02f Hz', thresholdFrequencyQSLE);
+JJ = sprintf('%.02f mV^2/s', thresholdIntensityQSLE);
+KK = sprintf('%.02f s', thresholdDurationQSLE);     
+
 %Report outliers detected using peak-to-peak amplitude feature
 if sum(indexArtifact)>0
     L = sprintf('%.02f mV', thresholdAmplitudeOutlier);     %artifacts threshold
@@ -609,9 +613,9 @@ end
 
 %Sheet = Interictal Events
 if ~isempty(interictalEvents)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
+    subtitle1 = {A, B, C, D, E, F, G, H, II, JJ, KK, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'interictalEvents','A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'interictalEvents','A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),interictalEvents,'interictalEvents','A2');
 else
     disp ('No interictal events were detected.');
 end
