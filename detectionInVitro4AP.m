@@ -1,4 +1,4 @@
-% function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 6.8
+%Version 6.9
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -17,7 +17,7 @@ if ~exist('x','var') == 1
     clc
 
     %Manually set File DirectorYou seem really sweet and genuine from your profile. 
-    inputdir = 'C:\Users\User\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -89,6 +89,7 @@ DiffLFP_Filtered = abs(diff(LFP_filtered));     %2nd derived signal
 
 %Power of the filtered data (feature for classification)     
 powerFeature = (LFP_filtered).^2;                     %3rd derived signal
+avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
 %detrended LFP signal
 LFP_detrended = detrend(LFP);
@@ -132,8 +133,7 @@ if isempty(epileptiformLocation)
     return
 end
 
-%% Stage 2a: SLE Classifier  
-%% Part 1 - 1st Classifier (Seperate SLEs from spikes using duration)
+%% Stage 2a: SLE Classifier; Part 1 - Classifier, duration 
 %Putative IIS
 indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
@@ -144,12 +144,12 @@ IIS = epileptiformLocation(indexIIS,1:3)/frequency;
 indexEvents = (epileptiformLocation (:,3)>=(minSLEduration*frequency));
 epileptiformEvents = epileptiformLocation(indexEvents,:);   
 
-%% SLE Crawler: Determine exact onset and offset times | Power Feature
+%SLE Crawler: Determine exact onset and offset times | Power Feature
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = epileptiformEvents(:,1:2)/frequency;
 events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
 
-%% Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
+%Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
 for i = 1:size(events,1)   
     %make epileptiform event vector
     onsetTime = int64(events(i,1)*frequency);
@@ -198,23 +198,22 @@ for i = 1:size(events,1)
     events (i,6) = p2pAmplitude;     
     
     %Identify epileptiform event phases
-    [events(i,[13:17 21:22]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});    
-    
-
-    %Calculate the intensity ratio (high to low)
+    [events(i,[13:17 21:22]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});       
+   
+    %Calculating the Intensity Ratio (High:Low)
 %     for i = 1:numel(events(:,1))
         maxIntensity = double(max(intensityPerMinute{i}(:,2)));
-        indexHighIntensity = intensityPerMinute{i}(:,2) >= (maxIntensity/10); %Locate indices that are larger than (or equal to) the threshold
+        indexHighIntensity = intensityPerMinute{i}(:,2) >= avgPowerFeature; %Locate indices that are larger than (or equal to) the threshold
         intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
         intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
         events(i,18) = intensityRatio;
 %     end
-    
+
     %m calculation                   
   
 end        
 
-%% Part 3 - 2nd Classifier (Seperate SLEs, IIEs, artifacts using extracted features, averages)
+%Part 3 - Classifier, extracted features
 [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier, algoFrequencyThreshold] = classifier_dynamic (events, userInput(3));
 %if no SLEs detected (because IIEs are absent) | Repeat classification using hard-coded thresholds, 
 if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6    
@@ -223,76 +222,6 @@ if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
 end        
 
 %% Stage 2b: IIE Classifier
-LFP_detrendedBaseline = LFP_detrended;
-
-%remove events 
-for i = 1:size(events,1)
-    timeStart = int64((events(i,1)-1)*frequency);
-    timeEnd = int64((events (i,2)+8)*frequency);
-    LFP_detrendedBaseline(timeStart:timeEnd) = [-1];
-    clear timeStart timeEnd
-end
-
-%remove IISs
-for i = 1:size(IIS,1)
-    timeStart = int64((IIS(i,1)-1)*frequency);
-    timeEnd = int64((IIS(i,2)+1)*frequency);
-    LFP_detrendedBaseline(timeStart:timeEnd) = [-1];
-    clear timeStart timeEnd
-end
-
-%remove artifacts
-for i = 1:size(artifacts,1)
-LFP_detrendedBaseline (artifacts(i,1):artifacts(i,2)) = [-1];
-end
-
-%remove light pulse
-if LED
-    [pulse] = pulse_seq(LED);   %determine location of light pulses     
-
-    %Find range of time when light pulse has potential to trigger an event,
-    for i = 1:numel(pulse.range(:,1))
-        lightTriggeredOnsetRange = (pulse.range(i,1):pulse.range(i,1)+(1*frequency));
-        lightTriggeredOnsetZone{i} = lightTriggeredOnsetRange; 
-        clear lightTriggeredRange 
-    end
-    %Combine all the ranges where light triggered events occur into one array
-    lightTriggeredOnsetZones = cat(2, lightTriggeredOnsetZone{:});  %2 is vertcat
-        
-    %% remove spiking due to light pulse 
-    LFP_detrendedBaseline (lightTriggeredOnsetZones) = [-1];
-end
-
-%Isolate baseline recording
-LFP_detrendedBaseline (LFP_detrendedBaseline == -1) = [];
-
-%Characterize baseline features from absolute value of the filtered data 
-avgDetrendedBaseline = mean(LFP_detrendedBaseline(2500000:end)); %Average
-sigmaDetrendedBaseline = std(LFP_detrendedBaseline(2500000:end)); %Standard Deviation
-
-figure;
-reduce_plot(LFP_detrended)
-hold on
-reduce_plot(LFP_detrendedBaseline)
-
-figure;
-subplot(2,1,1)
-reduce_plot(LFP_detrendedBaseline(2500000:end))
-
-subplot(2,1,2)
-reduce_plot(LFP_detrended(2500000:end))
-
-
-
-
-
-
-
-
-
-
-
-
 %Collect all the interictal events       
 indexInterictalEvents= find(events(:,7) == 2); %index to indicate the remaining epileptiform events
 interictalEvents = events(indexInterictalEvents,:); %Collect IIEs 
@@ -304,7 +233,7 @@ else
     floorThresholdFrequency = 0.6;  %for SLE at Taufik's suggestion
 end
 
-%Questionable SLE, isolation
+%Part 1 - Classifier, extracted features | Located questionable SLEs
 [interictalEvents, thresholdFrequencyQSLE, thresholdIntensityQSLE, thresholdDurationQSLE] = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency); %the input "1" is to indicate it's a IIE classifier
 %if no (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
 if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6    
@@ -315,11 +244,11 @@ end
 %Transfer the results to the Events array 
 events(indexInterictalEvents, 7) = interictalEvents(:,7);
 
-%% 3rd Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
+%% Stage 2c: Epileptiform Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
 %Classify using Tonic Phase feature set (does it exist or not?)
 for i = 1:numel(events(:,1))
     
-    %Verify SLEs (Reclassify SLE lacking Tonic Phase)
+    %Reclassify as IIE (SLE lacking Tonic Phase)
     if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
         events(i,7) = 2.1;  %Legit IIE (2.1)
     end   
@@ -331,10 +260,10 @@ for i = 1:numel(events(:,1))
     
     %Verify IIE (Confirm IIE that is small with a tonic phase) 
     if events(i,7) == 2.5 && events(i,13) > 0
-        events(i,7) = 2; 
+        events(i,7) = 2.1; 
     end    
     
-    %Reclassify IIS (<3 s) 
+    %Reclassify as IIS (IIE duration <3 s) 
     if events(i,13) == -1   
         events(i,7) = 3;
     end
@@ -367,12 +296,14 @@ thresholdIntensityRatioSLE = max([floorThresholdIntensityRatio, MachineLearningT
 %Split the questionable SLEs
 indexIntensityRatioSLE = events(:,18) >= thresholdIntensityRatioSLE;   %I'm being liberal in what's considered an SLE. If it's above (or equal to) threshold, it's a SLE
 events(:,19) = indexIntensityRatioSLE;
+interictalEvents (:,19) = indexIntensityRatioSLE(indexInterictalEvents); %store the index in interictalEvents array, as well for post-analysis by undergrad students
+
 
 %Update Classification
 for i = 1:numel(events(:,1))
     
     if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) < (minDurationSLE/2)  
-        events(i,7) = 2;    %This is an IIE
+        events(i,7) = 2.1;    %This is an IIE
     end
     
     if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE/2)  
@@ -407,6 +338,7 @@ thresholdIntensityRatioIIE = max([floorThresholdIntensityRatio, MachineLearningT
 %Split the questionable IIEs
 indexIntensityRatioIIE = events(:,18) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's above (or equal to) the threshold, it's an IIE.
 events(:,20) = indexIntensityRatioIIE;  %store the index for classification later on
+interictalEvents (:,20) = indexIntensityRatioIIE(indexInterictalEvents); %store the index in interictalEvents array, as well for post-analysis by undergrad students
 
 %Classify
 for i = 1:numel(events(:,1))
@@ -559,7 +491,7 @@ if userInput(5) == 1
 
         %Set up the index to split intensity population
         maxIntensity = double(max(intensityPerMinute{i}(:,2)));
-        zeroIndex = intensityPerMinute{i}(:,2) < (maxIntensity/10); 
+        zeroIndex = intensityPerMinute{i}(:,2) < avgPowerFeature; 
 
         plot (intensityPerMinute{i}(:,1)/frequency, intensityPerMinute{i}(:,2), 'o', 'MarkerFaceColor', 'm')
         plot (intensityPerMinute{i}(zeroIndex ,1)/frequency, intensityPerMinute{i}(zeroIndex ,2), 'o', 'MarkerFaceColor', 'black')
@@ -635,6 +567,7 @@ if userInput(4)>0
 end
 
 %Thresholds
+details.thresholdHighIntensity = avgPowerFeature;
 details.thresholdIntensityRatioSLE = thresholdIntensityRatioSLE;
 details.thresholdIntensityRatioIIE = thresholdIntensityRatioIIE;
 
