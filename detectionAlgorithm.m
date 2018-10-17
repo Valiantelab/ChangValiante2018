@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 6.8
+%Version 7.0
 
 %clear all (reset)
 close all
@@ -15,10 +15,10 @@ inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III 
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
 prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
-prompt2 = 'Artifact Threshold: average + (70 x Sigma) ';
+prompt2 = 'Artifact Threshold: average + (70 x Sigma)';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
-prompt5 = 'Troubleshooting (plot all epileptiform events): Yes (1) or No 0)';
+prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Review(5), all(6), None(0):';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];

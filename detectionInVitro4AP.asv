@@ -1,4 +1,4 @@
-function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@ function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, sampli
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.0
+%Version 6.9
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -456,16 +456,17 @@ if userInput(5) > 0
             indexTroubleshoot = indexArtifacts';
             uniqueTitle = '(Artifacts)';
 
-        case 5 %Review Events and Questionable SLEs
-            indexTroubleshoot = [indexReviewSLE, indexQuestionableSLE]';
+        case 5 %Review Events
+            indexTroubleshoot = [indexReviewSLE:indexQuestionableSLE]';
             uniqueTitle = '(reviewEvents)';
 
         case 6  %Plot all Events
-            indexTroubleshoot = 1:size(events,1);
-            uniqueTitle = '(detectedEvents)';
+            indexTroubleshoot = 1:size(events,1)
+            uniqueTitle = '(detectedEvents)'
     end
 
-    if indexTroubleshoot    
+    if indexTroubleshoot     
+    
         for i = indexTroubleshoot
         %Classification labels for plotting
         [label, classification] = decipher (events,i);
@@ -505,8 +506,7 @@ if userInput(5) > 0
         set(gca,'fontsize',14)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'Frequency above threshold', 'Frequency below threshold', 'Tonic Phase onset', 'Clonic Phase onset', sprintf('Classification: %s', classification))
         legend ('Location', 'northeastoutside')
-        axis tight
-        
+
         subplot (2,1,2)
         figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);                 
         %Labels
@@ -529,7 +529,6 @@ if userInput(5) > 0
         set(gca,'fontsize',14)
         legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Detected Spikes', 'Applied Stimulus', 'High Intensity', 'Low intensity')
         legend ('Location', 'northeastoutside')
-        axis tight
 
         %Export figures to .pptx
         exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
@@ -546,6 +545,8 @@ if userInput(5) > 0
     end   
     end    
 end
+
+
 
 %% Final Summary Report
 %Plot a 3D scatter plot of events
@@ -838,7 +839,6 @@ if userInput(3) == 1
         title (sprintf('LFP Recording, SLE #%d', i));
         ylabel ('mV');
         xlabel ('Time (sec)');
-        axis tight
 
     %     yyaxis right
     %     
