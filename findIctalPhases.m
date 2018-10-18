@@ -94,7 +94,7 @@ else    %this event is a IIS mascurading as a IIE
     endTonicTime = endTime;  %secs; just to push it through the function
     
     classification = -1;    %-1 = IIS (<3s duration)  
-    %fprintf(2,'\nWarning: The event at %d-%d s is not a IIE (duration <2 s), reclassify as a IIS.\n', startTime, endTime)  %Warning presented when a reclassification is made
+    %fprintf(2,'\nWarning: The event at %d-%d s is not a IIE (duration <3 s), reclassify as a IIS.\n', startTime, endTime)  %Warning presented when a reclassification is made
     
     preictalPhaseFrequency = 0;
     tonicPhaseFrequency = 0;
