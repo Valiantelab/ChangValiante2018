@@ -53,6 +53,22 @@ end
 
 template = LFP_detrended(175700:178700);
 
+
+
+figure;
+plot(timeSeries)
+axis tight
+title ('Time Series')
+
+w = conv(LFP_detrended, template, 'same');
+
+
+figure;
+plot(w)
+axis tight
+title ('convolution')
+
+
     % Create a matched filter based on the template
     b = template;
 
@@ -78,21 +94,14 @@ u = template.'*template;
 
 % Find matches
 %matches = n(y>thresh*u);
-n = 1:length(timeSeries);
-matches = n(w>thresh*u);
-
+matches = t(w>thresh*u);
+matches = int64(matches);
 
 % Plot the results
 figure;
 plot(t,w,'b')
 hold on
 plot(t(matches), w(matches), 'ro');
-axis tight
-title ('Detected spikes from Template Matching')
 
 % Print the results to the console
 % display(matches);
-
-%Dealing with IISs
-spikes = SLECrawler(LFP_filtered, IIS, frequency, LED, onsetDelay, 0, locs_spike_2nd, 1);  
-

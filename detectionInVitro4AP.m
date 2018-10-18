@@ -90,8 +90,8 @@ DiffLFP_Filtered = abs(diff(LFP_filtered));     %2nd derived signal
 powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
-%detrended LFP signal
-LFP_detrended = detrend(LFP);
+% %detrended LFP signal
+% LFP_detrended = detrend(LFP);
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
 [epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
