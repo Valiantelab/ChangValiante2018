@@ -269,7 +269,7 @@ sigmaSLEDuration = std(putativeSLE(:,3));
 %classify based on duration
 featureSet = events(:,3);   %Duration (s)
 %Floor threshold
-floorThresholdDuration = 7;    %seconds
+floorThresholdDuration = 10;    %seconds
 %Dynamic threshold
 if hardCodedThreshold>=2
     %Michael's threshold, use the one that is higher, conservative

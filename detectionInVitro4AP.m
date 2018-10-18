@@ -49,7 +49,7 @@ finalTitle = '(V7)';
 %findEvent function
 distanceSpike = 0.15;  %distance between spikes (seconds)
 distanceArtifact = 0.6; %distance between artifacts (seconds)
-minEventduration = 3.5; %seconds; %change to 5 s if any detection issues 
+minSLEduration = 3.5; %seconds; %change to 5 s if any detection issues 
 %SLECrawler function
 durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
 durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
@@ -134,13 +134,13 @@ end
 
 %% Stage 2a: SLE Classifier; Part 1 - Classifier, duration 
 %Putative IIS
-indexIIS = (epileptiformLocation (:,3)<(minEventduration*frequency));
+indexIIS = (epileptiformLocation (:,3)<(minSLEduration*frequency));
 epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
 %temp for troublshooting
 IIS = epileptiformLocation(indexIIS,1:3)/frequency;
 
 %Putative SLE
-indexEvents = (epileptiformLocation (:,3)>=(minEventduration*frequency));
+indexEvents = (epileptiformLocation (:,3)>=(minSLEduration*frequency));
 epileptiformEvents = epileptiformLocation(indexEvents,:);   
 
 %SLE Crawler: Determine exact onset and offset times | Power Feature
@@ -197,23 +197,16 @@ for i = 1:size(events,1)
     events (i,6) = p2pAmplitude;     
     
     %Identify epileptiform event phases
-    [events(i,[13:17 22:23]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});       
+    [events(i,[13:17 21:22]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});       
    
-    %Calculating the Intensity Ratio (High:Low) for SLE
+    %Calculating the Intensity Ratio (High:Low)
 %     for i = 1:numel(events(:,1))
         maxIntensity = double(max(intensityPerMinute{i}(:,2)));
-        indexHighIntensity = intensityPerMinute{i}(:,2) >= maxIntensity/10;  %Locate indices that are larger than (or equal to) the threshold
+        indexHighIntensity = intensityPerMinute{i}(:,2) >= avgPowerFeature; %Locate indices that are larger than (or equal to) the threshold
         intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
         intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
-        intensityRatio = round(intensityRatio,1);   %I rounded off the values to overcome the issues related to being super clsoe to the threshold.
         events(i,18) = intensityRatio;
 %     end
-
-    %Calculating the Intensity Ratio (High:Low) for IIE
-    indexHighIntensity = intensityPerMinute{i}(:,2) >= avgPowerFeature; %Locate indices that are larger than (or equal to) the threshold
-    intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
-    intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
-    events(i,20) = intensityRatio;
 
     %m calculation                   
   
@@ -255,8 +248,12 @@ events(indexInterictalEvents, 7) = interictalEvents(:,7);
 %Classify using Tonic Phase feature set (does it exist or not?)
 =======
 %% Stage 2c: Epileptiform Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
+<<<<<<< HEAD
 %Tonic Phase feature set (does it exist or not?)
 >>>>>>> 20428825946dec50e90e9b50350254638020a802
+=======
+%Classify using Tonic Phase feature set (does it exist or not?)
+>>>>>>> parent of 2042882... 8th Iteration - Complete
 for i = 1:numel(events(:,1))
     
     %Reclassify as IIE (SLE lacking Tonic Phase)
@@ -313,15 +310,14 @@ interictalEvents (:,19) = indexIntensityRatioSLE(indexInterictalEvents); %store 
 %Update Classification
 for i = 1:numel(events(:,1))
     
-    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE)  
-        events(i,7) = 0;    %Review! I have no idea wtf this is There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
-        fprintf(2,'\nReview Results! Unusual event (#%d) was detected. Maybe a SLE surrounded by noise or post-ictal bursting activity. If there are alot of these unusual events, try reanalyzing with higher detection threshold (sigma).\n', i)
-    end
-    
-    if events(i,7) == 1.5 && events(i,19) == 0  %&& events(i,3) < (minDurationSLE/2)  
+    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) < (minDurationSLE/2)  
         events(i,7) = 2.1;    %This is an IIE
     end
     
+    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE/2)  
+        events(i,7) = 0;    %Review! I have no idea wtf this is There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
+        fprintf(2,'\nReview Results! Unusual event (#%d) was detected. Maybe a SLE surrounded by noise or post-ictal bursting activity. If there are alot of these unusual events, try reanalyzing with higher detection threshold (sigma).\n', i)
+    end
 
 end
 
@@ -332,7 +328,7 @@ indexQuestionableIIEs = find(events(:,7)==2.5);
 
 %IIE (confirmed)
 indexIIE= find(events(:,7) == 2.1); %Confirmed IIEs
-minRatioIIE = min(events(indexIIE, 20));   %Calculate minimum Intensity Ratios (for machine learning)    
+minRatioIIE = min(events(indexIIE, 18));   %Calculate minimum Intensity Ratios (for machine learning)    
 minDurationIIE = min(events(indexIIE,3));  %Calculate the minimum duration (for machine learning)
 
 %find threshold, dynamic
@@ -348,18 +344,18 @@ end
 thresholdIntensityRatioIIE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
 
 %Split the questionable IIEs
-indexIntensityRatioIIE = events(:,20) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's above (or equal to) the threshold, it's an IIE.
-events(:,21) = indexIntensityRatioIIE;  %store the index for classification later on
-interictalEvents (:,21) = indexIntensityRatioIIE(indexInterictalEvents); %store the index in interictalEvents array, as well for post-analysis by undergrad students
+indexIntensityRatioIIE = events(:,18) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's above (or equal to) the threshold, it's an IIE.
+events(:,20) = indexIntensityRatioIIE;  %store the index for classification later on
+interictalEvents (:,20) = indexIntensityRatioIIE(indexInterictalEvents); %store the index in interictalEvents array, as well for post-analysis by undergrad students
 
 %Classify
 for i = 1:numel(events(:,1))
     
-    if events(i,7) == 2.5 && events(i,21) == 1
+    if events(i,7) == 2.5 && events(i,20) == 1
         events(i,7) = 2;    %IIE
     end
     
-    if events(i,7) == 2.5 && events(i,21) == 0
+    if events(i,7) == 2.5 && events(i,20) == 0
         events(i,7) = 3;    %IIS
     end
     
@@ -370,7 +366,7 @@ indexIIEs = find(events(:,7) == 2);
 
 for i = indexIIEs'
     
-    if events(i,13) >= 1 || events(i, 21) == 1
+    if events(i,13) >= 1 || events(i, 20) == 1
         ;
     else
         events(i,7) = 3;    %It's a IIS
@@ -505,8 +501,8 @@ if userInput(5) > 0
             plot (spikeFrequency{i}(inactiveIndex ,1)/frequency, spikeFrequency{i}(inactiveIndex ,2), 'o', 'MarkerFaceColor', 'magenta')
         end        
 
-        plot ([events(i,22) events(i,22)], ylim)    %Plot when tonic phase starts
-        plot ([events(i,23) events(i,23)], ylim)    %Plot when tonic phase ends
+        plot ([events(i,21) events(i,21)], ylim)    %Plot when tonic phase starts
+        plot ([events(i,22) events(i,22)], ylim)    %Plot when tonic phase ends
         
         plot (spikeFrequency{i}(: ,1)/frequency, spikeFrequency{i}(: ,2), 'o', 'color', 'k')    %Plot again to give markers black border
         
@@ -589,8 +585,7 @@ details.spikeThreshold = (userInput(1));
 details.distanceSpike = distanceSpike;
 details.artifactThreshold = userInput(2);
 details.distanceArtifact = distanceArtifact;
-details.minEventduration = minEventduration;
-details.minSLEduration = minDurationSLE;
+details.minSLEduration = minSLEduration;
 %Detect events (epileptiform/artifacts) | Absolute Values
 details.minPeakHeightAbs = minPeakHeight; 
 details.minPeakDistanceAbs = minPeakDistance;
@@ -648,14 +643,15 @@ N = 'Preictal Freq, Avg';
 O = 'Tonic Freq, Avg';
 P = 'Clonic Freq, Avg';
 Q = 'Tonic Freq, Min';  %17
-R = 'Intensity Ratio, SLE';  %18
+R = 'Intensity Ratio';  %18
 S = sprintf('%.02f', thresholdIntensityRatioSLE);
-T = 'Intensity Ratio, IIE';  %20
-U = sprintf('%.02f', thresholdIntensityRatioIIE);
+T = sprintf('%.02f', thresholdIntensityRatioIIE);
+U = 'Start Time (Tonic Phase)';
+V = 'End Time (Tonic Phase)';
 
 %Sheet 1 = Events
 if ~isempty(events)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
@@ -664,7 +660,7 @@ end
 
 %Sheet = Interictal Events
 if ~isempty(interictalEvents)
-    subtitle1 = {A, B, C, D, E, F, G, H, II, JJ, KK, L, M, N, O, P, Q, R, S, T, U};
+    subtitle1 = {A, B, C, D, E, F, G, H, II, JJ, KK, L, M, N, O, P, Q, R, S, T, U, V};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'interictalEvents','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),interictalEvents,'interictalEvents','A2');
 else
