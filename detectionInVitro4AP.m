@@ -243,7 +243,7 @@ end
 %Transfer the results to the Events array 
 events(indexInterictalEvents, 7) = interictalEvents(:,7);
 
-%% Stage 2c: Epileptiform Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
+%% Stage 3: Individual Features | Epileptiform Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
 %Classify using Tonic Phase feature set (does it exist or not?)
 for i = 1:numel(events(:,1))
     
