@@ -205,7 +205,6 @@ for i = 1:size(events,1)
         indexHighIntensity = intensityPerMinute{i}(:,2) >= maxIntensity/10;  %Locate indices that are larger than (or equal to) the threshold
         intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
         intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
-        intensityRatio = round(intensityRatio,1);   %I rounded off the values to overcome the issues related to being super clsoe to the threshold.
         events(i,18) = intensityRatio;
 %     end
 
@@ -250,13 +249,8 @@ end
 %Transfer the results to the Events array 
 events(indexInterictalEvents, 7) = interictalEvents(:,7);
 
-<<<<<<< HEAD
-%% Stage 3: Individual Features | Epileptiform Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
-%Classify using Tonic Phase feature set (does it exist or not?)
-=======
 %% Stage 2c: Epileptiform Classifier (Confirm SLEs, IIEs, IISs using extracted features, per second) 
 %Tonic Phase feature set (does it exist or not?)
->>>>>>> 20428825946dec50e90e9b50350254638020a802
 for i = 1:numel(events(:,1))
     
     %Reclassify as IIE (SLE lacking Tonic Phase)
@@ -313,15 +307,14 @@ interictalEvents (:,19) = indexIntensityRatioSLE(indexInterictalEvents); %store 
 %Update Classification
 for i = 1:numel(events(:,1))
     
-    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE)  
+    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) < (minDurationSLE/2)  
+        events(i,7) = 2.1;    %This is an IIE
+    end
+    %Events between minDurationSLE/2 - minDurationSLE is a Questionable SLE
+    if events(i,7) == 1.5 && events(i,19) == 0  && events(i,3) >= (minDurationSLE/2)  
         events(i,7) = 0;    %Review! I have no idea wtf this is There is maybe an SLE inside noise or need to reanalyze with higher detection threshold (sigma)
         fprintf(2,'\nReview Results! Unusual event (#%d) was detected. Maybe a SLE surrounded by noise or post-ictal bursting activity. If there are alot of these unusual events, try reanalyzing with higher detection threshold (sigma).\n', i)
     end
-    
-    if events(i,7) == 1.5 && events(i,19) == 0  %&& events(i,3) < (minDurationSLE/2)  
-        events(i,7) = 2.1;    %This is an IIE
-    end
-    
 
 end
 
