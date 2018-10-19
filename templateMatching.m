@@ -79,7 +79,9 @@ title ('Detected spikes from Template Matching')
 % display(matches);
 
 %% Dealing with IISs
-spikes2 = SLECrawler(LFP_highpass, IIS, frequency, LED, onsetDelay, 0, locs_spike_2nd, 1, 1, 4);  
+clear spikes2
+spikes2 = crawler(LFP, IIS, locs_spike_2nd, 'SLE', LED, frequency, onsetDelay, 0, 1);  
+
 
 %% Analyze the detected Spikes 
 timeSeries = LFP_detrended;
@@ -128,18 +130,18 @@ for i = 1:numel(spikes(:,1))
     contextStartTime = int64((spikes(i,1)-0.1)*frequency);
     contextEndTime = int64((spikes(i,2)+3)*frequency);
     
-%     %Plot all the IIS spikes detected
-%     figHandle = figure;
-%     plot(t(contextStartTime:contextEndTime), timeSeries(contextStartTime:contextEndTime))
-%     hold on
-%     plot(t(startTime:endTime), timeSeries(startTime:endTime))
-%     axis tight
-%     title (sprintf('Spike #%d',i))        
-%     
-%      %Export figures to .pptx
-%     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-%     exportToPPTX('addpicture',figHandle);      
-%     close(figHandle)
+    %Plot all the IIS spikes detected
+    figHandle = figure;
+    plot(t(contextStartTime:contextEndTime), timeSeries(contextStartTime:contextEndTime))
+    hold on
+    plot(t(startTime:endTime), timeSeries(startTime:endTime))
+    axis tight
+    title (sprintf('Spike #%d',i))        
+    
+     %Export figures to .pptx
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);      
+    close(figHandle)
     
     %Characterize the spikes
     vectorSpike = timeSeries(contextStartTime:contextEndTime);
