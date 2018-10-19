@@ -134,10 +134,10 @@ end
 
 %% Stage 2a: SLE Classifier; Part 1 - Classifier, duration 
 %Putative IIS
-indexIIS = (epileptiformLocation (:,3)<(minEventduration*frequency));
-epileptiformLocation (indexIIS,7) = 3;   %3 = IIS; 0 = unclassified.
+indexSpikes = (epileptiformLocation (:,3)<(minEventduration*frequency));
+epileptiformLocation (indexSpikes,7) = 3;   %3 = IIS; 0 = unclassified.
 %temp for troublshooting
-IIS = epileptiformLocation(indexIIS,1:3)/frequency;
+IIS = epileptiformLocation(indexSpikes,1:3)/frequency;
 
 %Putative SLE
 indexEvents = (epileptiformLocation (:,3)>=(minEventduration*frequency));

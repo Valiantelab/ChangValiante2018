@@ -1,4 +1,4 @@
-function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike, troubleshooting, durationOnsetBaseline, durationOffsetBaseline, calculateMeanOffsetBaseline)
+function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike, troubleshooting, durationOnsetBaseline, durationOffsetBaseline)
 %'SLE Crawl' function detects exact onset and offset time of ictal event
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
 %   where all the SLEs (aka ictal events) roughly occur to the nearest 0.5
@@ -17,36 +17,38 @@ function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onse
 
   
 %% Default values, if frequenct is not specified 
-if nargin<5
-    frequency = 10000;      % 10kHz is default sampling frequency    
+if nargin<3
+    frequency = 10000;      % 10kHz is default sampling frequency   
+    LED = [];               %No LED input
     onsetDelay = 0.13;      % seconds after light pulse onset to be considered triggered
     offsetDelay = 1.5;      % seconds the event offset follows light pulse to be considered associated
     troubleshooting = [];    % plot onset and offset detections
     durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
-    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
-    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
+    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)        
 end
 
 if nargin<8
     troubleshooting = [];    % plot onset and offset detections
     durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
-    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
-    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
+    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)    
 end
 
 if nargin<9    
     durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
     durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
-    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
 end
+
+%Set the duration of Offset Baseline to calculate the offset threshold (meanBaseline/2)
+if durationOffsetBaseline >= 1.5
+    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
+else
+    calculateMeanOffsetBaseline = durationOffsetBaseline;
+end
+
 
 %create time vector
 t = (0:(length(LFP_filtered)- 1))/frequency;
 t = t';
-
-%hard-coded variables
-
-
 
 % Find Light pulse
 if LED
@@ -197,14 +199,21 @@ for i = 1:size(eventTimes,1)
 %         meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline of whatever remains
 %     end    
 
-    meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline of context
-    OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
+    %Make vector and center it
+    vectorOffsetContext = powerFeatureLowPassFiltered2(offsetContext);
+    center = min(vectorOffsetContext);
+    vectorOffsetContextCentered = powerFeatureLowPassFiltered2(offsetContext)-center;
+
+    %Locating the offset time - using derivative values
+    meanOffsetBaseline = mean(vectorOffsetContextCentered); %Mean baseline of context
+    OffsetLocation = vectorOffsetContextCentered > meanOffsetBaseline/2; 
     offset_loc = find(OffsetLocation, 1, 'last'); %Last point is the index for the offset location    
     offsetSLE_2 = (offsetContext(offset_loc));  %detecting the new offset location         
     SLEoffset_final(i,1) = t(offsetSLE_2);
     
-    %Locating the offset time - using absolute value signal
-%     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
+    %Locating the offset time - using absolute value signal  | Note: you
+    %don't have to center the absolute values, they are typically already
+    %centered.
     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline of offset context
     OffsetLocationAbs = powerFeatureLowPassFilteredAbs2(offsetContext) > meanOffsetAbsBaseline/2; 
     offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
@@ -236,15 +245,17 @@ for i = 1:size(eventTimes,1)
                 end                                 
 
                 %Locating the new offset time  - using the derivative signal  
-%                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:1.5*frequency)));    %Mean baseline of the first 1.5 s
-%                 meanOffsetBaseline = mean(powerFeatureLowPassFiltered2(offsetContext));    %Mean baseline of the first 1.5 s
+                %Make vector and center it
+                vectorOffsetContext = powerFeatureLowPassFiltered2(offsetContext);
+                center = min(vectorOffsetContext);
+                vectorOffsetContextCentered = powerFeatureLowPassFiltered2(offsetContext)-center;
                 
                 if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
-                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s                    
+                    meanOffsetAbsBaseline = mean(vectorOffsetContextCentered(1:calculateMeanOffsetBaseline*frequency)); %Mean baseline of the first 1.5 s                    
                 else
-                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFiltered2(offsetContext)); %Mean baseline calculated from whatever context there is                    
+                    meanOffsetAbsBaseline = mean(vectorOffsetContextCentered); %Mean baseline calculated from whatever context there is                    
                 end                 
-                OffsetLocation = powerFeatureLowPassFiltered2(offsetContext) > meanOffsetBaseline/2; 
+                OffsetLocation = vectorOffsetContextCentered > meanOffsetBaseline/2; 
                 offset_loc = find(OffsetLocation, 1, 'last'); %Last point (index) is the offset     
                 if offset_loc
                     SLEoffset_final(i,1) = t(offsetContext(offset_loc)); %store the detected new offset time             
@@ -252,17 +263,14 @@ for i = 1:size(eventTimes,1)
                     SLEoffset_final(i,1) = t(offsetContext(numel(OffsetLocation)));  %If the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.
                 end
 
-                %Locating the offset time - using absolute value signal
-%                 meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:1.5*frequency))); %Mean baseline of the first 1.5 s
-
+                %Locating the offset time - using absolute value signal | Don't need to center
                 if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
                     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
                 else
                     meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs2(offsetContext)); %Mean baseline calculated from whatever context there is
                 end                                    
                 OffsetLocationAbs = powerFeatureLowPassFilteredAbs2(offsetContext) > meanOffsetAbsBaseline/2; 
-                offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
-                
+                offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location                    
                 if offset_loc_Abs
                     offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
                 else
@@ -331,11 +339,11 @@ for i = 1:size(eventTimes,1)
     
     %Plot of the Power of the derivative signal
     subplot (3,1,2)
-    plot(t(offsetContext), powerFeatureLowPassFiltered2(offsetContext))
+    plot(t(offsetContext), vectorOffsetContextCentered)
     hold on
-    plot(t(offsetSLE), powerFeatureLowPassFiltered2(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(SLEoffset_final(i,1), powerFeatureLowPassFiltered2(offsetContext(offset_loc)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
-    plot(t(offsetContext(offset_loc)), powerFeatureLowPassFiltered2(offsetContext(offset_loc)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+    plot(t(offsetSLE), powerFeatureLowPassFiltered2(offsetSLE)-center, 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+    plot(SLEoffset_final(i,1), powerFeatureLowPassFiltered2(offsetContext(offset_loc))-center, 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
+    plot(t(offsetContext(offset_loc)), powerFeatureLowPassFiltered2(offsetContext(offset_loc))-center, '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
     %Plot dashed lines where the threshold for offset is
     xL = get(gca, 'XLim');
     plot(xL, [meanOffsetBaseline/2 meanOffsetBaseline/2], '--')
@@ -343,7 +351,7 @@ for i = 1:size(eventTimes,1)
     title (sprintf('Power of derivative signal, Low Pass Filtered (2 Hz): %.2f', SLEoffset_final(i,1)));
     ylabel ('mV');
     xlabel ('Time (sec)');
-    legend ('Low-pass filtered, Power of derivative signal', 'Putative Offset', 'detected offset', 'Final Offset', 'Baseline mean/2')
+    legend ('Low-pass filtered, Power of derivative signal', 'Putative Offset', 'detected offset', 'Final Offset', 'Baseline mean/2')       
     
     %Plot of the Power of the Absolute values signal
     subplot (3,1,3)
