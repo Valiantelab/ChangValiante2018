@@ -38,8 +38,6 @@ if LED
     LFP_detrendedBaseline (lightTriggeredOnsetZones) = [-1];
 end
 
-
-
 %Characterize baseline features from absolute value of the filtered data 
 avgDetrendedBaseline = mean(LFP_detrendedBaseline(1:end)); %Average
 sigmaDetrendedBaseline = std(LFP_detrendedBaseline(1:end)); %Standard Deviation

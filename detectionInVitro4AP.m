@@ -1,4 +1,4 @@
-% function [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.0
+%Version 7.2
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -43,7 +43,7 @@ end
 
 %Label for titles
 excelFileName = FileName(1:8);
-finalTitle = '(V6,8)';
+finalTitle = '(V7)';
 
 %% Hard Coded values | Detection settings
 %findEvent function
@@ -128,7 +128,29 @@ minArtifactDistance = distanceArtifact*frequency;                       %minimum
 
 %If no events are detected, terminate script
 if isempty(epileptiformLocation)
-    fprintf(2,'\nNo epileptiform events were detected. Review the raw data and consider using a different threshold for epileptiform spike detection.\n')
+    fprintf(2,'\nNo epileptiform events (including epileptiform spikes) were detected. Review the raw data and consider using a different threshold for epileptiform spike detection.\n')
+    
+    %Plot figure for end user to review
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('Review Recording: %s', FileName)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));
+
+    reduce_plot (t, LFP_centered, 'k');
+    hold on        
+    if LED    
+        reduce_plot (t, lightpulse - abs(min(LFP_centered))); %Plot light pulses, if present
+    end
+    xL = get(gca, 'XLim');  %plot dashed reference line at y = 0    
+    plot(xL, [0 0], '--', 'color', [0.5 0.5 0.5])   %Plot dashed line at 0
+    
+    %plot artifacts (red), found in 2nd search
+    if artifactLocation
+        for i = 1:numel(artifactLocation(:,1)) 
+            reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_centered(artifactLocation(i,1):artifactLocation(i,2)), 'r');
+        end
+    end
+
     return
 end
 
@@ -137,7 +159,8 @@ end
 indexSpikes = (epileptiformLocation (:,3)<(minEventduration*frequency));
 epileptiformLocation (indexSpikes,7) = 3;   %3 = IIS; 0 = unclassified.
 %temp for troublshooting
-IIS = epileptiformLocation(indexSpikes,1:3)/frequency;
+spikeTimes = epileptiformLocation(indexSpikes,1:3)/frequency;
+spikes = crawler(LFP, spikeTimes, locs_spike_2nd, 'IIS', LED);  
 
 %Putative SLE
 indexEvents = (epileptiformLocation (:,3)>=(minEventduration*frequency));
@@ -147,6 +170,7 @@ epileptiformEvents = epileptiformLocation(indexEvents,:);
 %Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = epileptiformEvents(:,1:2)/frequency;
 events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
+% events2 = crawler(LFP, eventTimes, locs_spike_2nd, 'SLE', LED);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
 for i = 1:size(events,1)   
@@ -175,7 +199,7 @@ for i = 1:size(events,1)
         if numel(powerFeature) > endWindow
             PowerPerMinute = sum(powerFeature (startWindow:endWindow));        
         else
-            PowerPerMinute = sum(powerFeature (startWindow:numel(powerFeature)))
+            PowerPerMinute = sum(powerFeature (startWindow:numel(powerFeature)));
         end                    
         intensity(j,1) = startWindow; %time windows starts
         intensity(j,2) = PowerPerMinute;   %Total power within the (minute) window        
@@ -243,7 +267,7 @@ end
 [interictalEvents, thresholdFrequencyQSLE, thresholdIntensityQSLE, thresholdDurationQSLE] = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency); %the input "1" is to indicate it's a IIE classifier
 %if no (questionable) SLEs detected | Repeat classification using hard-coded thresholds, 
 if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6    
-    fprintf(2,'\nDynamic Classifier detect a limited number of Questionable SLEs (<2). Beginning second attempt with hard-coded thresholds to classify interictal events.\n')
+    fprintf(2,'\nDynamic Classifier detect a limited number of interictal events (<6). Beginning second attempt with hard-coded thresholds to classify interictal events.\n')
     interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data        
 end
 
@@ -286,6 +310,10 @@ featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)];
 indexSLE = find(events (:,7) == 1); 
 minRatioSLE = min(events(indexSLE, 18));    %Calculate minimum values (for machine learning thresholds)        
 minDurationSLE = min(events(indexSLE, 3));  %Calculate minimum values (for machine learning thresholds)
+%If no SLEs were detected, to push function forward
+if isempty(minDurationSLE)
+    minDurationSLE = 'N/A; no SLEs detected';
+end
 
 %Determine threshold, dynamic
 floorThresholdIntensityRatio = 0.3;    %High Intensity:Low Intensity
@@ -597,7 +625,7 @@ details.durationOffsetBaseline = durationOffsetBaseline;
 details.calculateMeanOffsetBaseline = calculateMeanOffsetBaseline;
 
 %detection results
-details.IISsDetected = numel(IIS(:,1));
+details.spikesDetected = numel(spikeTimes(:,1));
 details.eventsDetected = numel(events(:,1));
 details.SLEsDetected = numel (SLE(:,1));
 
@@ -676,10 +704,10 @@ else
 end
 
 %Sheet 3 = IIS
-if ~isempty(IIS)
-    subtitle3 = {A, B, C};
+if ~isempty(spikes)
+    subtitle3 = {A, B, C, H};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle3,'IIS' ,'A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),IIS,'IIS' ,'A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),spikes(:,[1:3,8]),'IIS' ,'A2');
 else
     disp ('No IISs were detected.');
 end
@@ -706,7 +734,8 @@ if ~isempty(SLE)
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE,'SLE' ,'A2');
 else
-    disp ('No SLEs were detected. Review the raw data and consider using a lower multiple of baseline sigma as the threshold');
+    disp ('No SLEs were detected. Overview of data is being plotting for you to review the raw data. For in vivo recordings or noisier recordings, consider using a higher multiple (i.e. 10) of baseline sigma as the threshold.');
+    userInput(3) = 1;
 end
 
 %Sheet 0 = Details
@@ -840,7 +869,7 @@ if userInput(3) == 1
         set(gcf, 'Position', get(0, 'Screensize'));  
         
         %Plot figure  
-        figHandle = plotEvent (figHandle, LFP_centered, t, SLE(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
+        figHandle = plotEvent (figHandle, LFP, t, SLE(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function       
                         
         %Title
         title (sprintf('LFP Recording, SLE #%d', i));
@@ -863,6 +892,7 @@ if userInput(3) == 1
     exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName)); 
 end
 
+clear x
 fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector.\n')
 
 

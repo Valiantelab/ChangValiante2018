@@ -3,89 +3,20 @@
 %been high pass filtered to remove any DC shift.
 
 
-%Time Series
-timeSeries = LFP;
-
-figure;
-plot(timeSeries)
-axis tight
-title ('Time Series')
-
-%Make High-Pass Filter
-[b,a] = butter(4, 0.5/(10000/2), 'high');   %Highpass Filter 0.5 Hz
-
-%Filter Time Series
-LFP_highpass = filtfilt(b,a,LFP);
-
-figure;
-plot(LFP_highpass)
-axis tight
-title ('Time Series high pass filtered')
-
-%A template is given
-template = LFP_highpass(175700:178700);
-
-figure;
-plot(template)
-axis tight
-title ('Template')
-
-%Convolution | template matching
-w = conv(LFP_highpass,template, 'same');
-
-figure;
-plot(t, w)
-axis tight
-title ('Convolution Output')
-
-    % Create a matched filter based on the template
-    b = template;
-
-    % For testing the matched filter, create a random signal which
-    % contains a match for the template at some time index
-    % x = [randn(200,1); template(:); randn(300,1)];
-    x = LFP(1:300000);
-    n = 1:length(x);
-
-    figure;
-    plot(x)
-    axis tight
-    title ('Time Series Signal')
-
-    % Process the signal with the matched filter
-    y = filter(b,1,x);
-
-% Set a detection threshold (exmaple used is 90% of template)
-thresh = .9;
-
-% Compute normalizing factor
-u = template.'*template;
-
-% Find matches
-%matches = n(y>thresh*u);
-n = 1:length(timeSeries);
-matches = n(w>thresh*u);
-
-
-% Plot the results
-figure;
-plot(t,w,'b')
-hold on
-plot(t(matches), w(matches), 'ro');
-axis tight
-title ('Detected spikes2 from Template Matching')
-
-% Print the results to the console
-% display(matches);
+timeSeries = LFP_detrended;
 
 %% Dealing with IISs
 clear spikes2
 spikes2 = crawler(LFP, IIS, locs_spike_2nd, 'IIS', LED, frequency, onsetDelay, 0, 1, 1, 0);  
 
+%Lowpass butter filter [25 Hz] | on detrended data
+fc = 25;
+[b,a] = butter(2, fc/(frequency/2));
+LFP_detrendedLowpass = filtfilt (b,a,LFP_detrended);             %Filtered signal
 
 %% Analyze the detected Spikes 
-timeSeries = LFP_detrended;
-uniqueTitle = 'LFP_detrended'
+timeSeries = LFP_detrendedLowpass;
+uniqueTitle = 'LFP_detrendedLowpass'
 
  %% Creating powerpoint slide
     isOpen  = exportToPPTX();
@@ -134,35 +65,52 @@ for i = 1:numel(spikes2(:,1))
     figHandle = figure;
     plot(t(contextStartTime:contextEndTime), timeSeries(contextStartTime:contextEndTime))
     hold on
-    plot(t(startTime:endTime), timeSeries(startTime:endTime))
+    plot(t(startTime:endTime), timeSeries(startTime:endTime))    
+    threshold = timeSeries(startTime)
+    xL = get(gca, 'XLim');
+    plot(xL, [threshold threshold], '--', 'color', 'black')
     axis tight
-    title (sprintf('Spike #%d',i))        
-    
+    title (sprintf('LFP detrended (Lowpass Filtered @ 25 Hz), Spike #%d',i))        
+
+    %Locate the spike offset    
+    if timeSeries(endTime) >= threshold
+        offsetIndex = find(timeSeries(endTime:contextEndTime)<=threshold,1,'first');
+    else
+        offsetIndex = find(timeSeries(endTime:contextEndTime)>threshold,1,'first');
+    end
+
+    if isempty(offsetIndex)
+        offsetIndex = 1
+    end
+
+    %Locating the new offset time
+    vector = endTime:contextEndTime;
+    plot(t(vector(offsetIndex)), timeSeries(vector(offsetIndex)), 'ro')
+
+    spikeOffset = t(vector(offsetIndex)); %This is the true offset of the event
+    spikes2(i,4) = spikeOffset;  
+
      %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);      
     close(figHandle)
     
     %Characterize the spikes2
-    vectorSpike = timeSeries(contextStartTime:contextEndTime);
-    
+    fullStartTime = int64((spikes2(i,1))*frequency);
+    fullEndTime = int64((spikes2(i,4))*frequency);
+    fullVectorSpike = timeSeries(fullStartTime:fullEndTime);   
+
     %derivative
-%     figure;
-%     subplot (2,1,1)
-%     plot(vectorSpike)
-%     subplot (2,1,2)
-%     plot(diff(vectorSpike))
-    
-    %derivative
-    spikes2(i,5) = max(diff(vectorSpike));
+    spikes2(i,5) = max(diff(fullVectorSpike));
        
     %amplitude
-    spikes2(i,6) = max(vectorSpike)-min(vectorSpike);
+    spikes2(i,6) = max(vectorSpike)-min(fullVectorSpike);
             
     %integral
-    spikes2(i,7) = trapz(vectorSpike)
+    spikes2(i,7) = trapz(fullVectorSpike)
     
     %duration
+    spikes2(i,9) = length(fullVectorSpike);
     
     
 end
@@ -171,11 +119,92 @@ end
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
 
 figure;
-scatter3(spikes2(:,3), spikes2(:,5), spikes2(:,6), 18, 'red', 'filled')  %All artifacts 
+scatter3(spikes2(:,9), spikes2(:,5), spikes2(:,6), 18, 'red', 'filled')  %All artifacts 
         
 % template = LFP_detrended(175700:178700);
 
-%Characterize the spikes2
+
+
+
+%Time Series
+timeSeries = LFP;
+
+figure;
+plot(timeSeries)
+axis tight
+title ('Time Series')
+
+%Make High-Pass Filter
+[b,a] = butter(4, 0.5/(10000/2), 'high');   %Highpass Filter 0.5 Hz
+
+%Filter Time Series
+LFP_highpass = filtfilt(b,a,LFP);
+
+figure;
+plot(LFP_highpass)
+axis tight
+title ('Time Series high pass filtered')
+
+%A template is given
+% template = LFP_highpass(175700:178700);
+
+template = LFP_highpass(spikes2(2,1)*frequency:spikes2(2,4)*frequency);
+
+figure;
+plot(template)
+axis tight
+title ('Template')
+
+%Convolution | template matching
+w = conv(LFP_highpass,template, 'same');
+
+figure;
+plot(t, w)
+axis tight
+title ('Convolution Output')
+
+    % Create a matched filter based on the template
+    b = template;
+
+    % For testing the matched filter, create a random signal which
+    % contains a match for the template at some time index
+    % x = [randn(200,1); template(:); randn(300,1)];
+    x = LFP(1:300000);
+    n = 1:length(x);
+
+    figure;
+    plot(x)
+    axis tight
+    title ('Time Series Signal')
+
+    % Process the signal with the matched filter
+    y = filter(b,1,x);
+
+% Set a detection threshold (exmaple used is 90% of template)
+thresh = .9;
+
+% Compute normalizing factor
+% u = template.'*template;
+u = max(w);
+
+% Find matches
+%matches = n(y>thresh*u);
+n = 1:length(timeSeries);
+matches = n(w>thresh*u);
+
+
+% Plot the results
+figure;
+plot(t,w,'b')
+hold on
+plot(t(matches), w(matches), 'ro');
+axis tight
+title ('Detected spikes2 from Template Matching')
+
+% Print the results to the console
+display(matches);
+
+
 
 
 

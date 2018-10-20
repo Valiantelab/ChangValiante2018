@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.0
+%Version 7.2
 
 %clear all (reset)
 close all
@@ -32,7 +32,7 @@ if (InputGUI(6)=="")
     %Load .abf file (raw data), analyze single file
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
-    [IIS, SLE, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+    [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
@@ -43,7 +43,7 @@ else
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
-        [IIS, SLE_final, events] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+        [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
     end
 end
     

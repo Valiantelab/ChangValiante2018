@@ -40,11 +40,6 @@ end
     end
 
     %Plot figures
-%     figHandle = figure;
-%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-% %     set(gcf,'Name', sprintf ('%s Event #%d', finalTitle, i)); %select the name you want
-%     set(gcf, 'Position', get(0, 'Screensize'));  
-
     figure(figHandle)
     centerLFP = (timeSeriesLFP(backgroundVector(1)));  %center the LFP 
     plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP ) %background

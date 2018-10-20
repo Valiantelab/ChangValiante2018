@@ -211,7 +211,12 @@ for i = 1:size(eventTimes,1)
     %Locating onset 
     onsetLocsBoolean = powerFeatureLowPassFiltered25(onsetContext(1:peakIndex)) < onsetThreshold; %Finds all values below the threshold, prior to the spike's peak
     onsetIndex = find(onsetLocsBoolean==1, 1, 'last'); %Locates the index below threshold, closet to the spike's peak 
+    %if the peak never returns to baseline
+    if isempty(onsetIndex)
+        onsetIndex = peakIndex;
+    end
     SLEonset_final(i,1) = t(onsetContext(onsetIndex)); %Time of the spike's onset
+    
 
     %Locating onset of peak | light-triggered purposes
     if LED
@@ -305,7 +310,7 @@ for i = 1:size(eventTimes,1)
     
     %plotting threshold
     xL = get(gca, 'XLim');
-    plot (xL, [onsetThreshold onsetThreshold], '--')
+    plot (xL, [onsetThreshold onsetThreshold], '--', 'color', 'black')
        
     %Labels
     title ('Power, Low Pass Filtered (25 Hz)');

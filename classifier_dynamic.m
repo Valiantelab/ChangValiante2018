@@ -35,11 +35,18 @@ end
 
 %% Switch between classifier for SLEs and IIEs
 switch IIE_classifier            
-    case 1
+    case 1  %ON
         indexEventsToAnalyze = events(:,7)==2;  %Analyze IIEs
         %Indicate any issues
         if hardCodedThreshold < 1
-            fprintf(2,'\nNo interictal events were detected for further analysis.\n')
+%             fprintf(2,'\nNo interictal events were detected for further analysis.\n')
+            %Fillers so the program keeps going
+            thresholdFrequency = 'N/A';
+            thresholdIntensity = 'N/A';
+            thresholdDuration = 'N/A';
+            indexArtifact = 'N/A/';
+            thresholdAmplitudeOutlier = 'N/A';
+            algoFrequencyThreshold = 'N/A';
             return
         elseif hardCodedThreshold < 2
             fprintf(2,'\nInterictal event(s) will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease (because limited number of events were detected).\n')                    
@@ -52,11 +59,11 @@ switch IIE_classifier
             floorThresholdFrequency = 0.6;    %Hz            
         end
     
-    case 0
+    case 0  %OFF
         indexEventsToAnalyze = events(:,7)<4;   %Analyze SLEs
         %Indicate any issues      
         if hardCodedThreshold < 1
-            fprintf(2,'\nNo epileptiform events were detected.\n')
+            %fprintf(2,'\nNo epileptiform events were detected.\n')
             return
         elseif hardCodedThreshold < 2
             fprintf(2,'\nEpileptiform events will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease (because limited number of events were detected).\n')        
