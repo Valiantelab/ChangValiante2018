@@ -1,5 +1,5 @@
 %%Template Matching using convolution | By: Michael Chang and Kramay Patel
-%This function searches for spikes (template) in the Time Series that has
+%This function searches for spikes2 (template) in the Time Series that has
 %been high pass filtered to remove any DC shift.
 
 
@@ -73,16 +73,14 @@ plot(t,w,'b')
 hold on
 plot(t(matches), w(matches), 'ro');
 axis tight
-title ('Detected spikes from Template Matching')
+title ('Detected spikes2 from Template Matching')
 
 % Print the results to the console
 % display(matches);
 
 %% Dealing with IISs
 clear spikes2
-spikes2 = crawler(LFP, IIS, locs_spike_2nd, 'IIS', LED, frequency, onsetDelay, 0, 1, 1, 3);  
-
-events2 = crawler(LFP, eventTimes, locs_spike_2nd, 'IIS', LED, frequency, onsetDelay, 0, 1, 1, 3); 
+spikes2 = crawler(LFP, IIS, locs_spike_2nd, 'IIS', LED, frequency, onsetDelay, 0, 1, 1, 0);  
 
 
 %% Analyze the detected Spikes 
@@ -123,16 +121,16 @@ uniqueTitle = 'LFP_detrended'
     exportToPPTX('addtext', 'Note: The event have only been shifted alone the y-axis to start at position 0', 'Position',[0 5 5 1],...
                  'Horiz','left', 'Vert','middle', 'FontSize', 16);          
 
-for i = 1:numel(spikes(:,1))
+for i = 1:numel(spikes2(:,1))
     
     %Create all the vectors
-    startTime = int64((spikes(i,1))*frequency);
-    endTime = int64((spikes(i,2))*frequency);
+    startTime = int64((spikes2(i,1))*frequency);
+    endTime = int64((spikes2(i,2))*frequency);
 
-    contextStartTime = int64((spikes(i,1)-0.1)*frequency);
-    contextEndTime = int64((spikes(i,2)+3)*frequency);
+    contextStartTime = int64((spikes2(i,1)-0.1)*frequency);
+    contextEndTime = int64((spikes2(i,2)+3)*frequency);
     
-    %Plot all the IIS spikes detected
+    %Plot all the IIS spikes2 detected
     figHandle = figure;
     plot(t(contextStartTime:contextEndTime), timeSeries(contextStartTime:contextEndTime))
     hold on
@@ -145,7 +143,7 @@ for i = 1:numel(spikes(:,1))
     exportToPPTX('addpicture',figHandle);      
     close(figHandle)
     
-    %Characterize the spikes
+    %Characterize the spikes2
     vectorSpike = timeSeries(contextStartTime:contextEndTime);
     
     %derivative
@@ -154,13 +152,15 @@ for i = 1:numel(spikes(:,1))
 %     plot(vectorSpike)
 %     subplot (2,1,2)
 %     plot(diff(vectorSpike))
-    spikes(i,5) = max(diff(vectorSpike));
+    
+    %derivative
+    spikes2(i,5) = max(diff(vectorSpike));
        
     %amplitude
-    spikes(i,6) = max(vectorSpike)-min(vectorSpike);
+    spikes2(i,6) = max(vectorSpike)-min(vectorSpike);
             
     %integral
-    spikes(i,7) = trapz(vectorSpike)
+    spikes2(i,7) = trapz(vectorSpike)
     
     %duration
     
@@ -170,10 +170,12 @@ end
  % save and close the .PPTX
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, uniqueTitle)); 
 
+figure;
+scatter3(spikes2(:,3), spikes2(:,5), spikes2(:,6), 18, 'red', 'filled')  %All artifacts 
         
 % template = LFP_detrended(175700:178700);
 
-%Characterize the spikes
+%Characterize the spikes2
 
 
 

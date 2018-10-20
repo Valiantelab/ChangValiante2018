@@ -24,10 +24,10 @@ end
 %remove light pulse
 if LED
     [pulse] = pulse_seq(LED);   %determine location of light pulses     
-
+    window = 3;
     %Find range of time when light pulse has potential to trigger an event,
     for i = 1:numel(pulse.range(:,1))
-        lightTriggeredOnsetRange = (pulse.range(i,1):pulse.range(i,1)+(1*frequency));
+        lightTriggeredOnsetRange = (pulse.range(i,1):pulse.range(i,1)+(window*frequency));
         lightTriggeredOnsetZone{i} = lightTriggeredOnsetRange; 
         clear lightTriggeredRange 
     end
@@ -38,17 +38,19 @@ if LED
     LFP_detrendedBaseline (lightTriggeredOnsetZones) = [-1];
 end
 
-%Isolate baseline recording
-LFP_detrendedBaseline (LFP_detrendedBaseline == -1) = [];
+
 
 %Characterize baseline features from absolute value of the filtered data 
-avgDetrendedBaseline = mean(LFP_detrendedBaseline(2500000:end)); %Average
-sigmaDetrendedBaseline = std(LFP_detrendedBaseline(2500000:end)); %Standard Deviation
+avgDetrendedBaseline = mean(LFP_detrendedBaseline(1:end)); %Average
+sigmaDetrendedBaseline = std(LFP_detrendedBaseline(1:end)); %Standard Deviation
 
 figure;
 reduce_plot(LFP_detrended)
 hold on
 reduce_plot(LFP_detrendedBaseline)
+
+%Isolate baseline recording
+LFP_detrendedBaseline (LFP_detrendedBaseline == -1) = [];
 
 figure;
 subplot(2,1,1)
