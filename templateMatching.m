@@ -80,7 +80,9 @@ title ('Detected spikes from Template Matching')
 
 %% Dealing with IISs
 clear spikes2
-spikes2 = crawler(LFP, IIS, locs_spike_2nd, 'SLE', LED, frequency, onsetDelay, 0, 1);  
+spikes2 = crawler(LFP, IIS, locs_spike_2nd, 'IIS', LED, frequency, onsetDelay, 0, 1, 1, 3);  
+
+events2 = crawler(LFP, eventTimes, locs_spike_2nd, 'IIS', LED, frequency, onsetDelay, 0, 1, 1, 3); 
 
 
 %% Analyze the detected Spikes 
