@@ -1,4 +1,4 @@
-function [SLE_final] = crawler(LFP, eventTimes, locs_spike, crawlerType, LED, frequency, onsetDelay, offsetDelay, troubleshooting, durationOnsetBaseline, durationOffsetBaseline)
+function [SLE_final] = crawler(LFP, eventTimes, locs_spike, LED, frequency, crawlerType, troubleshooting, offsetDetectionSignal, onsetDelayLED, offsetDelayLED, durationOnsetBaseline, durationOffsetBaseline)
 %'SLE Crawl' function detects exact onset and offset time of ictal event
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
 %   where all the SLEs (aka ictal events) roughly occur to the nearest 0.5
@@ -13,91 +13,33 @@ function [SLE_final] = crawler(LFP, eventTimes, locs_spike, crawlerType, LED, fr
 %   Additional Notes: The default onset delay is 130 ms (or 100 ms after a
 %   30 ms light pulse). The threshold for offset detection is
 %   'meanOffsetBaseline/2'  SLE onset where spike prominience > 1/3 the
-%   maximum amplitude of the "onset context".
-
+%   maximum amplitude of the "onset context". NOTE: this function was
+%   originally written to crawl for SLEs, so the variable names have
+%   inherited this fact. The function was later modified in V7.2 to also be
+%   customizable for different types of events. By default, this function
+%   will crawl for SLEs
   
 %% Default values, if frequenct is not specified 
-if nargin<3    
-    crawlerType = 'SLE';
+if nargin<4
     LED = [];               %No LED input
+    frequency = 10000;      % 10kHz is default sampling frequency       
+    crawlerType = 'SLE';
+    troubleshooting = [];    % plot onset and offset detections
+end
+
+if nargin<5
     frequency = 10000;      % 10kHz is default sampling frequency   
-    onsetDelay = 0.13;      % seconds after light pulse onset to be considered triggered
-    offsetDelay = 1.5;      % seconds the event offset follows light pulse to be considered associated
+    crawlerType = 'SLE';
     troubleshooting = [];    % plot onset and offset detections
-    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
-    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)        
 end
 
-if nargin<6    
-    frequency = 10000;      % 10kHz is default sampling frequency   
-    onsetDelay = 0.13;      % seconds after light pulse onset to be considered triggered
-    offsetDelay = 1.5;      % seconds the event offset follows light pulse to be considered associated
+if nargin<7
     troubleshooting = [];    % plot onset and offset detections
-    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
-    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)        
-end
-
-if nargin<9
-    troubleshooting = [];    % plot onset and offset detections
-    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
-    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)    
-end
-
-if nargin<10    
-    durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
-    durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)
-end
-
-%Set the duration of Offset Baseline to calculate the offset threshold (meanBaseline/2)
-if durationOffsetBaseline >= 1.5
-    calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
-else
-    calculateMeanOffsetBaseline = durationOffsetBaseline;
-end
-
-switch crawlerType
-    case 'SLE'
-;
-    case 'IIE'
-        disp('IIE')
-    case 'IIS'
-        durationOffsetBaseline = 3; %seconds
-        offsetDelay = 0;    %seconds
 end
 
 %create time vector
 t = (0:(length(LFP)- 1))/frequency;
 t = t';
-
-% Find Light pulse
-if LED       
-    [P] = pulse_seq(LED);   %determine location of light pulses     
-
-    %Find range of time when light pulse has potential to trigger an event,
-    clear lightTriggeredRange lightTriggeredZone
-    for i = 1:numel(P.range(:,1))
-        lightTriggeredOnsetRange = (P.range(i,1):P.range(i,1)+(onsetDelay*frequency));
-        lightTriggeredOnsetZone{i} = lightTriggeredOnsetRange; 
-        lightTriggeredOffsetRange = (P.range(i,1):P.range(i,1)+(offsetDelay*frequency));
-        lightTriggeredOffsetZone{i} = lightTriggeredOffsetRange; 
-    end
-
-    %Combine all the ranges where light triggered events occur into one array
-    lightTriggeredOnsetZones = cat(2, lightTriggeredOnsetZone{:});  %2 is vertcat
-    lightTriggeredOffsetZones = cat(2, lightTriggeredOffsetZone{:});  %2 is vertcat
-    
-    %% remove spiking due to light pulse (from array of prominient spikes)    
-    locs_spike_replicated = locs_spike(:,1);     %replicate array          
-   
-    for i = 1:numel(locs_spike_replicated)
-        if intersect(locs_spike_replicated(i), lightTriggeredOffsetZones)
-            locs_spike_replicated(i)=-1;
-        end
-    end
-        
-    %make index to indicate if spikes are triggered by light pulses
-    locs_spike (:,2) = locs_spike_replicated > 0;   %if index is 0, means spike triggered by light    
-end
 
 if troubleshooting       
     %% Creating powerpoint slide
@@ -158,10 +100,58 @@ AbsLFP_filtered = abs(LFP_filtered);            %Derived signal
 %Power of the Absolute signal 
 powerFeatureAbs = (AbsLFP_filtered).^2;       %3rd derived signal
 
-%Lowpass butter filter [25 Hz], to scan for offset
-fc = 25; % Cut off frequency
-[b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
-powerFeatureLowPassFilteredAbs25 = filtfilt(b,a,powerFeatureAbs); %filtered power signal of derivative
+switch crawlerType  
+    case 'SLE'
+        onsetDelayLED = 0.13;      % seconds after light pulse onset to be considered triggered
+        offsetDelayLED = 1.5;      % seconds the event offset follows light pulse to be considered associated
+        durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
+        durationOffsetBaseline = 1.5;     %sec (context to analyze for finding the offset)  
+        %Lowpass butter filter [2 Hz] of absolute signal power, to scan for offset, SLE 
+        fc = 2; % Cut off frequency
+        [b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
+        powerFeatureLowPassFilteredAbs2 = filtfilt(b,a,powerFeatureAbs); %filtered power signal of derivative
+        offsetDetectionSignal = powerFeatureLowPassFilteredAbs2;
+    case 'IIS'
+        onsetDelayLED = 0.13;      % seconds after light pulse onset to be considered triggered
+        offsetDelayLED = 0;      % seconds the event offset follows light pulse to be considered associated
+        durationOnsetBaseline = 1.0;     %sec (context to analyze for finding the onset)
+        durationOffsetBaseline = 3.0;     %sec (context to analyze for finding the offset)  
+        %Lowpass butter filter [25 Hz] of absolute signal power, to scan for offset, IIS
+        fc = 25; % Cut off frequency
+        [b,a] = butter(2,fc/(frequency/2)); %Butterworth filter of order 2
+        powerFeatureLowPassFilteredAbs25 = filtfilt(b,a,powerFeatureAbs); %filtered power signal of derivative
+        offsetDetectionSignal = powerFeatureLowPassFilteredAbs25;
+end
+
+% Find Light pulse
+if LED       
+    [P] = pulse_seq(LED);   %determine location of light pulses     
+
+    %Find range of time when light pulse has potential to trigger an event,
+    clear lightTriggeredRange lightTriggeredZone
+    for i = 1:numel(P.range(:,1))
+        lightTriggeredOnsetRange = (P.range(i,1):P.range(i,1)+(onsetDelayLED*frequency));
+        lightTriggeredOnsetZone{i} = lightTriggeredOnsetRange; 
+        lightTriggeredOffsetRange = (P.range(i,1):P.range(i,1)+(offsetDelayLED*frequency));
+        lightTriggeredOffsetZone{i} = lightTriggeredOffsetRange; 
+    end
+
+    %Combine all the ranges where light triggered events occur into one array
+    lightTriggeredOnsetZones = cat(2, lightTriggeredOnsetZone{:});  %2 is vertcat
+    lightTriggeredOffsetZones = cat(2, lightTriggeredOffsetZone{:});  %2 is vertcat
+    
+    %% remove spiking due to light pulse (from array of prominient spikes)    
+    locs_spike_replicated = locs_spike(:,1);     %replicate array          
+   
+    for i = 1:numel(locs_spike_replicated)
+        if intersect(locs_spike_replicated(i), lightTriggeredOffsetZones)
+            locs_spike_replicated(i)=-1;
+        end
+    end
+        
+    %make index to indicate if spikes are triggered by light pulses
+    locs_spike (:,2) = locs_spike_replicated > 0;   %if index is 0, means spike triggered by light    
+end
 
 %% Scanning Low-Pass Filtered Power signal for more accurate onset/offset times
 %Preallocating for speed
@@ -170,11 +160,12 @@ SLEoffset_final = zeros (size(eventTimes,1), 1);
 SLEonset_peak = zeros (size(eventTimes,1), 1);
 
 for i = 1:size(eventTimes,1)
-    %Putative SLE onset and offset times  
+    %% Creating the vectors to analyze
+    %Event onset and offset times  
     onsetSLE = int64(eventTimes(i,1)*frequency);   %convert into a position
     offsetSLE = int64(eventTimes(i,2)*frequency);  %convert into a position
 
-    %Baseline adjacent to SLE
+    %Baseline adjacent to event
     onsetBaselineStart = (onsetSLE-(durationOnsetBaseline*frequency));
     onsetBaselineEnd = (onsetSLE+(0.5*frequency));
     offsetBaselineStart = (offsetSLE-(0.5*frequency));
@@ -199,7 +190,7 @@ for i = 1:size(eventTimes,1)
     prominence = max(powerFeatureLowPassFiltered25(onsetContext))/3; %The first spike is when spike prominience > 1/3 the maximum amplitude
     [~, peak_locs] = findpeaks(powerFeatureLowPassFiltered25(onsetContext), 'MinPeakProminence', prominence);     
     if isempty(peak_locs)
-        [~, peakIndex] = max(powerFeatureLowPassFiltered25(onsetContext));                
+        [~, peakIndex] = max(powerFeatureLowPassFiltered25(onsetContext));  %The index of the point in the context with highest power               
     else
         peakIndex = ((peak_locs(1))); %The index within onsetContext where the first spike occurs
     end
@@ -210,34 +201,43 @@ for i = 1:size(eventTimes,1)
 
     %Locating onset 
     onsetLocsBoolean = powerFeatureLowPassFiltered25(onsetContext(1:peakIndex)) < onsetThreshold; %Finds all values below the threshold, prior to the spike's peak
-    onsetIndex = find(onsetLocsBoolean==1, 1, 'last'); %Locates the index below threshold, closet to the spike's peak 
-    %if the peak never returns to baseline
-    if isempty(onsetIndex)
-        onsetIndex = peakIndex;
+    onsetIndex = find(onsetLocsBoolean==1, 1, 'last'); %Locates the index below threshold, closet to the spike's peak, this is the event's onset when it crosses the threshold. 
+    if isempty(onsetIndex)  %if the peak never returns to baseline
+        onsetIndex = peakIndex; %treat the peak as the event's onset, (it will just be slightly delayed detection).
     end
-    SLEonset_final(i,1) = t(onsetContext(onsetIndex)); %Time of the spike's onset
-    
-
-    %Locating onset of peak | light-triggered purposes
+    %Store time of the spike's onset
+    SLEonset_final(i,1) = t(onsetContext(onsetIndex)); 
+        
+    %Store time of spike's peak | to determine if it was light-triggered 
     if LED
-        SLEonset_peak(i,1) = t(onsetContext(peakIndex));    %The time when spike's peak occurs
+        SLEonset_peak(i,1) = t(onsetContext(peakIndex));
     end
 
     %% Locating Event Offset
-    %Locating the offset time - using absolute value signal
-    meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs25(offsetContext)); %Mean baseline of offset context
-    OffsetLocationAbs = powerFeatureLowPassFilteredAbs25(offsetContext) > meanOffsetAbsBaseline/2; 
+    %Deteremine the mean baseline value to calculate for determining the threshold
+    if durationOffsetBaseline >= 1.5
+        calculateMeanOffsetBaseline = 1.5;    %sec (mean baseline value) | Note: should be smaller than duration
+    else
+        calculateMeanOffsetBaseline = durationOffsetBaseline;   %if offset context is less than 1.5, use whatever context there is 
+    end
+    %Locate the offset time as the last point above threshold
+    if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
+        meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Calcaluate mean baseline for first 1.5 s
+    else
+        meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext)); %Mean baseline calculated from whatever context there is
+    end                                    
+    offsetThreshold = meanOffsetAbsBaseline/2;
+    OffsetLocationAbs = offsetDetectionSignal(offsetContext) > offsetThreshold; 
     offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
     offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location         
-    SLEoffset_final(i,1) = t(offsetSLE_2_Abs);
+    SLEoffset_final(i,1) = t(offsetSLE_2_Abs);  %Storing the offset time
 
-    if LED 
-        %make sure last spike is not light triggered
+    if LED %make sure last spike is not light triggered
         lastBurstEvent = offsetSLE:offsetSLE_2_Abs; %the duration of the last burst, defined as putative detected offset, and crawler's detected offset
         lightTriggered = intersect(lastBurstEvent, lightTriggeredOffsetZones); %check if last burst event is due to a light trigger
-        if lightTriggered %if it is light triggered, find last spike that is not light-triggered (new SLE offset)
+        if lightTriggered %find the preceding spike (that is not light-triggered) as new SLE offset
             %find index of new SLE offset            
-            offsetIndex = find(locs_spike(:,1) == int64(eventTimes(i,2)*frequency)); %find the preceding spike, using data from previous 'detectEvent function' in abs LFP
+            offsetIndex = find(locs_spike(:,1) == int64(eventTimes(i,2)*frequency)); %find the preceding spike, using data from previous 'detectEvent function' in absLFP signal
             precedingOffsetIndex = find(flipud(locs_spike(1:offsetIndex, 2))==1,1);        % Thomas flipped the array and looked for the first point where spike was not light-triggered; consider using the while-loop or for-loop backwards
             if isempty(precedingOffsetIndex)    %if the last spike can only be due to a light pulse; then it's not a SLE, break from this iteration
                 SLEoffset_final(i,1) = -1;  %This is considered to be an artifact and will be removed; it is a spike with all preceding spikes due to light                
@@ -249,26 +249,22 @@ for i = 1:size(eventTimes,1)
                 offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
                 offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));  %SLE "context" (end of post-ictal baseline)
 
-                if offsetBaselineEnd < numel(powerFeatureLowPassFilteredAbs25)
+                if offsetBaselineEnd < numel(offsetDetectionSignal)
                     offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
                 else
-                    offsetContext = int64(offsetBaselineStart:numel(powerFeatureLowPassFilteredAbs25)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
+                    offsetContext = int64(offsetBaselineStart:numel(offsetDetectionSignal)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
                 end                                 
 
                 %Locating the offset time - using absolute value signal 
                 if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
-                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs25(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
+                    meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
                 else
-                    meanOffsetAbsBaseline = mean(powerFeatureLowPassFilteredAbs25(offsetContext)); %Mean baseline calculated from whatever context there is
-                end                                    
-                OffsetLocationAbs = powerFeatureLowPassFilteredAbs25(offsetContext) > meanOffsetAbsBaseline/2; 
+                    meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext)); %Mean baseline calculated from whatever context there is
+                end 
+                offsetThreshold = meanOffsetAbsBaseline/2;
+                OffsetLocationAbs = offsetDetectionSignal(offsetContext) > offsetThreshold; 
                 offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location                    
-                if offset_loc_Abs
-                    offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
-                else
-                    offsetSLE_2_Abs = (offsetContext(numel(OffsetLocationAbs)));  %In case the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.                    
-                end                
-                         
+                offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
                 SLEoffset_final(i,1) = t(offsetSLE_2_Abs);  %Store time of the new offset location
             end
         end
@@ -319,7 +315,6 @@ for i = 1:size(eventTimes,1)
     legend ('Low-pass filter, Power', 'Putative Onset', 'Detected (final) onset', 'Peak Power', 'Threshold (5% of Max)')
     axis tight
     
-
     %Plot offset detection    
     subplot (2,2,2)
     plot(t(offsetContext),LFP(offsetContext))
@@ -334,11 +329,11 @@ for i = 1:size(eventTimes,1)
             
     %Plot of the Power of the Absolute values signal
     subplot (2,2,4)
-    plot(t(offsetContext), powerFeatureLowPassFilteredAbs25(offsetContext))
+    plot(t(offsetContext), offsetDetectionSignal(offsetContext))
     hold on
-    plot(t(offsetSLE), powerFeatureLowPassFilteredAbs25(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(SLEoffset_final(i,1), powerFeatureLowPassFilteredAbs25(offsetContext(offset_loc_Abs)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
-    plot(t(offsetContext(offset_loc_Abs)), powerFeatureLowPassFilteredAbs25(offsetContext(offset_loc_Abs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
+    plot(t(offsetSLE), offsetDetectionSignal(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
+    plot(SLEoffset_final(i,1), offsetDetectionSignal(offsetContext(offset_loc_Abs)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
+    plot(t(offsetContext(offset_loc_Abs)), offsetDetectionSignal(offsetContext(offset_loc_Abs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
     %Plot dashed lines where the threshold for offset is
     xL = get(gca, 'XLim');
     plot(xL, [meanOffsetAbsBaseline/2 meanOffsetAbsBaseline/2], '--')
@@ -348,11 +343,11 @@ for i = 1:size(eventTimes,1)
     xlabel ('Time (sec)');
     legend ('Low-pass filtered, Power of Absolute signal', 'Putative Offset', 'detected offset', 'Final Offset', 'Threshold (Baseline mean/2)')
     
-% %Set Threshold for spike onset
-% maxPower = max(powerFeatureLowPassFilteredAbs25(offsetContext));
-% offsetThreshold = 0.05 * maxPower;    %spike onset threshold is 1/10 the power of the spike's max power
-% xL = get(gca, 'XLim');
-% plot (xL, [offsetThreshold offsetThreshold], '--')
+    % %Set Threshold for spike onset
+    % maxPower = max(offsetDetectionSignal(offsetContext));
+    % offsetThreshold = 0.05 * maxPower;    %spike onset threshold is 1/10 the power of the spike's max power
+    % xL = get(gca, 'XLim');
+    % plot (xL, [offsetThreshold offsetThreshold], '--')
 
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);      
@@ -363,7 +358,7 @@ end
 
 if troubleshooting         
     % save and close the .PPTX
-    exportToPPTX('saveandclose','troubleshooting'); 
+    exportToPPTX('saveandclose','troubleshooting onset&offset detection'); 
 end
 
 %% Store output 

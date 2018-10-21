@@ -27,8 +27,7 @@ if nargin < 4
     hardCodedThreshold = numel(events(:,1));   
 end
 
-if nargin < 3
-    userInput(3) = 0;    %by default don't plot any figures
+if nargin < 3    
     IIE_classifier = 0; 
     hardCodedThreshold = numel(events(:,1));
 end
@@ -54,11 +53,11 @@ switch IIE_classifier
         %Set Floor threshold, if not specified
         if nargin < 4
             floorThresholdFrequency = 0.6;    %by default don't plot any figures            
-        end
-        if nargin < 3            
-            floorThresholdFrequency = 0.6;    %Hz            
-        end
-    
+        end    
+        if nargin < 3
+            floorThresholdFrequency = 0.6;    %by default don't plot any figures            
+        end    
+
     case 0  %OFF
         indexEventsToAnalyze = events(:,7)<4;   %Analyze SLEs
         %Indicate any issues      
@@ -72,8 +71,8 @@ switch IIE_classifier
         if nargin < 4
             floorThresholdFrequency = 1;    %by default don't plot any figures            
         end
-        if nargin < 3            
-            floorThresholdFrequency = 1;    %Hz            
+        if nargin < 3
+            floorThresholdFrequency = 1;    %by default don't plot any figures            
         end
 
     %% Stage 1: Artifact (Amplitude Outlier) removal | only for SLE Classifier

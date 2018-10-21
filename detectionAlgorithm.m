@@ -44,7 +44,12 @@ else
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+%         %Collect the average intensity ratio for SLEs
+%         indexSLE = events(:,7) == 1;
+%         intensity{k} = events(indexSLE,18);               
     end
 end
     
+clear x
+fprintf(1,'\nThank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector to sequentially analyze %s files.\n', numel(S))
     
