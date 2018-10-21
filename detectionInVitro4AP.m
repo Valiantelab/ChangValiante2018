@@ -8,7 +8,7 @@ function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInpu
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.2
+%Version 7.5
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -43,7 +43,7 @@ end
 
 %Label for titles
 excelFileName = FileName(1:8);
-finalTitle = '(V7)';
+finalTitle = '(V7,5)';
 
 %% Hard Coded values | Detection settings
 %findEvent function
@@ -234,18 +234,18 @@ for i = 1:size(events,1)
         indexHighIntensity = intensityPerMinute{i}(:,2) >= maxIntensity/10;  %Locate indices that are larger than (or equal to) the threshold
         intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
         intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
-        intensityRatio = round(intensityRatio,1);   %I rounded off the values to overcome the issues related to being super clsoe to the threshold.
         events(i,18) = intensityRatio;
+        events(i,24) = round(intensityRatio,1);   %I rounded off the values to overcome the issues related to being super clsoe to the threshold.
 %     end
 
     %Calculating the Intensity Ratio (High:Low) for IIE
     indexHighIntensity = intensityPerMinute{i}(:,2) >= avgPowerFeature; %Locate indices that are larger than (or equal to) the threshold
     intensityPerMinute{i}(:,3) = indexHighIntensity;    %store the index
     intensityRatio = sum(indexHighIntensity)/numel(indexHighIntensity);   %Ratio high to low 
-    events(i,20) = intensityRatio;
+    events(i,20) = intensityRatio; 
+    events(i,25) = round(intensityRatio,1);   %I rounded off the values to overcome the issues related to being super clsoe to the threshold.
 
     %m calculation                   
-  
 end        
 
 %Part 3 - Classifier, extracted features
@@ -331,7 +331,7 @@ end
 thresholdIntensityRatioSLE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
 
 %Split the questionable SLEs
-indexIntensityRatioSLE = events(:,18) >= thresholdIntensityRatioSLE;   %I'm being liberal in what's considered an SLE. If it's above (or equal to) threshold, it's a SLE
+indexIntensityRatioSLE = events(:,24) >= thresholdIntensityRatioSLE;   %I'm being liberal in what's considered an SLE. If the rounded value's above (or equal to) threshold, it's a SLE
 events(:,19) = indexIntensityRatioSLE;
 interictalEvents (:,19) = indexIntensityRatioSLE(indexInterictalEvents); %store the index in interictalEvents array, as well for post-analysis by undergrad students
 
@@ -374,7 +374,7 @@ end
 thresholdIntensityRatioIIE = max([floorThresholdIntensityRatio, MachineLearningThresholdIntensityRatio, algoThresholdIntensityRatio]); %I'm being conservative (strict) in what's considered an IIE
 
 %Split the questionable IIEs
-indexIntensityRatioIIE = events(:,20) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If it's above (or equal to) the threshold, it's an IIE.
+indexIntensityRatioIIE = events(:,25) >= thresholdIntensityRatioIIE;   %I'm being liberal in what's considered an IIE. If the rounded value's above (or equal to) the threshold, it's an IIE.
 events(:,21) = indexIntensityRatioIIE;  %store the index for classification later on
 interictalEvents (:,21) = indexIntensityRatioIIE(indexInterictalEvents); %store the index in interictalEvents array, as well for post-analysis by undergrad students
 
