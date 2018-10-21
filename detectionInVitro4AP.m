@@ -1,4 +1,4 @@
-function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -77,7 +77,7 @@ end
 LFP_centered = LFP - LFP(1);                                         
 
 %Bandpass butter filter [1 - 100 Hz]
-[b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
+[b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Filtered signal
 
 %Absolute value of the filtered data
@@ -97,12 +97,12 @@ avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshol
 
 %remove potential events
 for i = 1:size(epileptiformLocation,1)
-AbsLFP_Filtered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = [-1];
+AbsLFP_Filtered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = (-1);
 end
 
 %remove artifacts
 for i = 1:size(artifacts,1)
-AbsLFP_Filtered (artifacts(i,1):artifacts(i,2)) = [-1];
+AbsLFP_Filtered (artifacts(i,1):artifacts(i,2)) = (-1);
 end
 
 %Isolate baseline recording
@@ -131,7 +131,7 @@ if isempty(epileptiformLocation)
     fprintf(2,'\nNo epileptiform events (including epileptiform spikes) were detected. Review the raw data and consider using a different threshold for epileptiform spike detection.\n')
     
     %Plot figure for end user to review
-    figHandle = figure;
+    figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('Review Recording: %s', FileName)); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));
@@ -308,8 +308,6 @@ end
 %Classify using Intensity Ratio feature set (is it about the threshold or not?)
 %% Questionable SLEs
 indexQuestionableSLE = find(events(:,7)==1.5);  
-questionableSLE = events(indexQuestionableSLE,:);
-featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)];
 
 %SLE (confirmed)
 indexSLE = find(events (:,7) == 1); 
@@ -398,9 +396,7 @@ indexIIEs = find(events(:,7) == 2);
 
 for i = indexIIEs'
     
-    if events(i,13) >= 1 || events(i, 21) == 1
-        ;
-    else
+    if ~(events(i,13) >= 1 || events(i, 21) == 1)        
         events(i,7) = 3;    %It's a IIS
     end
     
@@ -446,7 +442,7 @@ if userInput(5) > 0
 
     %% Creating powerpoint slide
     isOpen  = exportToPPTX();
-    if ~isempty(isOpen),
+    if ~isempty(isOpen)
         % If PowerPoint already started, then close first and then open a new one
         exportToPPTX('close');
     end

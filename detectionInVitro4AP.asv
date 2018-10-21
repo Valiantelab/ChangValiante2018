@@ -1,4 +1,4 @@
-function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -77,7 +77,7 @@ end
 LFP_centered = LFP - LFP(1);                                         
 
 %Bandpass butter filter [1 - 100 Hz]
-[b,a] = butter(2, [[1 100]/(frequency/2)], 'bandpass');
+[b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Filtered signal
 
 %Absolute value of the filtered data
@@ -97,12 +97,12 @@ avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshol
 
 %remove potential events
 for i = 1:size(epileptiformLocation,1)
-AbsLFP_Filtered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = [-1];
+AbsLFP_Filtered (epileptiformLocation (i,1):epileptiformLocation (i,2)) = (-1);
 end
 
 %remove artifacts
 for i = 1:size(artifacts,1)
-AbsLFP_Filtered (artifacts(i,1):artifacts(i,2)) = [-1];
+AbsLFP_Filtered (artifacts(i,1):artifacts(i,2)) = (-1);
 end
 
 %Isolate baseline recording
@@ -131,7 +131,7 @@ if isempty(epileptiformLocation)
     fprintf(2,'\nNo epileptiform events (including epileptiform spikes) were detected. Review the raw data and consider using a different threshold for epileptiform spike detection.\n')
     
     %Plot figure for end user to review
-    figHandle = figure;
+    figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name', sprintf ('Review Recording: %s', FileName)); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));
@@ -153,7 +153,7 @@ if isempty(epileptiformLocation)
     spikeLocation(:,1) = locs_spike_2nd(:,1);    %This is the location of the spike
     spikeLocation(:,2) = locs_spike_2nd(:,1);   
         
-    spikes = crawler(LFP, spikeLocation/frequency, locs_spike_2nd, LED, frequency, 'IIS');  
+    spikes = crawler(LFP, spikeLocation/frequency, locs_spike_2nd, LED, frequency, 'IIS');  %export the spikes for subseqent analysis
 %     spikes(:,5) = locs_spike_2nd(:,2);    %This is the width of the spike 
     
     %End the function
@@ -174,7 +174,8 @@ epileptiformEvents = epileptiformLocation(indexEvents,:);
 
 %SLE Crawler: Determine exact onset and offset times | Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = epileptiformEvents(:,1:2)/frequency;
-events = crawler(LFP, eventTimes, locs_spike_2nd, LED);
+% events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
+events = crawler(LFP, eventTimes, locs_spike_2nd, LED, frequency);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
 for i = 1:size(events,1)   
@@ -307,8 +308,6 @@ end
 %Classify using Intensity Ratio feature set (is it about the threshold or not?)
 %% Questionable SLEs
 indexQuestionableSLE = find(events(:,7)==1.5);  
-questionableSLE = events(indexQuestionableSLE,:);
-featureSet = [indexQuestionableSLE events(indexQuestionableSLE,18)];
 
 %SLE (confirmed)
 indexSLE = find(events (:,7) == 1); 
@@ -743,7 +742,8 @@ else
 end
 
 %Sheet 0 = Details
-writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Plot at end to prevent extra worksheets being produced
+writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Print details at end to prevent extra worksheets being produced
+writetable(struct2table(metadata, 'AsArray', true), sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A5:IV99')    %Print the metadata
 
 %% Optional: Plot Figures
 if userInput(3) == 1      
