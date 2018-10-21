@@ -153,7 +153,7 @@ if isempty(epileptiformLocation)
     spikeLocation(:,1) = locs_spike_2nd(:,1);    %This is the location of the spike
     spikeLocation(:,2) = locs_spike_2nd(:,1);   
         
-    spikes = crawler(LFP, spikeLocation/frequency, locs_spike_2nd, LED, frequency, 'IIS');  
+    spikes = crawler(LFP, spikeLocation/frequency, locs_spike_2nd, LED, frequency, 'IIS');  %export the spikes for subseqent analysis
 %     spikes(:,5) = locs_spike_2nd(:,2);    %This is the width of the spike 
     
     %End the function
@@ -174,7 +174,8 @@ epileptiformEvents = epileptiformLocation(indexEvents,:);
 
 %SLE Crawler: Determine exact onset and offset times | Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = epileptiformEvents(:,1:2)/frequency;
-events = crawler(LFP, eventTimes, locs_spike_2nd, LED);
+% events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);  
+events = crawler(LFP, eventTimes, locs_spike_2nd, LED, frequency);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
 for i = 1:size(events,1)   
@@ -743,7 +744,8 @@ else
 end
 
 %Sheet 0 = Details
-writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Plot at end to prevent extra worksheets being produced
+writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Print details at end to prevent extra worksheets being produced
+writetable(struct2table(metadata, 'AsArray', true), sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A5:IV99')    %Print the metadata
 
 %% Optional: Plot Figures
 if userInput(3) == 1      

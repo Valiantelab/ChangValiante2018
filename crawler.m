@@ -33,6 +33,11 @@ if nargin<5
     troubleshooting = [];    % plot onset and offset detections
 end
 
+if nargin<6
+    crawlerType = 'SLE';
+    troubleshooting = [];    % plot onset and offset detections
+end
+
 if nargin<7
     troubleshooting = [];    % plot onset and offset detections
 end
@@ -179,10 +184,10 @@ for i = 1:size(eventTimes,1)
     end
 
     %Range of LFP to scan for offset
-    if offsetBaselineEnd < numel(powerFeatureLowPassFiltered25)  %note this is a power feature of the derivative signal, which has one less point than the Abs values
+    if offsetBaselineEnd < numel(offsetDetectionSignal)  %note this is a power feature of the derivative signal, which has one less point than the Abs values
         offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
     else
-        offsetContext = int64(offsetBaselineStart:numel(powerFeatureLowPassFiltered25));
+        offsetContext = int64(offsetBaselineStart:numel(offsetDetectionSignal));
     end
     
     %% Locating Event Onset
@@ -229,7 +234,11 @@ for i = 1:size(eventTimes,1)
     offsetThreshold = meanOffsetAbsBaseline/2;
     OffsetLocationAbs = offsetDetectionSignal(offsetContext) > offsetThreshold; 
     offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location    
-    offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location         
+    if offset_loc_Abs
+        offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
+    else
+        offsetSLE_2_Abs = (offsetContext(numel(OffsetLocationAbs)));  %In case the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.                    
+    end  
     SLEoffset_final(i,1) = t(offsetSLE_2_Abs);  %Storing the offset time
 
     if LED %make sure last spike is not light triggered
@@ -263,8 +272,12 @@ for i = 1:size(eventTimes,1)
                 end 
                 offsetThreshold = meanOffsetAbsBaseline/2;
                 OffsetLocationAbs = offsetDetectionSignal(offsetContext) > offsetThreshold; 
-                offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location                    
-                offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
+                offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location                                                    
+                if offset_loc_Abs
+                    offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
+                else
+                    offsetSLE_2_Abs = (offsetContext(numel(OffsetLocationAbs)));  %In case the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.                    
+                end                                
                 SLEoffset_final(i,1) = t(offsetSLE_2_Abs);  %Store time of the new offset location
             end
         end

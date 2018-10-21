@@ -50,6 +50,4 @@ else
     end
 end
     
-clear x
-fprintf(1,'\nThank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector to sequentially analyze %s files.\n', numel(S))
-    
+clear x    
