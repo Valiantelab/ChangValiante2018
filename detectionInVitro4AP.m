@@ -8,7 +8,7 @@ function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInpu
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.5
+%Version 7.51
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -283,11 +283,6 @@ events(indexInterictalEvents, 7) = interictalEvents(:,7);
 %Tonic Phase feature set (does it exist or not?)
 for i = 1:numel(events(:,1))
     
-    %Reclassify as IIE (SLE lacking Tonic Phase)
-    if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
-        events(i,7) = 2.1;  %Legit IIE (2.1)
-    end   
-
     %Verify IIEs (Confirm IIE lacking Tonic Phase)
     if events(i,7) == 1.5 && events(i,13) == 0 %these are IIEs without a tonic phase, defintely a IIE
         events(i,7) = 2.1;  %Legit IIE (2.1)
@@ -302,7 +297,7 @@ for i = 1:numel(events(:,1))
     if events(i,13) == -1   
         events(i,7) = 3;
     end
-
+   
 end
 
 %Classify using Intensity Ratio feature set (is it about the threshold or not?)
@@ -391,19 +386,23 @@ for i = 1:numel(events(:,1))
     
 end
 
-%% IIE Classifier - Final
+%% Final Classifier 
 indexIIEs = find(events(:,7) == 2);
-
-for i = indexIIEs'
-    
+for i = indexIIEs'    
     if ~(events(i,13) >= 1 || events(i, 21) == 1)        
         events(i,7) = 3;    %It's a IIS
-    end
-    
+    end    
 end
 
 indexLegitIIE = find(events(:,7) == 2.1);
 events(indexLegitIIE,7) = 2;    %Classify as IIE, even without tonic phase and high intensity ratio
+
+%Reclassify as QSLE (SLE lacking Tonic Phase) | Run this last so the previous command doesn't change results
+for i = 1:numel(events(:,1))       
+    if events(i,7) == 1 && events(i,13) == 0    %These are seizures without a tonic phase, definitely a IIE
+        events(i,7) = 1.5;  %Questionable SLE, require human intuition
+    end   
+end
 
 %% Collect and group all detected events
 %SLE

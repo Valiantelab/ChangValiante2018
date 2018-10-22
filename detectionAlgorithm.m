@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.5
+%Version 7.51
 
 %clear all (reset)
 close all
@@ -46,7 +46,7 @@ else
         [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
 %         %Collect the average intensity ratio for SLEs
 %         indexSLE = events(:,7) == 1;
-%         intensity{k} = events(indexSLE,18);               
+%         intensity{k} = events(indexSLE,24);               
     end
 end
     

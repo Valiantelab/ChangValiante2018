@@ -190,14 +190,27 @@ else
 end
     
 %use the lower threshold for Intensity, (with a floor threshold in place at 5 mV^2/s)
-if algoIntensityThreshold <= floorIntensityThreshold || michaelIntensityThreshold <= floorIntensityThreshold
-    thresholdIntensity = floorIntensityThreshold;
-else if algoIntensityThreshold<=michaelIntensityThreshold
+if algoIntensityThreshold >= floorIntensityThreshold && michaelIntensityThreshold >= floorIntensityThreshold
+    thresholdIntensity = min(michaelIntensityThreshold, algoIntensityThreshold);
+else if algoIntensityThreshold >= floorIntensityThreshold
         thresholdIntensity = algoIntensityThreshold;
-    else
-        thresholdIntensity = michaelIntensityThreshold;
+    else if michaelIntensityThreshold >= floorIntensityThreshold
+            thresholdIntensity = michaelIntensityThreshold; 
+        else
+            thresholdIntensity = floorIntensityThreshold;
+        end
     end
-end
+end 
+
+%Old code used floor if either Algo or Michaels threshold was below floor
+% if algoIntensityThreshold <= floorIntensityThreshold || michaelIntensityThreshold <= floorIntensityThreshold
+%     thresholdIntensity = floorIntensityThreshold;
+% else if algoIntensityThreshold<=michaelIntensityThreshold
+%         thresholdIntensity = algoIntensityThreshold;
+%     else
+%         thresholdIntensity = michaelIntensityThreshold;
+%     end
+% end
 
 %determine the index for SLE and IIE using threshold for Intensity (feature)
 indexIntensity = featureSet>=thresholdIntensity;    %split the population based on the feature
@@ -278,28 +291,31 @@ featureSet = events(:,3);   %Duration (s)
 floorThresholdDuration = 7;    %seconds
 %Dynamic threshold
 if hardCodedThreshold>=2
-    %Michael's threshold, use the one that is higher, conservative
-    if averageSLEDuration-(2*sigmaSLEDuration) > sigmaSLEDuration
-        michaelsDurationThreshold=averageSLEDuration-(2*sigmaSLEDuration);
-    else
-        michaelsDurationThreshold=sigmaSLEDuration;  
-    end
-    %Algo deteremined threshold (tend to be higher value)
-    [~, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
+%Michael's threshold, use the one that is higher, conservative
+if averageSLEDuration-(2*sigmaSLEDuration) > sigmaSLEDuration
+    michaelsDurationThreshold=averageSLEDuration-(2*sigmaSLEDuration);
+else
+    michaelsDurationThreshold=sigmaSLEDuration;  
+end
+%Algo deteremined threshold (tend to be higher value)
+[~, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
 else
     michaelsDurationThreshold = floorThresholdDuration;
     algoDurationThreshold = michaelsDurationThreshold;
 end
 
 %Use the lowest (more liberal) threhsold, unless it's below (the floor)
-if algoDurationThreshold <= floorThresholdDuration || michaelsDurationThreshold <= floorThresholdDuration
-    thresholdDuration = floorThresholdDuration;
-else if michaelsDurationThreshold <= algoDurationThreshold
-        thresholdDuration = michaelsDurationThreshold;
-    else
+if algoDurationThreshold >= floorThresholdDuration && michaelsDurationThreshold >= floorThresholdDuration
+    thresholdDuration = min(michaelsDurationThreshold, algoDurationThreshold);
+else if algoDurationThreshold >= floorThresholdDuration 
         thresholdDuration = algoDurationThreshold;
+    else if michaelsDurationThreshold >= floorThresholdDuration 
+            thresholdDuration = michaelsDurationThreshold; 
+        else
+            thresholdDuration = floorThresholdDuration;
+        end
     end
-end
+end 
 
 indexDuration = featureSet>thresholdDuration; 
 events(:,11) = indexDuration;
