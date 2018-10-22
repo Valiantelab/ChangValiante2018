@@ -253,32 +253,33 @@ for i = 1:size(eventTimes,1)
             else                
                 newOffsetIndex = offsetIndex-(precedingOffsetIndex-1);  %subtract 1 because you're subtracting indices
                 offsetSLE = int64(locs_spike(newOffsetIndex));  %approximate position of last spike
+                SLEoffset_final(i,1) = t(offsetSLE);  %Store time of the preceding spike as the new offset location | if you search, you'll end up finding the spike caused by the light pulse again.
 
-                %New range of LFP (context) to scan for the offset
-                offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
-                offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));  %SLE "context" (end of post-ictal baseline)
-
-                if offsetBaselineEnd < numel(offsetDetectionSignal)
-                    offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
-                else
-                    offsetContext = int64(offsetBaselineStart:numel(offsetDetectionSignal)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
-                end                                 
-
-                %Locating the offset time - using absolute value signal 
-                if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
-                    meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
-                else
-                    meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext)); %Mean baseline calculated from whatever context there is
-                end 
-                offsetThreshold = meanOffsetAbsBaseline/2;
-                OffsetLocationAbs = offsetDetectionSignal(offsetContext) > offsetThreshold; 
-                offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location                                                    
-                if offset_loc_Abs
-                    offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
-                else
-                    offsetSLE_2_Abs = (offsetContext(numel(OffsetLocationAbs)));  %In case the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.                    
-                end                                
-                SLEoffset_final(i,1) = t(offsetSLE_2_Abs);  %Store time of the new offset location
+%                 %New range of LFP (context) to scan for the offset
+%                 offsetBaselineStart = (offsetSLE-(0.5*frequency));  %SLE "context" (start of post-ictal baseline)
+%                 offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));  %SLE "context" (end of post-ictal baseline); read less spike because you don't want to accidentally push into the next spike you just skipped over.
+% 
+%                 if offsetBaselineEnd < numel(offsetDetectionSignal)
+%                     offsetContext = int64(offsetBaselineStart:offsetBaselineEnd); 
+%                 else
+%                     offsetContext = int64(offsetBaselineStart:numel(offsetDetectionSignal)); %SLE "context" (end of post-ictal baseline), end of recording, cut the SLE short
+%                 end                                 
+% 
+%                 %Locating the offset time - using absolute value signal 
+%                 if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
+%                     meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Mean baseline of the first 1.5 s
+%                 else
+%                     meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext)); %Mean baseline calculated from whatever context there is
+%                 end 
+%                 offsetThreshold = meanOffsetAbsBaseline/2;
+%                 OffsetLocationAbs = offsetDetectionSignal(offsetContext) > offsetThreshold; 
+%                 offset_loc_Abs = find(OffsetLocationAbs, 1, 'last'); %Last point is the index for the offset location                                                    
+%                 if offset_loc_Abs
+%                     offsetSLE_2_Abs = (offsetContext(offset_loc_Abs));  %detecting the new offset location             
+%                 else
+%                     offsetSLE_2_Abs = (offsetContext(numel(OffsetLocationAbs)));  %In case the signal never returns to the threshold (meanbaseline/2), then take the last point as the offset.                    
+%                 end                                
+%                 SLEoffset_final(i,1) = t(offsetSLE_2_Abs);  %Store time of the new offset location
             end
         end
     end
@@ -333,7 +334,7 @@ for i = 1:size(eventTimes,1)
     plot(t(offsetContext),LFP(offsetContext))
     hold on
     plot(t(offsetSLE), LFP(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)  %initial putative (rough) detection
-    plot(SLEoffset_final(i,1), LFP(offsetContext(offset_loc_Abs)), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected offset point 
+    plot(SLEoffset_final(i,1), LFP(offsetContext(newOffsetIndex)), 'o', 'color', 'black', 'MarkerSize', 14)   %Detected offset point 
     plot(t(offsetContext(offset_loc_Abs)), LFP(offsetContext(offset_loc_Abs)), '*', 'color', 'green', 'MarkerSize', 14)    %All detected potential offsets    
     %Labels
     title (sprintf('%s offset #%d, LFP', crawlerType, i));
@@ -345,7 +346,7 @@ for i = 1:size(eventTimes,1)
     plot(t(offsetContext), offsetDetectionSignal(offsetContext))
     hold on
     plot(t(offsetSLE), offsetDetectionSignal(offsetSLE), 'x', 'color', 'red', 'MarkerSize', 12)     %initial (rough) detection
-    plot(SLEoffset_final(i,1), offsetDetectionSignal(offsetContext(offset_loc_Abs)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
+    plot(SLEoffset_final(i,1), offsetDetectionSignal(offsetContext(newOffsetIndex)), 'o', 'color', 'black', 'MarkerSize', 14)    %Detected offset point 
     plot(t(offsetContext(offset_loc_Abs)), offsetDetectionSignal(offsetContext(offset_loc_Abs)), '*', 'color', 'green', 'MarkerSize', 14)    %Final (Refined) detection
     %Plot dashed lines where the threshold for offset is
     xL = get(gca, 'XLim');
@@ -354,7 +355,7 @@ for i = 1:size(eventTimes,1)
     title (sprintf('Power of Absolute signal, Low Pass Filtered (25 Hz): %.2f',SLEoffset_final(i,1)));
     ylabel ('mV');
     xlabel ('Time (sec)');
-    legend ('Low-pass filtered, Power of Absolute signal', 'Putative Offset', 'detected offset', 'Final Offset', 'Threshold (Baseline mean/2)')
+    legend ('Low-pass filtered, Power of Absolute signal', 'Putative Offset', 'detected (final) offset', 'Minimal Power', 'Threshold (Baseline mean/2)')
     
     % %Set Threshold for spike onset
     % maxPower = max(offsetDetectionSignal(offsetContext));
