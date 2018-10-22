@@ -354,7 +354,6 @@ indexQuestionableIIEs = find(events(:,7)==2.5);
 %IIE (confirmed)
 indexIIE= find(events(:,7) == 2.1); %Confirmed IIEs
 minRatioIIE = min(events(indexIIE, 20));   %Calculate minimum Intensity Ratios (for machine learning)    
-minDurationIIE = min(events(indexIIE,3));  %Calculate the minimum duration (for machine learning)
 
 %find threshold, dynamic
 floorThresholdIntensityRatio = 0.2;    %High Intensity:Low Intensity
