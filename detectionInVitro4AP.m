@@ -8,7 +8,7 @@ function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInpu
 %Program: Epileptiform Activity Detector 
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
 %Copyright (c) 2018, Valiante Lab
-%Version 7.51
+%Version 7.6
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -43,7 +43,7 @@ end
 
 %Label for titles
 excelFileName = FileName(1:8);
-finalTitle = '(V7,5)';
+finalTitle = '(V7,6)';
 
 %% Hard Coded values | Detection settings
 %findEvent function
