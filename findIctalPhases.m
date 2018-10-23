@@ -51,7 +51,7 @@ if numel(spikeFrequency(:,1)) > 3   %Analyze if the event is greater than 3 seco
             startTonic(1,1) = spikeFrequency(j+1);  %j+1 because you started the find function (line above) starting from position "2:end"
             startTonic(1,2) = j+1;    %store the index
             endTonic(1,1) = spikeFrequency(numel(indexTonic));    %if no tonic period is found; just state whole ictal event as a tonic phase
-            endTonic(1,2) = numel(indexTonic);  %store the index            
+            endTonic(1,2) = numel(indexTonic);  %store the index
             classification = 0; % 0 = no tonic phase, 1 = tonic-clonic SLE, 2 - tonic-only        
         else                        
             if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
@@ -68,7 +68,12 @@ if numel(spikeFrequency(:,1)) > 3   %Analyze if the event is greater than 3 seco
                 end            
                 endTonic(1,1) = spikeFrequency(j-1); %take the point before the frequency drops to be the end of the tonic-phase
                 endTonic(1,2) = j-1;  %store the index   
-                break
+                %This is to confirm the tonic phase is >3s
+                if (endTonic(1)-startTonic(1)) < (3*frequency)  %There needs to be at least 3 seconds of tonic phase
+                    continue
+                else                                  
+                    break
+                end                
             end
         end        
     end          
@@ -84,6 +89,11 @@ if numel(spikeFrequency(:,1)) > 3   %Analyze if the event is greater than 3 seco
     minTonicPhaseFrequency = min(spikeFrequency (startTonic(1,2):endTonic(1,2),2));
     clonicPhaseFrequency = mean(spikeFrequency (endTonic(1,2):end,2));
     
+%     %Tonic Phase must be >3 s; the onset trigger alone cannot be the tonic phase
+%     if (endTonicTime-startTonicTime) <=3
+%         classification = 0;
+%     end
+        
 %     preictalPhaseDuration = startTonicTime - startTime;
 %     tonicPhaseDuration = endTonicTime  - startTonicTime;
 %     clonicPhaseDuration = endTime - endTonicTime; 

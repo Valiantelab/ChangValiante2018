@@ -1,7 +1,7 @@
-%Program: Epileptiform Activity Detector 
-%Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long; 
+%Program: Epileptiform Activity Detector
+%Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
 %Copyright (c) 2018, Valiante Lab
-%Version 7.6
+%Version 7.7
 %clear all (reset)
 close all
 clear all
@@ -35,18 +35,16 @@ if (InputGUI(6)=="")
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
-    S = dir(fullfile(PathName,'*.abf'));    
-    
-    for k = 1:numel(S)    
+    S = dir(fullfile(PathName,'*.abf'));
+
+    for k = 1:numel(S)
         clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
-%         %Collect the average intensity ratio for SLEs
-%         indexSLE = events(:,7) == 1;
-%         intensity{k} = events(indexSLE,24);               
+        %Collect the average intensity ratio for SLEs
+        %indexSLE = events(:,7) == 1;
+        %intensity{k} = events(indexSLE,18);               
     end
 end
-    
-clear x    
