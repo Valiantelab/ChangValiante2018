@@ -6,6 +6,11 @@ function [label,classification] = decipher (events, i)
 %   and demonstration purposes. The numbers are classification codes for
 %   the type of epileptiform event and if tonic-phase is present.
 
+%If default values are not provided
+if nargin <2
+    i = 1;
+end
+
 %% Label the epiletiform event (for plotting); convert numbers to words
 switch events(i,7) 
     case 0

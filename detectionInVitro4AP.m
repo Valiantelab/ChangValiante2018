@@ -1,4 +1,4 @@
-% function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizurev model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -970,8 +970,11 @@ text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the f
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
- for i = 1:numel(SLE(:,1))
-     figHandle = frequencyAnalysis(LFP_filtered, SLE(i,:), frequency, 'troubleshoot')
+ %index of events longer than 5 s
+ indexInterest = find(events(:,3)>5);
+%  for i = 1:numel(SLE(:,1))
+ for i = indexInterest
+     figHandle = frequencyAnalysis(LFP_filtered, events(i,:), t, i, frequency, 'troubleshoot');
      %Export figures to .pptx
      exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
      exportToPPTX('addpicture',figHandle);
@@ -979,9 +982,8 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
  end
  
 % save and close the .PPTX
-subtitle = 'frequencyContentSLE';
+subtitle = '(spectrogram)';
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-
 
 
 clear x
