@@ -1,4 +1,4 @@
-function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+% function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizure model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -43,7 +43,7 @@ end
 
 %Label for titles
 excelFileName = FileName(1:8);
-finalTitle = '(V7,6)';
+finalTitle = '(V7,7)';
 
 %% Hard Coded values | Detection settings
 %findEvent function
