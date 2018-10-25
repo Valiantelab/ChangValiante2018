@@ -971,7 +971,7 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
  for i = 1:numel(SLE(:,1))
-     figHandle = frequencyAnalysis(LFP_filtered, SLE, frequency, 'troubleshoot')
+     figHandle = frequencyAnalysis(LFP_filtered, SLE(i,:), frequency, 'troubleshoot')
      %Export figures to .pptx
      exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
      exportToPPTX('addpicture',figHandle);

@@ -46,7 +46,7 @@ if troubleshooting
     subplot (3,1,2)
     contour(t,f,abs(s).^2)
     c = colorbar;
-    c.Label.String = 'Power (mV/Hz)^2';    %what is the unit really called? 
+    c.Label.String = 'Power (mV)';    %what is the unit really called? 
     ylim([0 20])
     title (sprintf('Frequency Content of Event #%d', i))
     ylabel('Frequency (Hz)')
