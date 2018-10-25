@@ -963,7 +963,7 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 2 5 1],...
 text = 'Rayleigh frequency: 1/windowSize (Hz), is the minimum frequency that can be resolved from signal';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = 'The window size used is 10 s. so the minimum frequncy is 0.1 Hz';
+text = 'The window size used is 10 s. so the minimum frequncy is 0.1 Hz'
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
 text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the floor duration for SLE is 10 s';
@@ -975,13 +975,11 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
      %Export figures to .pptx
      exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
      exportToPPTX('addpicture',figHandle);
-     close(figHandle)
+    close(figHandle)
  end
  
 % save and close the .PPTX
 subtitle = 'frequencyContentSLE';
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-
-
-
+         
 clear x
