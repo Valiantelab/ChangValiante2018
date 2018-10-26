@@ -2,6 +2,8 @@
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
 %Copyright (c) 2018, Valiante Lab
 %Version 7.75
+
+%% Stage 1: Detect Epileptiform Events
 %clear all (reset)
 close all
 clear all
@@ -10,7 +12,7 @@ clc
 %Manually set File Director
 inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
-%% GUI to set thresholds
+%GUI to set thresholds
 %Settings, request for user input on threshold
 titleInput = 'Specify Detection Thresholds';
 prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
@@ -48,3 +50,49 @@ else
         %intensity{k} = events(indexSLE,18);               
     end
 end
+
+%% Stage 2: Process the File
+%Create time vector
+frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
+t = (0:(length(x)- 1))/frequency;
+t = t';
+
+%Seperate signals from .abf files
+LFP = x(:,1);   %original LFP signal
+if userInput(4)>0
+    LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
+    onsetDelay = 0.13;  %seconds
+    offsetDelay = 1.5;  %seconds
+    lightpulse = LED > 1;
+else
+    LED =[];
+    onsetDelay = [];
+end
+
+%Filter Bank
+LFP_centered = LFP - LFP(1);    %Center Data
+
+[b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
+LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
+
+LFP_detrended = detrend(LFP);   %detrended LFP signal
+
+%% Stage 3: m-Calculation
+
+figure;
+plot (LFP_centered(1:1e6))
+%Set Variables
+k_max = 10000;
+
+%Analyzing data
+data = LFP_centered(1:1e6);
+
+for i = 0:(length(data)/k_max)-1
+    a_t = LFP_filtered(1+(i*k_max):(1+i)*k_max+100);    
+    test=WP_MultipleRegression(a_t', k_max);
+    m{i} = test;
+end
+
+
+
+
