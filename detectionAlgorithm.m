@@ -75,7 +75,7 @@ LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] s
 
 %Set Variables
 k_max = 10000;  %Largest possible value for a 1 s window (@10 kHz)
-contextDuration = 10;  %second
+contextDuration = 20;  %second
 
 % Creating powerpoint slide
 isOpen  = exportToPPTX();
@@ -128,14 +128,16 @@ backgroundLength = floor(length(backgroundVector)/k_max);
 %Preallocate Memory for Cell Array
 m = cell(1,backgroundLength);
 M = zeros(backgroundLength,3);
-
+skip = 0;
 %Calculate m for each window along the length of the event
 for j = 0:backgroundLength-1    %Start at zero, allows me to account for the very beginning of the time series, and each iteration incresaes by k_max (the window size) | I use the maximum k-max for the window size, so I should have the most accurate reading of the signal's stability
+ 
     if numel(backgroundVector) >= (j+1)*k_max+100
         a_t = LFP_filtered(1+(j*k_max):(j+1)*k_max+100);    %I have to add 1 to the indices to account for the fact range starts at zero
     else
         m{j+1} = [];
         M(j+1,:) = [];
+        skip = 1;   %if the last window was skipped because it was too short for the k_max for calculation, keep track of it in the program for plotting later
         continue %don't calculate the last window if there are not enough data points
     end
     m{j+1}=WP_MultipleRegression(a_t', k_max);  %Calculate M | Store Struct output
@@ -154,24 +156,42 @@ set(gcf,'Name','Overview of Data: m calculation by Wilting and Priesemann, 2018'
 set(gcf, 'Position', get(0, 'Screensize'));
 
 figHandle = plotEvent(figHandle, LFP_filtered, t, events(i,:), [], LED, contextDuration, frequency);
-
+hold on
 ylabel ('LFP (mV)');
 %     xlabel ('Time (s)');
 
     yyaxis right
 
-plot (M(:,1), '-o', 'color', 'k', 'MarkerFaceColor', 'g') %, %Connect all dots w/ black line
-plot (M(:,1), 'o', 'color', 'white') %Fill in dots with green
+%Make Time Vector for the m-Calculation
+startBackground = (events(i,1)-contextDuration)*frequency;
+endBackground = (events(i,2)+contextDuration)*frequency;
+index_mCalc = startBackground:k_max:endBackground;
+if skip == 1    %if the last window was skipped, remove the index for the last window for plotting purposes
+    index_mCalc(end) = [];
+    skip = 0;   %index has been removed, so turn off skip.
+end
 
-hold on
-title (sprintf('Overview of m Calculation for event #%d: %s', i, label));
+if i~=1 %if not the first iteration
+    while numel(index_mCalc) > numel(M(:,1))   %remove all the indices at the end that are extra (that were padding)
+    index_mCalc(end) = [];
+    end
+else   %if it is the first iteration
+    while numel(index_mCalc) > numel(M(:,1))    %remove all the indices in the beginning that are extra (padding)
+    index_mCalc(1) = [];
+    end    
+end
+
+plot (t(index_mCalc), M(:,1), 'o', 'color', 'k', 'MarkerFaceColor', 'g') %, %Connect all dots w/ black line
+plot (t(index_mCalc), M(:,1), 'o', 'color', 'k') %Fill in dots with green
+
+title (sprintf('Overview of m Calculation for event #%d: %s @ %.1f sec', i, label, events(i,1)));
 ylabel ('m (Branching Ratio)');
 xlabel ('Time (s)');
 legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Applied Stimulus', 'm (Branching Ratio)',  sprintf('Classification: %s', classification))
 legend ('Location', 'northeastoutside')
 axis tight
 
-set(gca,'fontsize',16)
+set(gca,'fontsize',14)
 
  %Export figures to .pptx
  exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
