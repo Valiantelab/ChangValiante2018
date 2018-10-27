@@ -246,7 +246,7 @@ for i = 1:size(events,1)
     events(i,25) = round(intensityRatio,1);   %I rounded off the values to overcome the issues related to being super clsoe to the threshold.
 
     %m calculation
-    %mCalc=WP_MultipleRegression(eventVectorLFP', 10000);
+%     test=WP_MultipleRegression(eventVectorLFP', 10000);
 end
 
 %Part 3 - Classifier, extracted features

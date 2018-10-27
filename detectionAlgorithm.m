@@ -79,18 +79,16 @@ LFP_detrended = detrend(LFP);   %detrended LFP signal
 
 %% Stage 3: m-Calculation
 
-figure;
-plot (LFP_centered(1:1e6))
 %Set Variables
 k_max = 10000;
 
 %Analyzing data
-data = LFP_centered(1:1e6);
+data = LFP_filtered;
 
 for i = 0:(length(data)/k_max)-1
     a_t = LFP_filtered(1+(i*k_max):(1+i)*k_max+100);    
     test=WP_MultipleRegression(a_t', k_max);
-    m{i} = test;
+    m{i+1} = test;
 end
 
 
