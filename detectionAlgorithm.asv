@@ -149,35 +149,39 @@ for i = 1:size(events(:,1),1)
         M(j+1,2) = m{j+1}.naive_branching_ratio;    %"conventional m value" 
         M(j+1,3) = m{j+1}.autocorrelationtime;  %Store values into a matrix for plotting
     end
-    
-    
-    %Classification labels for plotting
-    [label, classification] = decipher (events,i);
 
-    %Plot Results
+    %Plot Results        
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
     set(gcf,'Name','Overview of Data: m calculation by Wilting and Priesemann, 2018'); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));
     
-    figHandle = plotEvent(figHandle, LFP_filtered, t, events(i,:), [], LED, contextDuration, frequency);
+    figHandle = plotEvent(figHandle, LFP_filtered, t, events(i,:), [], LED, contextDuration, frequency)
     
+    %Classification labels for plotting
+    [label, classification] = decipher (events,i);
+    
+%     lightpulse = LED > 1;
+% 
+%     plot (t(indicesBackground), backgroundVector, 'k')
+%     hold on
+%     plot (t(indicesEvent), eventVector)
+%     plot (t(indicesEvent), (lightpulse(indicesEvent)/4) - 1)
+%     plot 
+
+    title ('Overview of LFP (10000 points/s)');
     ylabel ('LFP (mV)');
 %     xlabel ('Time (s)');
 
     yyaxis right
     
-    plot (M(:,1), '-o', 'color', 'k', 'MarkerFaceColor', 'g') %, %Connect all dots w/ black line
-    plot (M(:,1), 'o', 'color', 'white') %Fill in dots with green
+    plot (M(:,1), '-o', 'color', 'k') %, %Connect all dots w/ black line
+    plot (M(:,1), 'o', 'MarkerFaceColor', 'g') %Fill in dots with green
 
     hold on
-    title (sprintf('Overview of m Calculation for event #%d: %s', i, label));
+    title ('Overview of m calculation');
     ylabel ('m (Branching Ratio)');
     xlabel ('Time (s)');
-    legend ('LFP filtered', 'Epileptiform Event', 'Detected Onset', 'Detected Offset', 'Applied Stimulus', 'm (Branching Ratio)',  sprintf('Classification: %s', classification))
-    legend ('Location', 'northeastoutside')
-    axis tight
-
     set(gca,'fontsize',16)
     
      %Export figures to .pptx

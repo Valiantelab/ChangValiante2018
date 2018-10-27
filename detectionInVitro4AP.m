@@ -90,8 +90,6 @@ DiffLFP_Filtered = abs(diff(LFP_filtered));     %2nd derived signal
 powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
-% %detrended LFP signal
-% LFP_detrended = detrend(LFP);
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
 [epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
@@ -178,6 +176,9 @@ eventTimes = epileptiformEvents(:,1:2)/frequency;
 events = crawler(LFP, eventTimes, locs_spike_2nd, LED, frequency);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
+spikeFrequency = cell(size(events,1),1);
+intensityPerMinute = cell(size(events,1),1);
+totalPower = zeros(size(events,1),1);
 for i = 1:size(events,1)
     %make epileptiform event vector
     onsetTime = int64(events(i,1)*frequency);
@@ -189,10 +190,11 @@ for i = 1:size(events,1)
     sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
+        fprintf(2,'\nWarning! You detected a epileptiform that is shroter than 1 sec, this is an issue with your algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
     end
 
     %Calculate the spiking rate and intensity (per sec) for epileptiform events
-    clear spikeRateMinute intensity
+    clear spikeRateMinute intensity    
     for j = 1:sleDuration
         startWindow = onsetTime+((windowSize*frequency)*(j-1));
         endWindow = onsetTime+((windowSize*frequency)*j);
@@ -348,7 +350,7 @@ for i = 1:numel(events(:,1))
 end
 
 %% Questionable IIE (w/o tonic phase)
-indexQuestionableIIEs = find(events(:,7)==2.5);
+% indexQuestionableIIEs = find(events(:,7)==2.5);
 % QuestionableIIE = events(indexQuestionableIIEs,:);
 % featureSet = [indexQuestionableIIEs events(indexQuestionableIIEs,18)];
 
@@ -381,14 +383,12 @@ end
 %use the lower threshold for Intensity Ratio, (with a floor threshold in place at 0.2)
 if algoThresholdIntensityRatio >= floorThresholdIntensityRatio && michaelsThresholdIntensityRatio >= floorThresholdIntensityRatio
     thresholdIntensityRatioIIE = min(algoThresholdIntensityRatio, michaelsThresholdIntensityRatio);
-else if algoThresholdIntensityRatio >= floorThresholdIntensityRatio
-        thresholdIntensityRatioIIE = algoThresholdIntensityRatio;
-    else if michaelsThresholdIntensityRatio >= floorThresholdIntensityRatio
-            thresholdIntensityRatioIIE = michaelsThresholdIntensityRatio;
-        else
-            thresholdIntensityRatioIIE = floorThresholdIntensityRatio;
-        end
-    end
+elseif algoThresholdIntensityRatio >= floorThresholdIntensityRatio
+    thresholdIntensityRatioIIE = algoThresholdIntensityRatio;
+elseif michaelsThresholdIntensityRatio >= floorThresholdIntensityRatio
+    thresholdIntensityRatioIIE = michaelsThresholdIntensityRatio;
+else
+    thresholdIntensityRatioIIE = floorThresholdIntensityRatio;
 end
 
 
