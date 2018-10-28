@@ -27,19 +27,25 @@ if nargin < 4
     hardCodedThreshold = numel(events(:,1));   
 end
 
-if nargin < 3
-    userInput(3) = 0;    %by default don't plot any figures
+if nargin < 3    
     IIE_classifier = 0; 
     hardCodedThreshold = numel(events(:,1));
 end
 
 %% Switch between classifier for SLEs and IIEs
 switch IIE_classifier            
-    case 1
+    case 1  %ON
         indexEventsToAnalyze = events(:,7)==2;  %Analyze IIEs
         %Indicate any issues
         if hardCodedThreshold < 1
-            fprintf(2,'\nNo interictal events were detected for further analysis.\n')
+%             fprintf(2,'\nNo interictal events were detected for further analysis.\n')
+            %Fillers so the program keeps going
+            thresholdFrequency = 'N/A';
+            thresholdIntensity = 'N/A';
+            thresholdDuration = 'N/A';
+            indexArtifact = 'N/A/';
+            thresholdAmplitudeOutlier = 'N/A';
+            algoFrequencyThreshold = 'N/A';
             return
         elseif hardCodedThreshold < 2
             fprintf(2,'\nInterictal event(s) will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease (because limited number of events were detected).\n')                    
@@ -47,16 +53,16 @@ switch IIE_classifier
         %Set Floor threshold, if not specified
         if nargin < 4
             floorThresholdFrequency = 0.6;    %by default don't plot any figures            
-        end
-        if nargin < 3            
-            floorThresholdFrequency = 0.6;    %Hz            
-        end
-    
-    case 0
+        end    
+        if nargin < 3
+            floorThresholdFrequency = 0.6;    %by default don't plot any figures            
+        end    
+
+    case 0  %OFF
         indexEventsToAnalyze = events(:,7)<4;   %Analyze SLEs
         %Indicate any issues      
         if hardCodedThreshold < 1
-            fprintf(2,'\nNo epileptiform events were detected.\n')
+            %fprintf(2,'\nNo epileptiform events were detected.\n')
             return
         elseif hardCodedThreshold < 2
             fprintf(2,'\nEpileptiform events will be classified using hard-coded thresholds based on Chang et al., 2018 Neurobiology of Disease (because limited number of events were detected).\n')        
@@ -65,8 +71,8 @@ switch IIE_classifier
         if nargin < 4
             floorThresholdFrequency = 1;    %by default don't plot any figures            
         end
-        if nargin < 3            
-            floorThresholdFrequency = 1;    %Hz            
+        if nargin < 3
+            floorThresholdFrequency = 1;    %by default don't plot any figures            
         end
 
     %% Stage 1: Artifact (Amplitude Outlier) removal | only for SLE Classifier
@@ -184,14 +190,27 @@ else
 end
     
 %use the lower threshold for Intensity, (with a floor threshold in place at 5 mV^2/s)
-if algoIntensityThreshold <= floorIntensityThreshold || michaelIntensityThreshold <= floorIntensityThreshold
-    thresholdIntensity = floorIntensityThreshold;
-else if algoIntensityThreshold<=michaelIntensityThreshold
+if algoIntensityThreshold >= floorIntensityThreshold && michaelIntensityThreshold >= floorIntensityThreshold
+    thresholdIntensity = min(michaelIntensityThreshold, algoIntensityThreshold);
+else if algoIntensityThreshold >= floorIntensityThreshold
         thresholdIntensity = algoIntensityThreshold;
-    else
-        thresholdIntensity = michaelIntensityThreshold;
+    else if michaelIntensityThreshold >= floorIntensityThreshold
+            thresholdIntensity = michaelIntensityThreshold; 
+        else
+            thresholdIntensity = floorIntensityThreshold;
+        end
     end
-end
+end 
+
+%Old code used floor if either Algo or Michaels threshold was below floor
+% if algoIntensityThreshold <= floorIntensityThreshold || michaelIntensityThreshold <= floorIntensityThreshold
+%     thresholdIntensity = floorIntensityThreshold;
+% else if algoIntensityThreshold<=michaelIntensityThreshold
+%         thresholdIntensity = algoIntensityThreshold;
+%     else
+%         thresholdIntensity = michaelIntensityThreshold;
+%     end
+% end
 
 %determine the index for SLE and IIE using threshold for Intensity (feature)
 indexIntensity = featureSet>=thresholdIntensity;    %split the population based on the feature
@@ -269,31 +288,34 @@ sigmaSLEDuration = std(putativeSLE(:,3));
 %classify based on duration
 featureSet = events(:,3);   %Duration (s)
 %Floor threshold
-floorThresholdDuration = 10;    %seconds
+floorThresholdDuration = 7;    %seconds
 %Dynamic threshold
 if hardCodedThreshold>=2
-    %Michael's threshold, use the one that is higher, conservative
-    if averageSLEDuration-(2*sigmaSLEDuration) > sigmaSLEDuration
-        michaelsDurationThreshold=averageSLEDuration-(2*sigmaSLEDuration);
-    else
-        michaelsDurationThreshold=sigmaSLEDuration;  
-    end
-    %Algo deteremined threshold (tend to be higher value)
-    [~, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
+%Michael's threshold, use the one that is higher, conservative
+if averageSLEDuration-(2*sigmaSLEDuration) > sigmaSLEDuration
+    michaelsDurationThreshold=averageSLEDuration-(2*sigmaSLEDuration);
+else
+    michaelsDurationThreshold=sigmaSLEDuration;  
+end
+%Algo deteremined threshold (tend to be higher value)
+[~, algoDurationThreshold] = findThresholdSLE (events(indexEventsToAnalyze,3));
 else
     michaelsDurationThreshold = floorThresholdDuration;
     algoDurationThreshold = michaelsDurationThreshold;
 end
 
 %Use the lowest (more liberal) threhsold, unless it's below (the floor)
-if algoDurationThreshold <= floorThresholdDuration || michaelsDurationThreshold <= floorThresholdDuration
-    thresholdDuration = floorThresholdDuration;
-else if michaelsDurationThreshold <= algoDurationThreshold
-        thresholdDuration = michaelsDurationThreshold;
-    else
+if algoDurationThreshold >= floorThresholdDuration && michaelsDurationThreshold >= floorThresholdDuration
+    thresholdDuration = min(michaelsDurationThreshold, algoDurationThreshold);
+else if algoDurationThreshold >= floorThresholdDuration 
         thresholdDuration = algoDurationThreshold;
+    else if michaelsDurationThreshold >= floorThresholdDuration 
+            thresholdDuration = michaelsDurationThreshold; 
+        else
+            thresholdDuration = floorThresholdDuration;
+        end
     end
-end
+end 
 
 indexDuration = featureSet>thresholdDuration; 
 events(:,11) = indexDuration;

@@ -23,7 +23,7 @@ details.calculateMeanOffsetBaseline = calculateMeanOffsetBaseline;
 %detection results
 details.IISsDetected = numel(IIS(:,1));
 details.eventsDetected = numel(events(:,1));
-details.SLEsDetected = numel (SLE_final(:,1);
+details.SLEsDetected = numel (SLE_final(:,1));
 
 %LED details
 if userInput(4)>0

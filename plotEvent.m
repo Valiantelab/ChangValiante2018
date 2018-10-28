@@ -40,11 +40,6 @@ end
     end
 
     %Plot figures
-%     figHandle = figure;
-%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-% %     set(gcf,'Name', sprintf ('%s Event #%d', finalTitle, i)); %select the name you want
-%     set(gcf, 'Position', get(0, 'Screensize'));  
-
     figure(figHandle)
     centerLFP = (timeSeriesLFP(backgroundVector(1)));  %center the LFP 
     plot (t(backgroundVector),timeSeriesLFP(backgroundVector)-centerLFP ) %background
@@ -54,13 +49,17 @@ end
     plot (t(offsetTime), timeSeriesLFP(offsetTime)-centerLFP , 'o', 'MarkerSize', 12, 'MarkerFaceColor', 'red') %offset marker
     
     %Plot spikes detected by algorithm
-    indexSpikes = and(onsetTime<locs_spike, offsetTime>locs_spike); %Locate spikes between the onset and offset  
-    plot (t(locs_spike(indexSpikes)), (timeSeriesLFP(locs_spike(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
-        
+    if ~isempty(locs_spike)
+        indexSpikes = and(onsetTime<locs_spike, offsetTime>locs_spike); %Locate spikes between the onset and offset  
+        plot (t(locs_spike(indexSpikes)), (timeSeriesLFP(locs_spike(indexSpikes))-centerLFP), 'x', 'color', 'green') %plot spikes (artifact removed)
+    end
+
     %Plot applied stimulus (i.e., LED signal), if present
     if ~isempty(appliedStimulus)
+        lightpulse = appliedStimulus > 1;
         centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));
-        plot (t(backgroundVector),((appliedStimulus(backgroundVector))/4)-centerLED , 'b') %plot LED 
+        pulseHeight = max(lightpulse(backgroundVector)/4);
+        plot (t(backgroundVector),((lightpulse(backgroundVector))/4)-(centerLED+pulseHeight) , 'b') %plot LED 
     end
 end
 
