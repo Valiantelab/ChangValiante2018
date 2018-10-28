@@ -165,7 +165,7 @@ ylabel ('LFP (mV)');
 %Make Time Vector for the m-Calculation
 startBackground = (events(i,1)-contextDuration)*frequency;
 endBackground = (events(i,2)+contextDuration)*frequency;
-index_mCalc = startBackground:k_max:endBackground;
+index_mCalc = int64(startBackground:k_max:endBackground);
 if skip == 1    %if the last window was skipped, remove the index for the last window for plotting purposes
     index_mCalc(end) = [];
     skip = 0;   %index has been removed, so turn off skip.
