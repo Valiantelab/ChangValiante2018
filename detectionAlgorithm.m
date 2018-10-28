@@ -121,6 +121,7 @@ for i = 1:size(events(:,1),1)
 [indicesEvent,indicesBackground] = eventIndices(LFP_filtered, events(i,:), contextDuration, frequency);   %Accounts for padding the ends
 eventVector = LFP_filtered(indicesEvent);
 backgroundVector = LFP_filtered(indicesBackground);
+timeVector = t(indicesBackground);
 
 %Size of background vector 
 backgroundLength = floor(length(backgroundVector)/k_max);
@@ -133,7 +134,7 @@ skip = 0;
 for j = 0:backgroundLength-1    %Start at zero, allows me to account for the very beginning of the time series, and each iteration incresaes by k_max (the window size) | I use the maximum k-max for the window size, so I should have the most accurate reading of the signal's stability
  
     if numel(backgroundVector) >= (j+1)*k_max+100
-        a_t = LFP_filtered(1+(j*k_max):(j+1)*k_max+100);    %I have to add 1 to the indices to account for the fact range starts at zero
+        a_t = backgroundVector(1+(j*k_max):(j+1)*k_max+100);    %I have to add 1 to the indices to account for the fact range starts at zero
     else
         m{j+1} = [];
         M(j+1,:) = [];
@@ -184,6 +185,11 @@ end
 plot (t(index_mCalc), M(:,1), 'o', 'color', 'k', 'MarkerFaceColor', 'g') %, %Connect all dots w/ black line
 plot (t(index_mCalc), M(:,1), 'o', 'color', 'k') %Fill in dots with green
 
+%fixed
+
+% plot (M(:,1), 'o', 'color', 'k', 'MarkerFaceColor', 'g') %, %Connect all dots w/ black line
+% plot (M(:,1), 'o', 'color', 'k') %Place holder symbol on the Legend for describing classification
+
 title (sprintf('Overview of m Calculation for event #%d: %s @ %.1f sec', i, label, events(i,1)));
 ylabel ('m (Branching Ratio)');
 xlabel ('Time (s)');
@@ -207,4 +213,5 @@ exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
     end
 end
+
 
