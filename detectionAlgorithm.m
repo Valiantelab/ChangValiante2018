@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
 %Copyright (c) 2018, Valiante Lab
-%Version 8.0
+%Version 8.1
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
