@@ -44,10 +44,7 @@ else
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
-        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
-        %Collect the average intensity ratio for SLEs
-        %indexSLE = events(:,7) == 1;
-        %intensity{k} = events(indexSLE,18);                   
+        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -76,34 +73,9 @@ end
 [b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
 
-%% Stage 3: Isolate Baseline
-
-% [timeSeriesBaseline, avgDetrendedBaseline, sigmaDetrendedBaseline, figHandle] = isolateBaseline(LFP_filtered,events,spikes, artifactSpikes, LED, frequency, 'troubleshoot');
-
-
-%% Stage 4: Locate interictal periods 
-% 
-% function [interictalPeriod, avgDetrendedBaseline, sigmaDetrendedBaseline, figHandle] = isolateBaseline(timeSeries,events,IIS, artifacts, LED, frequency, troubleshooting)
-% %baselineIsolation is a function that removes all the events to isolate the
-% %baseline signal
-% %   This function removes all the detected events, IISs, Artifacts, to
-% %   isolate the baseline signal. Specifically, 8 seconds after a
-% %   epileptiform event, 1 second after a IIS, and 3 second after a light pulse
-% 
-% %Default values if not specified
-% if nargin < 7
-%     troubleshooting = [];
-%     frequency = 1e4;
-%     LED = [];
-% end
-% 
-% if nargin < 6
-%     troubleshooting = [];
-%     frequency = 1e4;
-% end
-
-timeSeries = LFP_filtered;
-interictalPeriod = timeSeries;
+%% Stage 3: Calculate frequency content of interictal period
+%Part 1: Locate Interictal Periods
+interictalPeriod = LFP_filtered;
 
 %% Indices of interest
 epileptiformEventTimes = events(:,1:2);     %Collect all epileptiform events 
@@ -145,15 +117,9 @@ if LED
 
     %% remove spiking due to light pulse
     interictalPeriod (lightTriggeredOnsetZones) = [-1];
-end
+end 
 
-% figure;
-% reduce_plot(timeSeries)
-% hold on
-% reduce_plot(interictalPeriod)
-   
-%% Additional Analysis - Frequency Content
-% Creating powerpoint slide
+%Creating powerpoint slide
 isOpen  = exportToPPTX();
 if ~isempty(isOpen)
     % If PowerPoint already started, then close first and then open a new one
@@ -209,24 +175,25 @@ for i = 1:interictalPeriodCount
 %     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
 end
 
-%Locate and deleted the interictal period less than 10 secs
+%Locate and delete the interictal period less than 10 secs
 indexDelete = find ([interictal{:,2}] == -1); %locate 
 interictal(indexDelete,:)=[]; %Delete
 clear indexDelete
 
-%Locate and deleted the interictal period less than 10 secs
+%Locate the interictal with the lowest sigma
 [~, indexMin] = min ([interictal{:,3}]); %locate 
-
+%Plot for your records
 i = indexMin;
     figHandle = figure;
     plot (interictal{i})
     title(sprintf('Baseline: interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
+    
 %Export figures to .pptx
 exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
-%Plot all interictal events detected by algorithm
+%Part 2: Calculate Frequency Content
 [nr, ~] = size (interictal);   %Count how many interictal periods there are
 for i = 1:nr
     %Vector of interictal event with minimual standard deviation 
@@ -241,9 +208,9 @@ for i = 1:nr
     %decipher
     label = 'Interictal Period (Baseline)';
     if i == indexMin
-        classification = 'Used as Baseline (Minimum Sigma)';
+        classification = sprintf('Used as Baseline (Minimum Sigma: %.4f)',interictal{i,3});
     else
-        classification = 'none';
+        classification = sprintf('Sigma: %.4f)',interictal{i,3});
     end
     
     %Plot Figures
@@ -287,22 +254,10 @@ subtitle = '(spectrogramBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
-    
-
-% if ~isempty(troubleshooting)
-%     figHandle = figure;
-%     subplot(2,1,1)
-%     reduce_plot(interictalPeriod)
-% 
-%     subplot(2,1,2)
-%     reduce_plot(timeSeries)
-% end
-
+   
     end
 end
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
 
    
-
-

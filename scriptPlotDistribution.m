@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 7.5
+%Version 8.1
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
@@ -48,6 +48,8 @@ else
         %Collect the average intensity ratio for SLEs
         %indexSLE = events(:,7) == 1;
         %intensity{k} = events(indexSLE,18);                   
+    end
+end
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -76,53 +78,21 @@ end
 [b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
 
-%% Stage 3: Isolate Baseline
-
-% [timeSeriesBaseline, avgDetrendedBaseline, sigmaDetrendedBaseline, figHandle] = isolateBaseline(LFP_filtered,events,spikes, artifactSpikes, LED, frequency, 'troubleshoot');
-
-
-%% Stage 4: Locate interictal periods 
-% 
-% function [interictalPeriod, avgDetrendedBaseline, sigmaDetrendedBaseline, figHandle] = isolateBaseline(timeSeries,events,IIS, artifacts, LED, frequency, troubleshooting)
-% %baselineIsolation is a function that removes all the events to isolate the
-% %baseline signal
-% %   This function removes all the detected events, IISs, Artifacts, to
-% %   isolate the baseline signal. Specifically, 8 seconds after a
-% %   epileptiform event, 1 second after a IIS, and 3 second after a light pulse
-% 
-% %Default values if not specified
-% if nargin < 7
-%     troubleshooting = [];
-%     frequency = 1e4;
-%     LED = [];
-% end
-% 
-% if nargin < 6
-%     troubleshooting = [];
-%     frequency = 1e4;
-% end
-
-timeSeries = LFP_filtered;
-interictalPeriod = timeSeries;
+%% Stage 3: Locate interictal periods 
+interictalPeriod = LFP_filtered;
 
 %% Indices of interest
-epileptiformEventTimes = events(:,1:2);     %Collect all epileptiform events 
+indexSLE = find(events(:,7) == 1);
+epileptiformEventTimes = int64(events(indexSLE,1:2));     %Collect all epileptiform events 
+
 epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 0.5s early to make sure all epileptiform activity is accounted for; Warning! error will occur if the first event occured within 0.5 s of recording
 epileptiformEventTimes(:,2) = epileptiformEventTimes(:,2) + 3.0;    %Move offset back 3.0s later to make sure all epileptiform activity is accounted for
-indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
-epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
-indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
-epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
+% indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
+% epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
+% indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
+% epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
 
 %% Prepare Time Series 
-%Remove spikes (IISs)
-for i = 1:size(spikes,1)
-    timeStart = int64((spikes(i,1)-1)*frequency);
-    timeEnd = int64((spikes(i,2)+6)*frequency);    %Remove 6 s after spike offset
-    interictalPeriod(timeStart:timeEnd) = [-1];
-    clear timeStart timeEnd
-end
-
 %remove artifacts
 for i = 1:size(artifactSpikes,1)
     timeStart = int64(artifactSpikes(i,1)*frequency);
@@ -147,12 +117,6 @@ if LED
     interictalPeriod (lightTriggeredOnsetZones) = [-1];
 end
 
-% figure;
-% reduce_plot(timeSeries)
-% hold on
-% reduce_plot(interictalPeriod)
-   
-%% Additional Analysis - Frequency Content
 % Creating powerpoint slide
 isOpen  = exportToPPTX();
 if ~isempty(isOpen)
@@ -192,39 +156,42 @@ text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the f
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
- %% Create Vectors of Interictal Period
-interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events
+ %% Create Vectors of Interictal Periods
+interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events (period behind last epileptiform event is not 'interictal', technically)
 interictal = cell(interictalPeriodCount, 1);
 for i = 1:interictalPeriodCount
-    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);
+    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %contains IIEs and IISs
     interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
-    if length(interictal{i})<10*frequency
-        interictal{i} = -1;
-    end
+%     if length(interictal{i})<10*frequency
+%         interictal{i} = -1;
+%     end
     %Characterize baseline features from absolute value of the filtered data
     interictal{i,2} = mean(interictal{i}); %Average
     interictal{i,3} = std(interictal{i}); %Standard Deviation
-%     figure
-%     plot (interictal{i})
-%     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
+    figure
+    plot (interictal{i})
+    title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
 end
 
-%Locate and deleted the interictal period less than 10 secs
-indexDelete = find ([interictal{:,2}] == -1); %locate 
-interictal(indexDelete,:)=[]; %Delete
-clear indexDelete
+% %Locate and deleted the interictal period less than 10 secs
+% indexDelete = find ([interictal{:,2}] == -1); %locate 
+% interictal(indexDelete,:)=[]; %Delete
+% clear indexDelete
 
-%Locate and deleted the interictal period less than 10 secs
+
+%Locate the interictal with the lowest sigma
 [~, indexMin] = min ([interictal{:,3}]); %locate 
-
+%Plot for your records
 i = indexMin;
     figHandle = figure;
     plot (interictal{i})
     title(sprintf('Baseline: interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
+    
 %Export figures to .pptx
 exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
+
 
 %Plot all interictal events detected by algorithm
 [nr, ~] = size (interictal);   %Count how many interictal periods there are
@@ -241,9 +208,9 @@ for i = 1:nr
     %decipher
     label = 'Interictal Period (Baseline)';
     if i == indexMin
-        classification = 'Used as Baseline (Minimum Sigma)';
+        classification = sprintf('Used as Baseline (Minimum Sigma: %.4f)',interictal{i,3});
     else
-        classification = 'none';
+        classification = sprintf('Sigma: %.4f)',interictal{i,3});
     end
     
     %Plot Figures
@@ -283,7 +250,7 @@ for i = 1:nr
 end
 
 % save and close the .PPTX
-subtitle = '(spectrogramBaseline)';
+subtitle = '(spectrogramInterictalPeriod)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
@@ -298,8 +265,8 @@ exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 %     reduce_plot(timeSeries)
 % end
 
-    end
-end
+%% Still in Progress
+%Need to collect the voltage activity.
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
 
