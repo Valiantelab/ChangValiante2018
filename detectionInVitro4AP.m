@@ -1,4 +1,4 @@
-function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
+function [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
 % inVitro4APDetection is a function designed to search for epileptiform
 % events from the in vitro 4-AP seizurev model
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -8,7 +8,7 @@ function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInpu
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
 %Copyright (c) 2018, Valiante Lab
-%Version 7.5
+%Version 8.1
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -43,7 +43,7 @@ end
 
 %Label for titles
 excelFileName = FileName(1:8);
-finalTitle = '(V7,5)';
+finalTitle = '(V8)';
 
 %% Hard Coded values | Detection settings
 %findEvent function
@@ -720,10 +720,12 @@ end
 
 %Sheet 2 = Artifacts
 if ~isempty(artifactLocation)
+    artifactSpikes = artifactLocation/frequency;
     subtitle2 = {A, B, C};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle2,'Artifacts','A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),artifactLocation/frequency,'Artifacts','A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),artifactSpikes,'Artifacts','A2');
 else
+    artifactSpikes = [];
     disp ('No artifacts were detected.');
 end
 
@@ -733,6 +735,7 @@ if ~isempty(spikes)
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle3,'IIS' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),spikes(:,[1:3,8]),'IIS' ,'A2');
 else
+    spikes = [];
     disp ('No IISs were detected.');
 end
 
@@ -758,6 +761,7 @@ if ~isempty(SLE)
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE,'SLE' ,'A2');
 else
+    SLE = [];
     disp ('No SLEs were detected. Overview of data is being plotting for you to review the raw data. For in vivo recordings or noisier recordings, consider using a higher multiple (i.e. 10) of baseline sigma as the threshold.');
     userInput(3) = 1;
 end
@@ -922,7 +926,7 @@ end
 indexSLE = events(:,7) == 1;
 if indexSLE
     intensity = events(indexSLE,18);
-    if mean(intensity) > 0.3
+    if mean(intensity) >= 0.49  %If below, likely contaminated by noise, issue a warning to End User to review raw data.
         fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector %s.\n', finalTitle)
     else
         fprintf(2,'\nWarning! The detect ictal events in File: %s are unusual. Please review if detected ictal events are contaiminated by noise, or if multiple ictal events detected as one. If so, repeat the analysis at a higher threshold (i.e., sigma as 10, or at least double the current sigma).\n', FileName)

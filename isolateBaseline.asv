@@ -39,7 +39,7 @@ end
 %remove IISs
 for i = 1:size(IIS,1)
     timeStart = int64((IIS(i,1)-1)*frequency);
-    timeEnd = int64((IIS(i,2)+5)*frequency);
+    timeEnd = int64((IIS(i,2)+1)*frequency);
     timeSeriesBaseline(timeStart:timeEnd) = [-1];
     clear timeStart timeEnd
 end
