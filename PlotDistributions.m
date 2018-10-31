@@ -117,6 +117,7 @@ if LED
     interictalPeriod (lightTriggeredOnsetZones) = [-1];
 end
 
+%% Stage 4: Plot histogram of distributions of Voltage activity
 % Creating powerpoint slide
 isOpen  = exportToPPTX();
 if ~isempty(isOpen)
@@ -157,6 +158,13 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
 %% Create Vectors of SLEs
+%Add New Slide
+exportToPPTX('addslide');
+text = 'Distribution of voltage activity from Seizure-Like Events (SLEs)';
+exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
+             'Horiz','center', 'Vert','middle', 'FontSize', 36);
+
+%Add New Slide of SLE
 for i = 1:numel(SLETimes(:,1))
     ictal{i} = LFP_filtered(SLETimes(i,1)*frequency:SLETimes(i,2)*frequency);    %contains IIEs and IISs
     ictal{i} (ictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
@@ -164,14 +172,84 @@ for i = 1:numel(SLETimes(:,1))
     %Characterize baseline features from absolute value of the filtered data
     ictal{i,2} = mean(ictal{i}); %Average
     ictal{i,3} = std(ictal{i}); %Standard Deviation
-    figure
+    
+    data = abs(ictal{i});  %interested in size so only take the absolute value
+    binSize = max(data)/min(data);
+        
+    %Plot figures
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));
+    
+    subplot (2,1,1)
     plot (ictal{i})
-    title(sprintf('ictal period #%d. Sigma:%.4f', i, ictal{i,3}))
+    title(sprintf('Ictal Event #%d. Sigma:%.4f', i, ictal{i,3}))
+    axis tight
+    
+    subplot (2,1,2)
+%     plot (sort(ictal{i}))    
+%     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
+%     axis tight        
+
+     histogram(data);
+     set (gca, 'yscale', 'log')
+    set (gca, 'xscale', 'log')
+
+     title(sprintf('Ictal Event #%d. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, binSize, min(data), max(data)))
+    
+    %Export figures to .pptx
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);
+    close(figHandle)
 end
 
+%Add New Slide
+exportToPPTX('addslide');
+text = 'Distribution of voltage activity from all Seizure-Like Events (SLEs) combined';
+exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
+             'Horiz','center', 'Vert','middle', 'FontSize', 36);
+
+ictalCombined = ictal(:,1);
+ictalCombined = vertcat(ictalCombined{:});
+data = (abs(ictalCombined));
+
+%Plot figures
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', 'SLE combined together'); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));
+    
+    subplot (2,1,1)
+    plot (ictalCombined)
+    title(sprintf('%d Ictal Events combined', numel(ictal(:,1))))
+    axis tight
+    
+    subplot (2,1,2)
+%     plot (sort(ictal{i}))    
+%     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
+%     axis tight        
+
+    histogram(abs(data));
+    set (gca, 'yscale', 'log')
+    set (gca, 'xscale', 'log')
+    title(sprintf('Histogram: Distribution of Voltage Activity from all Ictal Events. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', (max(data)/min(data)), min(data), max(data)))
+    
+    %Export figures to .pptx
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);
+    close(figHandle)
+    
 %% Create Vectors of Interictal Periods
+%Add New Slide
+exportToPPTX('addslide');
+text = 'Distribution of voltage activity from Interictal Period (between ictal events)';
+exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
+             'Horiz','center', 'Vert','middle', 'FontSize', 36);
+         
 interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events (period behind last epileptiform event is not 'interictal', technically)
 interictal = cell(interictalPeriodCount, 1);
+%Add New Slide of Interictal Period
 for i = 1:interictalPeriodCount
     interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %contains IIEs and IISs
     interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
@@ -181,16 +259,90 @@ for i = 1:interictalPeriodCount
     %Characterize baseline features from absolute value of the filtered data
     interictal{i,2} = mean(interictal{i}); %Average
     interictal{i,3} = std(interictal{i}); %Standard Deviation
-%     figure
-%     plot (interictal{i})
-%     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
+    
+    %Bin Data
+    data = abs(interictal{i});  %interested in size so only take the absolute value
+    binSize = max(data)/min(data);
+    
+    edges = minValue:minValue*10000:maxValue;
+    
+    Y = discretize(data,edges);
+    minY = min(Y);
+    maxY = max(Y);
+    
+    [N, edges] = histcounts(data, 1500);
+    
+         
+    %Plot figures
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', sprintf ('Interictal Period #%d', i)); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));
+    
+    
+    subplot (2,1,1)
+    plot (interictal{i})
+    title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
+    axis tight
+    
+    subplot (2,1,2)
+%     plot (sort(data))    
+%     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
+%     axis tight
+        
+    histogram(data);
+    set (gca, 'yscale', 'log')
+    set (gca, 'xscale', 'log')
+
+    title(sprintf('Interictal Event #%d. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, binSize, min(data), max(data)))
+
+    %Export figures to .pptx
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);
+    close(figHandle)
 end
 
+%Plot all the interictal periods combined
+%Add New Slide
+exportToPPTX('addslide');
+text = 'Distribution of voltage activity from all Seizure-Like Events (SLEs) combined';
+exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
+             'Horiz','center', 'Vert','middle', 'FontSize', 36);
 
+interictalCombined = interictal(:,1);
+interictalCombined = vertcat(interictalCombined {:});
+data = (abs(interictalCombined));
 
+%Plot figures
+    figHandle = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', 'Interictal Periods combined together'); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));
+    
+    subplot (2,1,1)
+    plot (interictalCombined)
+    title(sprintf('%d Interictal Periods combined', numel(interictal(:,1))))
+    axis tight        
 
+    subplot (2,1,2)
+    histogram(abs(data));
+    set (gca, 'yscale', 'log')
+    set (gca, 'xscale', 'log')
+    title(sprintf('Histogram: Distribution of Voltage Activity from all interictal periods. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', (max(data)/min(data)), min(data), max(data)))
 
-%% Plot the interictal periods
+    %Export figures to .pptx
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figHandle);
+    close(figHandle)
+    
+
+% save and close the .PPTX
+subtitle = '(DistributionVoltageActivity)';
+excelFileName = FileName(1:8);
+exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
+    
+
+%% Stage 4: Plot Spectrogram of the interictal periods
 %Locate the interictal with the lowest sigma
 [~, indexMin] = min ([interictal{:,3}]); %locate 
 %Plot for your records
@@ -267,16 +419,6 @@ excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
     
-
-% if ~isempty(troubleshooting)
-%     figHandle = figure;
-%     subplot(2,1,1)
-%     reduce_plot(interictalPeriod)
-% 
-%     subplot(2,1,2)
-%     reduce_plot(timeSeries)
-% end
-
 %% Still in Progress
 %Need to collect the voltage activity.
 

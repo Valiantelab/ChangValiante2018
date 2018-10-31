@@ -164,9 +164,14 @@ for i = 1:numel(SLETimes(:,1))
     %Characterize baseline features from absolute value of the filtered data
     ictal{i,2} = mean(ictal{i}); %Average
     ictal{i,3} = std(ictal{i}); %Standard Deviation
+    
+    %Plot figures
     figure
     plot (ictal{i})
     title(sprintf('ictal period #%d. Sigma:%.4f', i, ictal{i,3}))
+    axis tight
+    
+    
 end
 
 %% Create Vectors of Interictal Periods

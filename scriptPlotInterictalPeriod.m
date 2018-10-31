@@ -156,18 +156,6 @@ text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the f
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
-%% Create Vectors of SLEs
-for i = 1:numel(SLETimes(:,1))
-    ictal{i} = LFP_filtered(SLETimes(i,1)*frequency:SLETimes(i,2)*frequency);    %contains IIEs and IISs
-    ictal{i} (ictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
-
-    %Characterize baseline features from absolute value of the filtered data
-    ictal{i,2} = mean(ictal{i}); %Average
-    ictal{i,3} = std(ictal{i}); %Standard Deviation
-    figure
-    plot (ictal{i})
-    title(sprintf('ictal period #%d. Sigma:%.4f', i, ictal{i,3}))
-end
 
 %% Create Vectors of Interictal Periods
 interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events (period behind last epileptiform event is not 'interictal', technically)
