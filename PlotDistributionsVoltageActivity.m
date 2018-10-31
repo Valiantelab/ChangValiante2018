@@ -48,8 +48,7 @@ else
         %Collect the average intensity ratio for SLEs
         %indexSLE = events(:,7) == 1;
         %intensity{k} = events(indexSLE,18);                   
-    end
-end
+
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -191,12 +190,15 @@ for i = 1:numel(SLETimes(:,1))
 %     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
 %     axis tight        
 
-     histogram(data);
-     set (gca, 'yscale', 'log')
+    histogram(data.^2); %bins the data for you
+    set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
 
-     title(sprintf('Ictal Event #%d:  Min Data:%.4f  |  Max Data:%.4f ', i, min(data), max(data)))
-    
+    title(sprintf('Ictal Event #%d. Histogram: Distribution of voltage activitys power | Min Data:%.4f  |  Max Data:%.4f ', i, min(data), max(data)))
+
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
+     
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);
@@ -229,10 +231,12 @@ data = (abs(ictalCombined));
 %     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
 %     axis tight        
 
-    histogram(abs(data));
+    histogram(data.^2);
     set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
     title(sprintf('Histogram: Distribution of Voltage Activity from all Ictal Events. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', (max(data)/min(data)), min(data), max(data)))
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
     
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
@@ -260,8 +264,7 @@ for i = 1:interictalPeriodCount
     interictal{i,3} = std(interictal{i,1}); %Standard Deviation
     
     %Bin Data
-    data = abs(interictal{i,1});  %interested in size so only take the absolute value
-    binSize = max(data)/min(data);       
+    data = abs(interictal{i,1});  %interested in size so only take the absolute value   
          
     %Plot figures
     figHandle = figure;
@@ -280,12 +283,14 @@ for i = 1:interictalPeriodCount
 %     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
 %     axis tight
         
-    histogram(data);
+    histogram(data.^2);
     set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
 
-    title(sprintf('Interictal Event #%d. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, binSize, min(data), max(data)))
-
+    title(sprintf('Interictal Event #%d. Histogram: Distribution of voltage activitys power |  Min Data:%.4f  |  Max Data:%.4f ', i, min(data), max(data)))
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
+    
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);
@@ -315,10 +320,12 @@ data = (abs(interictalCombined));
     axis tight        
 
     subplot (2,1,2)
-    histogram(abs(data));
+    histogram((data).^2);    %this is the power of the voltage activity
     set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
-    title(sprintf('Histogram: Distribution of Voltage Activity from all interictal periods. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', (max(data)/min(data)), min(data), max(data)))
+    title(sprintf('Histogram: Distribution of Voltage Activitys power during all interictal periods combined.  Min Data:%.4f  |  Max Data:%.4f ', min(data), max(data)))
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
 
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
@@ -327,13 +334,12 @@ data = (abs(interictalCombined));
     
 
 % save and close the .PPTX
-subtitle = '(DistributionVoltageActivity)';
+subtitle = '(DistributionVoltagePower)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
     
 
-fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
+fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')   
 
-   
-
-
+    end
+end

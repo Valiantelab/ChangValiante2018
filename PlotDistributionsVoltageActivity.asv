@@ -169,9 +169,9 @@ for i = 1:numel(SLETimes(:,1))
     ictal{i,1} = LFP_filtered(SLETimes(i,1)*frequency:SLETimes(i,2)*frequency);  
     ictal{i,1} (ictal{i,1} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
 
-%     %Characterize baseline features from absolute value of the filtered data
-%     ictal{i,2} = mean(ictal{i}); %Average
-%     ictal{i,3} = std(ictal{i}); %Standard Deviation
+    %Characterize baseline features from absolute value of the filtered data
+    ictal{i,2} = mean(ictal{i,1}); %Average
+    ictal{i,3} = std(ictal{i,1}); %Standard Deviation
     
     data = abs(ictal{i,1});  %interested in size so only take the absolute value
         
@@ -191,12 +191,15 @@ for i = 1:numel(SLETimes(:,1))
 %     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
 %     axis tight        
 
-     histogram(data);
+     histogram(data.^2);
      set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
 
-     title(sprintf('Ictal Event #%d:  Min Data:%.4f  |  Max Data:%.4f ', i, min(data), max(data)))
+     title(sprintf('Ictal Event #%d. Histogram: Distribution of voltage activitys power |  Min Data:%.4f  |  Max Data:%.4f ', i, min(data), max(data)))
     
+         xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
+     
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);
@@ -229,10 +232,12 @@ data = (abs(ictalCombined));
 %     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
 %     axis tight        
 
-    histogram(abs(data));
+    histogram(data.^2);
     set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
     title(sprintf('Histogram: Distribution of Voltage Activity from all Ictal Events. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', (max(data)/min(data)), min(data), max(data)))
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
     
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
@@ -250,18 +255,17 @@ interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between 
 interictal = cell(interictalPeriodCount, 1);
 %Add New Slide of Interictal Period
 for i = 1:interictalPeriodCount
-    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %contains IIEs and IISs
-    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
+    interictal{i,1} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %contains IIEs and IISs
+    interictal{i,1} (interictal{i,1} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
 %     if length(interictal{i})<10*frequency
 %         interictal{i} = -1;
 %     end
     %Characterize baseline features from absolute value of the filtered data
-    interictal{i,2} = mean(interictal{i}); %Average
-    interictal{i,3} = std(interictal{i}); %Standard Deviation
+    interictal{i,2} = mean(interictal{i,1}); %Average
+    interictal{i,3} = std(interictal{i,1}); %Standard Deviation
     
     %Bin Data
-    data = abs(interictal{i,1});  %interested in size so only take the absolute value
-    binSize = max(data)/min(data);       
+    data = abs(interictal{i,1});  %interested in size so only take the absolute value   
          
     %Plot figures
     figHandle = figure;
@@ -280,12 +284,14 @@ for i = 1:interictalPeriodCount
 %     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
 %     axis tight
         
-    histogram(data);
+    histogram(data.^2);
     set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
 
-    title(sprintf('Interictal Event #%d. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, binSize, min(data), max(data)))
-
+    title(sprintf('Interictal Event #%d. Histogram: Distribution of voltage activitys power |  Min Data:%.4f  |  Max Data:%.4f ', i, min(data), max(data)))
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
+    
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);
@@ -315,10 +321,12 @@ data = (abs(interictalCombined));
     axis tight        
 
     subplot (2,1,2)
-    histogram(abs(data));
+    histogram((data).^2);    %this is the power of the voltage activity
     set (gca, 'yscale', 'log')
     set (gca, 'xscale', 'log')
-    title(sprintf('Histogram: Distribution of Voltage Activity from all interictal periods. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', (max(data)/min(data)), min(data), max(data)))
+    title(sprintf('Histogram: Distribution of Voltage Activitys power during all interictal periods combined.  Min Data:%.4f  |  Max Data:%.4f ', min(data), max(data)))
+    xlabel ('Power (mV^2), binned')
+    ylabel ('Frequency of Occurrence')
 
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
