@@ -1,7 +1,15 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1
+%Version 8.1: Plot frequency from baseline (Complete)
+
+% Description: Locates segments in the time series that do not have any
+% epileptiform activity by looking for sections of actiivty between
+% detected events by the algorithm. It will then select the algorithm with
+% the lowest sigma to be the best segment of the time series to use as
+% baseline. It will analyze the frequency content of the baseline,
+% bandpassed between 0-50 Hz; this is because in population activity (ictal
+% events)
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
@@ -44,10 +52,7 @@ else
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
-        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
-        %Collect the average intensity ratio for SLEs
-        %indexSLE = events(:,7) == 1;
-        %intensity{k} = events(indexSLE,18);                   
+        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
     end
 end
 
@@ -78,21 +83,28 @@ end
 [b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
 
-%% Stage 3: Locate interictal periods 
+%% Stage 3: Calculate frequency content of interictal period
+%Part 1: Locate Interictal Periods
 interictalPeriod = LFP_filtered;
 
 %% Indices of interest
-indexSLE = find(events(:,7) == 1);
-SLETimes = int64(events(indexSLE,1:2));     %Collect all SLEs
-epileptiformEventTimes = SLETimes;
+epileptiformEventTimes = events(:,1:2);     %Collect all epileptiform events 
 epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 0.5s early to make sure all epileptiform activity is accounted for; Warning! error will occur if the first event occured within 0.5 s of recording
 epileptiformEventTimes(:,2) = epileptiformEventTimes(:,2) + 3.0;    %Move offset back 3.0s later to make sure all epileptiform activity is accounted for
-% indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
-% epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
-% indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
-% epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
+indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
+epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
+indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
+epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
 
 %% Prepare Time Series 
+%Remove spikes (IISs)
+for i = 1:size(spikes,1)
+    timeStart = int64((spikes(i,1)-1)*frequency);
+    timeEnd = int64((spikes(i,2)+6)*frequency);    %Remove 6 s after spike offset
+    interictalPeriod(timeStart:timeEnd) = [-1];
+    clear timeStart timeEnd
+end
+
 %remove artifacts
 for i = 1:size(artifactSpikes,1)
     timeStart = int64(artifactSpikes(i,1)*frequency);
@@ -115,10 +127,9 @@ if LED
 
     %% remove spiking due to light pulse
     interictalPeriod (lightTriggeredOnsetZones) = [-1];
-end
+end 
 
-%% Stage 4: Plot histogram of distributions of Voltage activity
-% Creating powerpoint slide
+%Creating powerpoint slide
 isOpen  = exportToPPTX();
 if ~isempty(isOpen)
     % If PowerPoint already started, then close first and then open a new one
@@ -157,149 +168,28 @@ text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the f
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
-%% Create Vectors of SLEs
-%Add New Slide
-exportToPPTX('addslide');
-text = 'Distribution of voltage activity from Seizure-Like Events (SLEs)';
-exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
-             'Horiz','center', 'Vert','middle', 'FontSize', 36);
-
-%Add New Slide of SLE
-for i = 1:numel(SLETimes(:,1))
-    ictal{i} = LFP_filtered(SLETimes(i,1)*frequency:SLETimes(i,2)*frequency);    %contains IIEs and IISs
-    ictal{i} (ictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
-
-    %Characterize baseline features from absolute value of the filtered data
-    ictal{i,2} = mean(ictal{i}); %Average
-    ictal{i,3} = std(ictal{i}); %Standard Deviation
-    
-    data = abs(ictal{i});  %interested in size so only take the absolute value
-    binSize = max(data)/min(data);
-        
-    %Plot figures
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));
-    
-    subplot (2,1,1)
-    plot (ictal{i})
-    title(sprintf('Ictal Event #%d. Sigma:%.4f', i, ictal{i,3}))
-    axis tight
-    
-    subplot (2,1,2)
-%     plot (sort(ictal{i}))    
-%     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
-%     axis tight        
-
-     histogram(data);
-     title(sprintf('Ictal Event #%d. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, binSize, min(data), max(data)))
-    
-    %Export figures to .pptx
-    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-    exportToPPTX('addpicture',figHandle);
-    close(figHandle)
-end
-
-%Add New Slide
-exportToPPTX('addslide');
-text = 'Distribution of voltage activity from all Seizure-Like Events (SLEs) combined';
-exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
-             'Horiz','center', 'Vert','middle', 'FontSize', 36);
-
-ictalCombined = ictal(:,1);
-data = vertcat(ictalCombined{:});
-    
-%Plot figures
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', 'SLE combined together'); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));
-    
-    subplot (2,1,1)
-    plot (data)
-    title(sprintf('%d Ictal Events combined', numel(ictal(:,1))))
-    axis tight
-    
-    subplot (2,1,2)
-%     plot (sort(ictal{i}))    
-%     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
-%     axis tight        
-
-     histogram(abs(data));
-     title(sprintf('Histogram: Distribution of Voltage Activity from all Ictal Events. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, magnitudeDiff, min(data), max(data)))
-    
-    %Export figures to .pptx
-    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-    exportToPPTX('addpicture',figHandle);
-    close(figHandle)
-    
-%% Create Vectors of Interictal Periods
-%Add New Slide
-exportToPPTX('addslide');
-text = 'Distribution of voltage activity from Interictal Period (between ictal events)';
-exportToPPTX('addtext', sprintf('%s', text), 'Position',[2 1 8 2],...
-             'Horiz','center', 'Vert','middle', 'FontSize', 36);
-         
-interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events (period behind last epileptiform event is not 'interictal', technically)
+ %% Create Vectors of Interictal Period
+interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events
 interictal = cell(interictalPeriodCount, 1);
-%Add New Slide of Interictal Period
 for i = 1:interictalPeriodCount
-    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %contains IIEs and IISs
+    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);
     interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
-%     if length(interictal{i})<10*frequency
-%         interictal{i} = -1;
-%     end
+    if length(interictal{i})<10*frequency
+        interictal{i} = -1;
+    end
     %Characterize baseline features from absolute value of the filtered data
     interictal{i,2} = mean(interictal{i}); %Average
     interictal{i,3} = std(interictal{i}); %Standard Deviation
-    
-    %Bin Data
-    data = abs(interictal{i});  %interested in size so only take the absolute value
-    binSize = max(data)/min(data);
-    
-    edges = minValue:minValue*10000:maxValue;
-    
-    Y = discretize(data,edges);
-    minY = min(Y);
-    maxY = max(Y);
-    
-    [N, edges] = histcounts(data, 1500);
-    
-         
-    %Plot figures
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('Interictal Period #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));
-    
-    
-    subplot (2,1,1)
-    plot (interictal{i})
-    title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
-    axis tight
-    
-    subplot (2,1,2)
-%     plot (sort(data))    
-%     title(sprintf('Distribution of voltage activity #%d. Sigma:%.4f', i, ictal{i,3}))
-%     axis tight
-        
-    histogram(data);
-    title(sprintf('Interictal Event #%d. Order of Magnitude difference:%.0fx  |  Min Data:%.4f  |  Max Data:%.4f ', i, binSize, min(data), max(data)))
-
-    %Export figures to .pptx
-    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-    exportToPPTX('addpicture',figHandle);
-    close(figHandle)
+%     figure
+%     plot (interictal{i})
+%     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
 end
 
-% save and close the .PPTX
-subtitle = '(DistributionVoltageActivity)';
-excelFileName = FileName(1:8);
-exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-    
+%Locate and delete the interictal period less than 10 secs
+indexDelete = find ([interictal{:,2}] == -1); %locate 
+interictal(indexDelete,:)=[]; %Delete
+clear indexDelete
 
-%% Stage 4: Plot Spectrogram of the interictal periods
 %Locate the interictal with the lowest sigma
 [~, indexMin] = min ([interictal{:,3}]); %locate 
 %Plot for your records
@@ -313,8 +203,7 @@ exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
-
-%Plot all interictal events detected by algorithm
+%Part 2: Calculate Frequency Content
 [nr, ~] = size (interictal);   %Count how many interictal periods there are
 for i = 1:nr
     %Vector of interictal event with minimual standard deviation 
@@ -371,16 +260,12 @@ for i = 1:nr
 end
 
 % save and close the .PPTX
-subtitle = '(spectrogramInterictalPeriod)';
+subtitle = '(spectrogramBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
-    
-%% Still in Progress
-%Need to collect the voltage activity.
+   
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
 
    
-
-
