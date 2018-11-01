@@ -1,7 +1,24 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1
+%Version 8.1: Plot distribution of voltage activity's power (Complete) 
+
+%Description: Plots the distributions of voltage activity's power for each
+%slice if userInput(5) > 0. Ultimately, it analyzes all the files in the
+%folder provided for their ictal period and interictal periods. This script
+%will then combine all the periods together and plot their distribution.
+%There is a feaible attempt to normalize all the data prior to combining
+%them together by dividing the dataset from 1 slice by the smallest voltage
+%activity's power. However, I imagine there will be a better way to
+%normalize the data in the future that I hope to implement. Final output is
+%the figures of the distribution from the ictal periods and interictal
+%periods. Future implementations: determine what x_min is and confirm the
+%distribution is in fact following a power-law relationship. I imagine that
+%x_min will be the border between noise and physiological signals. I need a
+%way to objectively define the noise. At the moment, I'm thinking it's fair
+%to say noise does not have a dominiant frequency, or perhaps if we can see
+%Guassian white noise - that would be the most objective. Note: This script
+%will collect interictal periods that contain the interictal events. 
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
@@ -80,11 +97,11 @@ end
 [b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
 
-%% Stage 3: Plot Histogram: Distribution of Voltage Activity Power 
-%Part A: Indices of interest
-indexSLE = find(events(:,7) == 1);
-SLETimes = int64(events(indexSLE,1:2));     %Collect all SLEs
-epileptiformEventTimes = SLETimes;
+%% Stage 3: Plot Histogram of Voltage Activity's Power 
+%Part A: Collect Indices of SLEs and interictal periods
+indexSLE = find(events(:,7) == 1);      %Find the indices for all the confirmed SLEs
+SLETimes = int64(events(indexSLE,1:2));     %Collect all SLE Times into one array
+epileptiformEventTimes = SLETimes;  %Collect all the epileptiform events SLE Times into one array
 epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 0.5s early to make sure all epileptiform activity is accounted for; Warning! error will occur if the first event occured within 0.5 s of recording
 epileptiformEventTimes(:,2) = epileptiformEventTimes(:,2) + 3.0;    %Move offset back 3.0s later to make sure all epileptiform activity is accounted for
 
@@ -94,15 +111,15 @@ interictalPeriod = LFP_filtered;
 %remove artifact Spikes
 for i = 1:size(artifactSpikes,1)
     timeStart = int64(artifactSpikes(i,1)*frequency);
-    timeEnd = int64(artifactSpikes(i,2)*frequency);    %Remove 6 s after spike offset
+    timeEnd = int64(artifactSpikes(i,2)*frequency);    
     interictalPeriod (timeStart:timeEnd) = [-1];
 end
 
-%remove artiface Events (events with artifacts)
+%remove artifact Events (events with artifacts)
 indexArtifactEvents = find(events(:,7) == 4);
 for i = indexArtifactEvents'
     timeStart = int64(events(i,1)*frequency);
-    timeEnd = int64(events(i,2)*frequency);    %Remove 6 s after spike offset
+    timeEnd = int64((events(i,2)-3)*frequency);    %Remove 3 s after spike offset
     interictalPeriod (timeStart:timeEnd) = [-1];
 end
 
@@ -123,8 +140,7 @@ if LED
     interictalPeriod (lightTriggeredOnsetZones) = [-1];
 end
 
-%Part C: Create vectors of SLEs and Interictal periods
-%% Create Vectors of SLEs
+%Part C (1): Create vectors of SLEs 
 ictal = cell(numel(SLETimes(:,1)),1);   %preallocate cell array
 
 %Make vectors of SLEs
@@ -133,16 +149,16 @@ for i = 1:numel(SLETimes(:,1))
 end
 
 %Combine together SLE vectors
-ictalCombined = ictal(:,1);
-ictalCombined = vertcat(ictalCombined{:});
-ictalData{k} = ictalCombined;   %store
+ictalCombined = ictal(:,1);     %Take the first column from the cell array
+ictalCombined = vertcat(ictalCombined{:});  %Vertically concatenate all the cells in the cell array
+ictalData{k} = ictalCombined;   %store for Stage 4
 
-%Attempt to normalize combined data
+%Attempt to normalize combined data | Need to find a better way in the future
 data = (abs(ictalCombined));
-normalizedIctalData{k} = data/min(data);
+normalizedIctalData{k} = data/min(data);    %store for Stage 4
 clear data
 
-%% Create Vectors of Interictal Periods
+%Part C (2): Create Vectors of Interictal Periods
 interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events (period behind last epileptiform event is not 'interictal', technically)
 interictal = cell(interictalPeriodCount, 1);    %Preallocate data
 
@@ -155,14 +171,14 @@ end
 %Combine interictal periods together
 interictalCombined = interictal(:,1);
 interictalCombined = vertcat(interictalCombined {:}); 
-interictalData{k} = interictalCombined;
+interictalData{k} = interictalCombined; 	%store for stage 4
 
-%Attempt to normalize the data
+%Attempt to normalize the data | Need to find a better way in the future
 data = (abs(interictalCombined));
-normalizedInterictalData{k} = data/min(data);   %store to combine later on with other datasets
+normalizedInterictalData{k} = data/min(data);       %store for stage 4
 clear data
 
-%% Part D: Analysis - Plot histogram of distributions of Voltage activity's Power
+%Part D: Analysis - Plot histogram of distributions of Voltage activity's Power
 if userInput(5)>0
     %Plot PowerPoint Slides
     isOpen  = exportToPPTX();
@@ -217,12 +233,12 @@ if userInput(5)>0
         set(gcf,'Name', sprintf ('SLE #%d', i)); %select the name you want
         set(gcf, 'Position', get(0, 'Screensize'));
 
-        subplot (2,1,1)
+        subplot (2,1,1)     %Plot the event vector
         plot (ictal{i})
         title(sprintf('Ictal Event #%d', i))
         axis tight
 
-        subplot (2,1,2)
+        subplot (2,1,2)     %Plot the power of the voltage activity
         data = ictal{i,1}.^2;
         histogram(data); %bins the data for you
         set (gca, 'yscale', 'log')
@@ -368,7 +384,7 @@ end
 end
 end
 
-
+%% Stage 4: Plot all the data from all recordings 
 %Combine ictal periods together
 allIctalData = vertcat(ictalData {:});
 allNormalizedIctalData = vertcat(normalizedIctalData {:});
@@ -510,12 +526,10 @@ exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
-
 % save and close the .PPTX
 subtitle = '(CollectiveDistributionVoltagePower)';
 excelFileName = 'LightTriggered';
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));    
 
-
-fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')   
+fprintf(1,'\nThank you for choosing to use the Epileptiform Activity Detector.\n')   
 
