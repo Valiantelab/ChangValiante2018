@@ -517,7 +517,7 @@ if userInput(5) > 0
             uniqueTitle = '(Artifacts)';
 
         case 5 %Review Events and Questionable SLEs
-            indexTroubleshoot = [indexReviewSLE, indexQuestionableSLE]';
+            indexTroubleshoot = [indexReviewSLE; indexQuestionableSLE]';
             uniqueTitle = '(reviewEvents)';
 
         case 6  %Plot all Events
