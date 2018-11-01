@@ -1,7 +1,17 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1
+%Version 8.1: Plot frequency from baseline (Complete)
+
+% Description: Locates segments in the time series that do not have any
+% epileptiform activity by looking for sections of actiivty between
+% detected events by the algorithm. It will then select the algorithm with
+% the lowest sigma to be the best segment of the time series to use as
+% baseline. It will analyze the frequency content of the baseline,
+% bandpassed between 0-50 Hz; this is because ictal activity in population 
+% activity have important frequencies that are below 20 Hz, we don't need
+% any of the frequency above that. Furthermore, we have 60 Hz noise and 76
+% Hz noise (source unknown) that I don't have to notch filter out anymore.
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)

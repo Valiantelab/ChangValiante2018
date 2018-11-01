@@ -927,10 +927,10 @@ indexSLE = events(:,7) == 1;
 if indexSLE
     intensity = events(indexSLE,18);
     if mean(intensity) >= 0.49  %If below, likely contaminated by noise, issue a warning to End User to review raw data.
-        fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector %s.\n', finalTitle)
+        fprintf(1,'\nSuccessfully completed file: %s using The In Vitro 4-AP cortical model Epileptiform Detector %s.\n', FileName, finalTitle)
     else
         fprintf(2,'\nWarning! The detect ictal events in File: %s are unusual. Please review if detected ictal events are contaiminated by noise, or if multiple ictal events detected as one. If so, repeat the analysis at a higher threshold (i.e., sigma as 10, or at least double the current sigma).\n', FileName)
     end
 else
-    fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector %s.\n', finalTitle)
+    fprintf(1,'\nSuccessfully completed file: %s using The In Vitro 4-AP cortical model Epileptiform Detector %s.\n', FileName, finalTitle)
 end
