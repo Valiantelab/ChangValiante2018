@@ -45,6 +45,8 @@ else
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
+    end
+end
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -255,8 +257,6 @@ excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
    
-    end
-end
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
 
