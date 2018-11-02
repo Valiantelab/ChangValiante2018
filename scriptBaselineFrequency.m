@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1: Plot frequency from baseline (Complete)
+%Version 8.1: Locate baseline (Complete)
 
 % Description: Locates segments in the time series that do not have any
 % epileptiform activity by looking for sections of actiivty between
@@ -85,20 +85,19 @@ end
 [b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
 
-%% Stage 3: Calculate frequency content of interictal period
-%Part 1: Locate Interictal Periods
-interictalPeriod = LFP_filtered;
+%% Stage 3: Find suitable baseline (interictal period with no epileptiform activity)
+interictalPeriod = LFP_filtered;    %data analyzed will be the LFP_filtered
 
-%% Indices of interest
+%Part A: Indices for interictal periods (between all detected events)
 epileptiformEventTimes = events(:,1:2);     %Collect all epileptiform events 
-epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 0.5s early to make sure all epileptiform activity is accounted for; Warning! error will occur if the first event occured within 0.5 s of recording
+epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 1 s early to make sure all epileptiform activity is accounted for; Warning! error will occur if the first event occured within 0.5 s of recording
 epileptiformEventTimes(:,2) = epileptiformEventTimes(:,2) + 3.0;    %Move offset back 3.0s later to make sure all epileptiform activity is accounted for
 indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
 epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
 indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
 epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
 
-%% Prepare Time Series 
+%Part B: Prepare Time Series 
 %Remove spikes (IISs)
 for i = 1:size(spikes,1)
     timeStart = int64((spikes(i,1)-1)*frequency);
@@ -113,6 +112,9 @@ for i = 1:size(artifactSpikes,1)
     timeEnd = int64(artifactSpikes(i,2)*frequency);    %Remove 6 s after spike offset
     interictalPeriod (timeStart:timeEnd) = [-1];
 end
+
+%Note: no need to remove artifact events because they are already accounted
+%for in the epileptiformEventTimes
 
 %remove light pulse
 if LED
@@ -130,6 +132,28 @@ if LED
     %% remove spiking due to light pulse
     interictalPeriod (lightTriggeredOnsetZones) = [-1];
 end 
+
+%Part C: Create Vectors of Interictal Period
+interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events
+interictal = cell(interictalPeriodCount, 1);
+for i = 1:interictalPeriodCount
+    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %Interictal period is between the end of one event and beginning of the next
+    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
+    if length(interictal{i})<10*frequency
+        interictal{i} = -1; %This is a marker to ignore the interictal period <10 s; I only want to analyze periods larger than 10 s
+    end
+    %Characterize baseline features from absolute value of the filtered data
+    interictal{i,2} = mean(interictal{i}); %Average
+    interictal{i,3} = std(interictal{i}); %Standard Deviation
+%     figure
+%     plot (interictal{i})
+%     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
+end
+
+%Locate and delete the interictal period less than 10 secs
+indexDelete = find ([interictal{:,2}] == -1); %locate 
+interictal(indexDelete,:)=[]; %Delete
+clear indexDelete
 
 %Creating powerpoint slide
 isOpen  = exportToPPTX();
@@ -170,43 +194,26 @@ text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the f
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
- %% Create Vectors of Interictal Period
-interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events
-interictal = cell(interictalPeriodCount, 1);
-for i = 1:interictalPeriodCount
-    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);
-    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
-    if length(interictal{i})<10*frequency
-        interictal{i} = -1;
-    end
-    %Characterize baseline features from absolute value of the filtered data
-    interictal{i,2} = mean(interictal{i}); %Average
-    interictal{i,3} = std(interictal{i}); %Standard Deviation
-%     figure
-%     plot (interictal{i})
-%     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
-end
-
-%Locate and delete the interictal period less than 10 secs
-indexDelete = find ([interictal{:,2}] == -1); %locate 
-interictal(indexDelete,:)=[]; %Delete
-clear indexDelete
-
-%Locate the interictal with the lowest sigma
+%Part D: Analysis
+%Locate the interictal with the lowest sigma, use as baseline
 [~, indexMin] = min ([interictal{:,3}]); %locate 
+
 %Plot for your records
 i = indexMin;
-    figHandle = figure;
-    plot (interictal{i})
-    title(sprintf('Baseline: interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
-    
+figHandle = figure;
+set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+set(gcf,'Name', sprintf ('%s Event #%d', label, i)); %select the name you want
+set(gcf, 'Position', get(0, 'Screensize'));
+plot (interictal{i})
+title(sprintf('Baseline: Interictal Period #%d. Sigma:%.4f', i, interictal{i,3}))
+
 %Export figures to .pptx
 exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
 %Part 2: Calculate Frequency Content
-[nr, ~] = size (interictal);   %Count how many interictal periods there are
+[nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
 for i = 1:nr
     %Vector of interictal event with minimual standard deviation 
     eventVector = interictal{i, 1};

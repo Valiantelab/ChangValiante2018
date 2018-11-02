@@ -25,3 +25,4 @@ end
 [b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
 LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
 
+%Notch Filter
