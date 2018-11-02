@@ -55,9 +55,10 @@ else
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
-    end
-end
-
+        
+        %Save Workspace
+        save(sprintf('%s.mat', FileName(1:8)))
+      
 %% Stage 2: Process the File
 % Author: Michael Chang
 % Run this file after the detection algorithm to analyze the results and do
@@ -82,8 +83,8 @@ else
 end
 
 %Filter Bank
-[b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');
-LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal
+[b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');
+LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
 %% Stage 3: Find suitable baseline (interictal period with no epileptiform activity)
 interictalPeriod = LFP_filtered;    %data analyzed will be the LFP_filtered
@@ -238,12 +239,21 @@ for i = 1:nr
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (eventVector)
-    title (sprintf('LFP Bandpass Filtered (0-100 Hz), %s Event #%d', label, i))
+    timeVector = length(eventVector)/frequency-1
+    plot (timeVector, eventVector)
+    title (sprintf('LFP Bandpass Filtered (0-50 Hz), %s Event #%d', label, i))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
     axis tight
+    
+    subplot (3,2,6)
+    histogram (eventVector)
+    title (sprintf('Distribution of voltage activity, Bandpass Filtered (0-50 Hz), %s Event #%d', label, i))
+    xlabel('Size of Voltage Activity (mV)')
+    ylabel('Frequency of Occurance (count)')
+    axis tight
 
+    
     subplot (3,1,2)
     contour(t,f,abs(s).^2)
     c = colorbar;
@@ -254,7 +264,7 @@ for i = 1:nr
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
 
-    subplot (3,1,3)
+    subplot (3,2,5)
     plot(t,maxFreq) 
     title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
     ylabel('Frequency (Hz)')
@@ -272,7 +282,8 @@ subtitle = '(spectrogramBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
-   
+    end
+end
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
 
