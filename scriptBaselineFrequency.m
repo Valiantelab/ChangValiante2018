@@ -202,7 +202,6 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
 i = indexMin;
 figHandle = figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-set(gcf,'Name', sprintf ('%s Event #%d', label, i)); %select the name you want
 set(gcf, 'Position', get(0, 'Screensize'));
 plot (interictal{i})
 title(sprintf('Baseline: Interictal Period #%d. Sigma:%.4f', i, interictal{i,3}))
