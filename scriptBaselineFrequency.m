@@ -204,8 +204,16 @@ i = indexMin;
 figHandle = figure;
 set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
 set(gcf, 'Position', get(0, 'Screensize'));
+subplot (2,1,1)
 plot (interictal{i})
-title(sprintf('Baseline: Interictal Period #%d. Sigma:%.4f', i, interictal{i,3}))
+title(sprintf('Interictal period with lowest Sigma selected to be Baseline | Interictal Period #%d. Sigma: %.4f ', i, interictal{i,3}))
+ylabel('Voltage Activity (mV)')
+xlabel('data points (Sampling Rate: 10 kHz)')
+subplot (2,1,2)
+histogram(interictal{i})
+title(sprintf('Distribution of voltage activity from Interictal Period #%d', i))
+ylabel('Count (Frequency)')
+xlabel('Size of Voltage Activity (mV)')
 
 %Export figures to .pptx
 exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
@@ -227,7 +235,7 @@ for i = 1:nr
     %decipher
     label = 'Interictal Period (Baseline)';
     if i == indexMin
-        classification = sprintf('Used as Baseline (Minimum Sigma: %.4f)',interictal{i,3});
+        classification = sprintf('Minimum Sigma: %.4f (Used as Baseline)',interictal{i,3});
     else
         classification = sprintf('Sigma: %.4f)',interictal{i,3});
     end
@@ -239,16 +247,15 @@ for i = 1:nr
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    timeVector = length(eventVector)/frequency-1
-    plot (timeVector, eventVector)
-    title (sprintf('LFP Bandpass Filtered (0-50 Hz), %s Event #%d', label, i))
-    xlabel('Time (sec)')
+    plot (eventVector)
+    title (sprintf('LFP Bandpass Filtered (1-50 Hz), %s Event #%d', label, i))
+    xlabel('Data Points')
     ylabel('Voltage (mV)')
     axis tight
     
     subplot (3,2,6)
     histogram (eventVector)
-    title (sprintf('Distribution of voltage activity, Bandpass Filtered (0-50 Hz), %s Event #%d', label, i))
+    title (sprintf('Distribution of voltage activity, Bandpass Filtered (1-50 Hz), %s Event #%d', label, i))
     xlabel('Size of Voltage Activity (mV)')
     ylabel('Frequency of Occurance (count)')
     axis tight
@@ -278,7 +285,7 @@ for i = 1:nr
 end
 
 % save and close the .PPTX
-subtitle = '(spectrogramBaseline)';
+subtitle = '(characterizeBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
