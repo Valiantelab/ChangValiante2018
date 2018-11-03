@@ -50,8 +50,9 @@ if (InputGUI(6)=="")
     %Load .abf file (raw data), analyze single file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
     fnm = fullfile(PathName,FileName);
-    load(sprintf('%s', fnm))   
-    userInput(5) = 7;   %troubleshoot
+    myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
+    load(sprintf('%s', fnm), myVars{:})  
+    
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
@@ -60,10 +61,21 @@ else
     for k = 1:numel(S)
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        load(sprintf('%s', fnm))     
-        userInput(5) = 7;   %troubleshoot
-    end
-end
+        myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
+        load(sprintf('%s', fnm), myVars{:})
+        
+%         detected.spikes = spikes;
+%         detected.events = events;
+%         detected.SLE = SLE;
+%         detected.artifactSpikes = artifactSpikes;
+%         detected.details = details;
+%         detected.samplingInterval = samplingInterval;
+%         detected.x = x;
+%         detected.metadata = metadata;
+%         
+%         save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace    
+        
+
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -386,8 +398,8 @@ if userInput(5)>0
     exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));    
 end
 
-%end
-%end
+    end
+end
 
 %% Stage 4: Plot all the data from all recordings 
 %Combine ictal periods together

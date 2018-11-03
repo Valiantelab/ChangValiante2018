@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1: Plot distribution of voltage activity's power (Complete) 
+%Version 8.2: Plot distribution of voltage activity's power (workspace) 
 
 %Description: Plots the distributions of voltage activity's power for each
 %slice if userInput(5) > 0. Ultimately, it analyzes all the files in the
@@ -51,15 +51,27 @@ if (InputGUI(6)=="")
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
     fnm = fullfile(PathName,FileName);
     load(sprintf('%s', fnm))   
+    userInput(5) = 7;   %troubleshoot
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
     S = dir(fullfile(PathName,'*.mat'));
 
     for k = 1:numel(S)
+        PathName = char('C:\Users\Michael\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelsAlgorithm\Workspace\Nov2_2018\light-triggered');
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        load(sprintf('%s', fnm))        
+        myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details'};
+        load(sprintf('%s', fnm), myVars{:})
+        
+        detected.spikes = spikes;
+        detected.events = events;
+        detected.SLE = SLE;
+        detected.artifactSpikes = artifactSpikes;
+        detected.details = details;
+        
+        save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace    
+        
     end
 end
 
