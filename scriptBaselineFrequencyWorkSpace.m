@@ -20,7 +20,7 @@ clear all
 clc
 
 %Manually set File Directory
-inputdir = 'C:\Users\User\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelsAlgorithm\V8\Workspace';
+inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -40,21 +40,25 @@ InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect E
 userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
 
 if (InputGUI(6)=="")
-    
     %Load .abf file (raw data), analyze single file
-    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    load(sprintf('%s', FileName))
+    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
+    [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
+    [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+    
+    save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
-    S = dir(fullfile(PathName,'*.mat'));
+    S = dir(fullfile(PathName,'*.abf'));
 
     for k = 1:numel(S)
+        clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        load(sprintf('%s.mat', FileName(1:8)))        
-    end
-end
+        [x,samplingInterval,metadata]=abfload(fnm);
+        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
+        
+        save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace    
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -291,6 +295,9 @@ end
 subtitle = '(characterizeBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
+
+    end
+end
 
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')

@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1: Locate baseline (Complete)
+%Version 8.2: Locate baseline (Complete)
 
 % Description: Locates segments in the time series that do not have any
 % epileptiform activity by looking for sections of actiivty between
@@ -49,7 +49,7 @@ if (InputGUI(6)=="")
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
-    S = dir(fullfile(PathName,'*.abf'));
+    S = dir(fullfile(PathName,'*.abf')); 
 
     for k = 1:numel(S)
         clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
@@ -58,7 +58,10 @@ else
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
         
-        save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace    
+        save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace          
+    end
+end
+
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -84,7 +87,8 @@ else
 end
 
 %Filter Bank
-[b,a] = butter(2, ([1 68]/(frequency/2)), 'bandpass');
+%Band Pass Filter
+[b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
 LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
 %Low Pass Filter
@@ -194,10 +198,10 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 2 5 1],...
 text = 'Rayleigh frequency: 1/windowSize (Hz), is the minimum frequency that can be resolved from signal';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = 'The window size used is 10 s. so the minimum frequncy is 0.1 Hz';
+text = 'The window size used is 5 s. so the minimum frequncy is 0.2 Hz';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the floor duration for SLE is 10 s';
+text = 'Data was bandpass filtered (1-50 Hz) and Low Pass filtered using Butterworth, 4th order at 68 Hz';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
@@ -294,11 +298,6 @@ end
 subtitle = '(characterizeBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-
-    end
-end
-
-
 
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
