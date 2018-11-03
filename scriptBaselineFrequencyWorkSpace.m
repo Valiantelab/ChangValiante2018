@@ -1,7 +1,7 @@
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
-%Version 8.1: Locate baseline (Complete)
+%Version 8.2: Locate baseline (Complete)
 
 % Description: Locates segments in the time series that do not have any
 % epileptiform activity by looking for sections of actiivty between
@@ -20,7 +20,7 @@ clear all
 clc
 
 %Manually set File Directory
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+inputdir = 'C:\Users\User\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelsAlgorithm\V8\Workspace';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -40,25 +40,21 @@ InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect E
 userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
 
 if (InputGUI(6)=="")
-    %Load .abf file (raw data), analyze single file
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
-    [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
-    [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
     
-    save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace
+    %Load .abf file (raw data), analyze single file
+    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
+    load(sprintf('%s', FileName))
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
-    S = dir(fullfile(PathName,'*.abf'));
+    S = dir(fullfile(PathName,'*.mat'));
 
     for k = 1:numel(S)
-        clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        [x,samplingInterval,metadata]=abfload(fnm);
-        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
-        
-        save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace    
+        load(sprintf('%s.mat', FileName(1:8)))        
+    end
+end
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -84,11 +80,12 @@ else
 end
 
 %Filter Bank
-[b,a] = butter(2, ([1 68]/(frequency/2)), 'bandpass');
+%Band Pass Filter
+[b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
 LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
 %Low Pass Filter
-fc = 68; % Cut off frequency
+fc = 40; % Cut off frequency
 [b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
 LFP_filtered = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
@@ -194,10 +191,10 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 2 5 1],...
 text = 'Rayleigh frequency: 1/windowSize (Hz), is the minimum frequency that can be resolved from signal';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = 'The window size used is 10 s. so the minimum frequncy is 0.1 Hz';
+text = 'The window size used is 5 s. so the minimum frequncy is 0.2 Hz';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = 'Accordingly, the smallest event that can be analyzed is 10 s, thus the floor duration for SLE is 10 s';
+text = 'Accordingly, the smallest event that can be analyzed is 5 s, thus the floor duration for epileptiform events is 5 s';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
@@ -294,11 +291,6 @@ end
 subtitle = '(characterizeBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-
-    end
-end
-
-
 
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')

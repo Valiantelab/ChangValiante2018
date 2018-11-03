@@ -44,6 +44,8 @@ if (InputGUI(6)=="")
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
     [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+    
+    save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
@@ -56,9 +58,8 @@ else
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
         
-        %Save Workspace
-        save(sprintf('%s.mat', FileName(1:8)))
-      
+        save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace    
+
 %% Stage 2: Process the File
 % Author: Michael Chang
 % Run this file after the detection algorithm to analyze the results and do
@@ -84,7 +85,12 @@ end
 
 %Filter Bank
 [b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');
-LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
+LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
+
+%Low Pass Filter
+fc = 68; % Cut off frequency
+[b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
+LFP_filtered = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
 %% Stage 3: Find suitable baseline (interictal period with no epileptiform activity)
 interictalPeriod = LFP_filtered;    %data analyzed will be the LFP_filtered
@@ -226,7 +232,7 @@ for i = 1:nr
     %Vector of interictal event with minimual standard deviation 
     eventVector = interictal{i, 1};
     %Energy content of interictal event (serve as baseline to normalize data)
-    [s,f,t] = spectrogram (eventVector, 5*frequency, 4*frequency, [], frequency, 'yaxis');
+    [s,f,t] = spectrogram (eventVector, 5*frequency, 2.5*frequency, [], frequency, 'yaxis');
 
     %Dominant Frequency at each time point
     [maxS, idx] = max(abs(s).^2);
@@ -291,6 +297,9 @@ exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
     end
 end
+
+
+
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
 
