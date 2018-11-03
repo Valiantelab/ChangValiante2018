@@ -50,10 +50,7 @@ else
     S = dir(fullfile(PathName,'*.mat'));
 
     for k = 1:numel(S)
-<<<<<<< HEAD
         clear spikes events SLE details artifactSpikes fnm FileName x samplingInterval metadata %clear all the previous data analyzed
-=======
->>>>>>> 2d64ec398b16409180cf891c9dfb74013fbe0fb0
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         load(sprintf('%s', fnm))        
