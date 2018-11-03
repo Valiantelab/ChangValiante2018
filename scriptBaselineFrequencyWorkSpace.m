@@ -13,14 +13,14 @@
 % any of the frequency above that. Furthermore, we have 60 Hz noise and 76
 % Hz noise (source unknown) that I don't have to notch filter out anymore.
 
-%% Stage 1: Detect Epileptiform Events
+%% Stage 1: Import .Mat Files (workspace)
 %clear all (reset)
 close all
 clear all
 clc
 
 %Manually set File Directory
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\8) Seizure Detection Program\Workspace\Nov2_2018\light-triggered';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -40,25 +40,22 @@ InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect E
 userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
 
 if (InputGUI(6)=="")
-    %Load .abf file (raw data), analyze single file
-    [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
-    [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
-    [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
     
-    save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace
+    %Load .abf file (raw data), analyze single file
+    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
+    fnm = fullfile(PathName,FileName);
+    load(sprintf('%s', fnm))   
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
-    S = dir(fullfile(PathName,'*.abf'));
+    S = dir(fullfile(PathName,'*.mat'));
 
     for k = 1:numel(S)
-        clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        [x,samplingInterval,metadata]=abfload(fnm);
-        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
-        
-        save(sprintf('%s.mat', FileName(1:8)))  %Save Workspace    
+        load(sprintf('%s', fnm))        
+    end
+end
 
 %% Stage 2: Process the File
 % Author: Michael Chang
