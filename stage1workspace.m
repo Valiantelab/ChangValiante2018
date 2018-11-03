@@ -5,7 +5,7 @@ clear all
 clc
 
 %Manually set File Directory
-inputdir = 'C:\Users\User\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelsAlgorithm\V8\Workspace';
+inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\8) Seizure Detection Program\Workspace\Nov2_2018\light-triggered';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -24,11 +24,11 @@ opts = 'on';    %allow end user to resize the GUI window
 InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
 userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
 
-if (InputGUI(6)=="")
-    
+if (InputGUI(6)=="")    
     %Load .abf file (raw data), analyze single file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    load(sprintf('%s', FileName))
+    fnm = fullfile(PathName,FileName);
+    load(sprintf('%s', fnm))   
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
@@ -37,6 +37,6 @@ else
     for k = 1:numel(S)
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
-        load(sprintf('%s', FileName))        
+        load(sprintf('%s', fnm))        
     end
 end

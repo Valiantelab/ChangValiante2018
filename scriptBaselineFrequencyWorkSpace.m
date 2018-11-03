@@ -4,7 +4,7 @@
 %Version 8.2: Locate baseline (Complete)
 
 % Description: Locates segments in the time series that do not have any
-% epileptiform activity by looking for sections of actiivty between
+% epileptiform activity by looking for sections of activty between
 % detected events by the algorithm. It will then select the algorithm with
 % the lowest sigma to be the best segment of the time series to use as
 % baseline. It will analyze the frequency content of the baseline,
@@ -12,6 +12,8 @@
 % activity have important frequencies that are below 20 Hz, we don't need
 % any of the frequency above that. Furthermore, we have 60 Hz noise and 76
 % Hz noise (source unknown) that I don't have to notch filter out anymore.
+% This particular script will open previous workspaces to speed up
+% development time.
 
 %% Stage 1: Import .Mat Files (workspace)
 %clear all (reset)
@@ -39,8 +41,7 @@ opts = 'on';    %allow end user to resize the GUI window
 InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
 userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
 
-if (InputGUI(6)=="")
-    
+if (InputGUI(6)=="")    
     %Load .abf file (raw data), analyze single file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
     fnm = fullfile(PathName,FileName);
@@ -57,11 +58,13 @@ else
     end
 end
 
+
 %% Stage 2: Process the File
 % Author: Michael Chang
 % Run this file after the detection algorithm to analyze the results and do
 % additional analysis to the detected events. This creats the time vector,
-% LFP time series, LED if there is light, and filters the data.
+% LFP time series, LED if there is light, and filters the data using a
+% bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
 %Create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -86,7 +89,7 @@ end
 LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
 %Low Pass Filter
-fc = 40; % Cut off frequency
+fc = 68; % Cut off frequency
 [b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
 LFP_filtered = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
@@ -195,7 +198,7 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
 text = 'The window size used is 5 s. so the minimum frequncy is 0.2 Hz';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = 'Accordingly, the smallest event that can be analyzed is 5 s, thus the floor duration for epileptiform events is 5 s';
+text = 'Data was bandpass filtered (1-50 Hz) and Low Pass filtered using Butterworth, 4th order at 68 Hz';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
@@ -292,9 +295,6 @@ end
 subtitle = '(characterizeBaseline)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-
-    end
-end
 
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
