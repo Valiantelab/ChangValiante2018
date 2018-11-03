@@ -8,8 +8,7 @@
 %directory that you have provided. Additionally, this script will save the
 %work space as a .mat file which contains the time points of the seizure
 %onset and offset and classificaitons, as well as details regarding how the
-%files were detected. These variables will be saved as a struct (.mat
-%file).
+%files were detected.
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
@@ -48,9 +47,6 @@ if (InputGUI(6)=="")
         detected.SLE = SLE;
         detected.artifactSpikes = artifactSpikes;
         detected.details = details;
-        detected.x = x;
-        detected.samplingInterval = samplingInterval;
-        detected.metadata = metadata;
         
         save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace  
 else
@@ -71,8 +67,7 @@ else
         detected.artifactSpikes = artifactSpikes;
         detected.details = details;
         detected.x = x;
-        detected.samplingInterval = samplingInterval;
-        detected.metadata = metadata;
+        detected.samplingInterval 
         
         save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace          
     end
