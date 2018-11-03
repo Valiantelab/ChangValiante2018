@@ -52,7 +52,7 @@ else
     S = dir(fullfile(PathName,'*.abf')); 
 
     for k = 1:numel(S)
-        clear IIS SLE_final events fnm FileName x samplingInterval metadata %clear all the previous data analyzed
+        clear spikes events SLE details artifactSpikes fnm FileName x samplingInterval metadata %clear all the previous data analyzed
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
