@@ -58,6 +58,8 @@ else
         FileName = S(k).name;
         myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
         load(sprintf('%s', fnm), myVars{:})       
+    end
+end
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -270,8 +272,11 @@ for i = indexEvents'
     subplot (3,1,1)
     plot (timeVector, eventVector)
     hold on
-    plot (timeVector(windowOverlap*frequency), eventVector(windowOverlap*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(numel(eventVector)-(windowSize*frequency)), eventVector(numel(eventVector)-(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+    plot (windowOverlap*frequency, eventVector(windowOverlap*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (numel(eventVector)-(windowSize*frequency), eventVector(numel(eventVector)-(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+    
+    plot (windowOverlap*frequency, eventVector(windowOverlap*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (numel(eventVector)-(windowSize*frequency), eventVector(numel(eventVector)-(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
@@ -312,8 +317,6 @@ subtitle = '(characterizeEpileptiformEvents)';
 excelFileName = FileName(1:8);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
-    end
-end
 
 
 

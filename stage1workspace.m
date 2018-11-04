@@ -42,16 +42,16 @@ else
         myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
         load(sprintf('%s', fnm), myVars{:})
         
-%         detected.spikes = spikes;
-%         detected.events = events;
-%         detected.SLE = SLE;
-%         detected.artifactSpikes = artifactSpikes;
-%         detected.details = details;
-%         detected.samplingInterval = samplingInterval;
-%         detected.x = x;
-%         detected.metadata = metadata;
-%         
-%         save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace    
+        detected.spikes = spikes;
+        detected.events = events;
+        detected.SLE = SLE;
+        detected.artifactSpikes = artifactSpikes;
+        detected.details = details;
+        detected.samplingInterval = samplingInterval;
+        detected.x = x;
+        detected.metadata = metadata;
+        
+        save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace    
         
     end
 end

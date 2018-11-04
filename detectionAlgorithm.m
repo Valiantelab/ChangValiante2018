@@ -65,16 +65,16 @@ else
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);               
         
-        detected.spikes = spikes;
-        detected.events = events;
-        detected.SLE = SLE;
-        detected.artifactSpikes = artifactSpikes;
-        detected.details = details;
-        detected.x = x;
-        detected.samplingInterval = samplingInterval;
-        detected.metadata = metadata;
-        
-        save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace          
+%         detected.spikes = spikes;
+%         detected.events = events;
+%         detected.SLE = SLE;
+%         detected.artifactSpikes = artifactSpikes;
+%         detected.details = details;
+%         detected.x = x;
+%         detected.samplingInterval = samplingInterval;
+%         detected.metadata = metadata;
+%         
+%         save(sprintf('%s.mat', FileName(1:8)), 'detected')  %Save Workspace          
     end
 end
 
