@@ -59,6 +59,9 @@ else
         myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
         load(sprintf('%s', fnm), myVars{:})       
 
+    end
+end
+
 %% Stage 2: Process the File
 % Author: Michael Chang
 % Run this file after the detection algorithm to analyze the results and do
@@ -98,8 +101,9 @@ epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 1 
 epileptiformEventTimes(:,2) = epileptiformEventTimes(:,2) + 3.0;    %Move offset back 3.0s later to make sure all epileptiform activity is accounted for
 indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
 epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
-indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
-epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
+%% Implement a switch to plot all events or only SLEs
+% indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
+% epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
 
 %Part B: Prepare Time Series 
 %Remove spikes (IISs)
@@ -309,13 +313,8 @@ end
 
 % save and close the .PPTX
 subtitle = '(characterizeEpileptiformEvents)';
-excelFileName = FileName(1:8);
+excelFileName = FileName(1:end-4);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
-
-    end
-end
-
-
 
 
 fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
