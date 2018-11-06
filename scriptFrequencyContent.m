@@ -1,4 +1,4 @@
-%Program: Epileptiform Activity Detector
+%Program: Frequency Content of Epileptiform Events, Work Space 
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
 %Version 8.2: Analyze Frequency of Epileptiform Events (Complete)
@@ -31,26 +31,25 @@ prompt1 = 'Window Size (sec)';
 prompt2 = 'Overlap between windows (sec)';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Filter Description:';
-prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Review(5), all(6), None(0):';
+prompt5 = 'Unique Title';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'5.0', '2.5', '0', '1-50 Hz', '0', ''};
+definput = {'5.0', '2.5', '1', '1-50 Hz + Low Pass at 68 hz', 'frequencyContent', ''};
 
 opts = 'on';    %allow end user to resize the GUI window
-InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
-userInput = str2double(InputGUI(1:5)); %convert inputs into numbers
+guiInput = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
+userInput = str2double(guiInput(1:5)); %convert inputs into numbers
 
-if (InputGUI(6)=="")    
+if (guiInput(6)=="")    
     %Load .abf file (raw data), analyze single file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
     fnm = fullfile(PathName,FileName);
     myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
-    load(sprintf('%s', fnm), myVars{:})  
-    
+    load(sprintf('%s', fnm), myVars{:})      
 else
     % Analyze all files in folder, multiple files
-    PathName = char(InputGUI(6));
+    PathName = char(guiInput(6));
     S = dir(fullfile(PathName,'*.mat'));
 
     for k = 1:numel(S)
@@ -66,8 +65,8 @@ end
 % Author: Michael Chang
 % Run this file after the detection algorithm to analyze the results and do
 % additional analysis to the detected events. This creats the time vector,
-% LFP time series, LED if there is light, and filters the data using a
-% bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
+% LFP time series, LED if there is light, this stage 2 is unique for
+% detecting epileptiforme and baseline frequency content
 
 %Create time vector
 frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
@@ -87,10 +86,15 @@ else
 end
 
 %Filter Bank
-filter = '1-100 Hz'; %Description for subtitles
+filter = guiInput{4}; %Description for subtitles
 %Band Pass Filter
-[b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');  %Band pass filter
-LFP_filtered = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
+[b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
+LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
+
+%Low Pass Filter
+fc = 68; % Cut off frequency
+[b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
+LFP_filtered = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
 %% Stage 3: Find suitable baseline (interictal period with no epileptiform activity)
 interictalPeriod = LFP_filtered;    %data analyzed will be the LFP_filtered
@@ -100,9 +104,15 @@ epileptiformEventTimes = events(:,1:2);     %Collect all epileptiform events
 epileptiformEventTimes(:,1) = epileptiformEventTimes(:,1) - 1;    %Move onset 1 s early to make sure all epileptiform activity is accounted for; Warning! error will occur if the first event occured within 0.5 s of recording
 epileptiformEventTimes(:,2) = epileptiformEventTimes(:,2) + 3.0;    %Move offset back 3.0s later to make sure all epileptiform activity is accounted for
 indexIIEIIS = find(or(events(:,7) == 2, events(:,7) == 3));     %Locate only the IIE & IIS events
-epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move onset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
-% indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
-% epileptiformEventTimes = int64(epileptiformEventTimes(indexFirstSLE:end,1:2));     %Ignore all events prior to the first SLE; int64 to make them whole numbers
+epileptiformEventTimes(indexIIEIIS,2) = epileptiformEventTimes(indexIIEIIS,2) + 3.0;  %Move offset back additional 3.0s for IIEs & IISs, the algorithm can't detect their offset effectively
+epileptiformEventTimes = int64(epileptiformEventTimes);     %int64 to make them whole numbers
+if ~isempty(SLE) && numel(SLE (:,1)) > 2
+    indexFirstSLE = find(events(:,7) == 1, 1, 'first');     %Locate where the first SLE occurs
+    epileptiformEventTimes = epileptiformEventTimes(indexFirstSLE:end,1:2);     %Ignore all events prior to the first SLE
+else
+    disp('No SLEs were detected; will plot all events detected')
+end
+
 
 %Part B: Prepare Time Series 
 %Remove spikes (IISs)
@@ -148,22 +158,30 @@ epileptiformEvent = cell(numel(events(:,1)),1);   %preallocate cell array
 %Pad the epileptiform event vector equal to the overlapSize and windowSize
 windowSize = userInput(1);
 windowOverlap = userInput(2);
+minInterictalPeriod = windowSize*2;   %secs
 
-%Make vectors of SLEs
+%Make vectors of SLEs 
 for i = 1:numel(events(:,1))
-    startTime = int64((events(i,1)+windowOverlap)*frequency) ;
-    endTime = int64((events(i,2)+windowSize)*frequency);
-    epileptiformEvent{i,1} = LFP_filtered(startTime:endTime);         
+%     if events(i,1) > windowOverlap
+%         startTime = int64((events(i,1-windowOverlap)*frequency);
+%     else
+%         startTime = int64((events(i,1-windowOverlap)*frequency)
+%     end
+%     
+%     endTime = int64((events(i,2)+windowSize)*frequency);    
+    [~, indicesBackground] = eventIndices(LFP_filtered, events(i,:), windowSize, frequency);    %Make vectors based on original times detected by algorithm
+            
+    epileptiformEvent{i,1} = LFP_filtered(indicesBackground); 
 end
 
 %Part C(2): Create Vectors of Interictal Period
 interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between epileptiform events
-interictal = cell(interictalPeriodCount, 1);
+interictal = cell(interictalPeriodCount, 5);
 for i = 1:interictalPeriodCount
-    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %Interictal period is between the end of one event and beginning of the next
-    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacfts or like pulses during the interictal period 
-    if length(interictal{i})<10*frequency
-        interictal{i} = -1; %This is a marker to ignore the interictal period <10 s; I only want to analyze periods larger than 10 s
+    interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %Make vectors based on adjusted times to errors made by detection algorithm
+    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacts or like pulses during the interictal period 
+    if length(interictal{i}) < (minInterictalPeriod*frequency)
+        interictal{i} = -1; %This is a marker to ignore the interictal period below the minimum; I only want to analyze periods larger than 10 s
     end
     %Characterize baseline features from absolute value of the filtered data
     interictal{i,2} = mean(interictal{i}); %Average
@@ -173,7 +191,7 @@ for i = 1:interictalPeriodCount
 %     title(sprintf('interictal period #%d. Sigma:%.4f', i, interictal{i,3}))
 end
 
-%Locate and delete the interictal period less than 10 secs
+%Locate and delete the interictal period less than minimum Interictal Period secs
 indexDelete = find ([interictal{:,2}] == -1); %locate 
 interictal(indexDelete,:)=[]; %Delete
 clear indexDelete
@@ -230,7 +248,7 @@ subplot (2,1,1)
 plot (interictal{i})
 title(sprintf('Interictal period with lowest Sigma selected to be Baseline | Interictal Period #%d. Sigma: %.4f ', i, interictal{i,3}))
 ylabel('Voltage Activity (mV)')
-xlabel('data points (Sampling Rate: 10 kHz)')
+xlabel(sprintf('data points (Sampling Rate: %d Hz)', frequency))
 subplot (2,1,2)
 histogram(interictal{i})
 title(sprintf('Distribution of voltage activity from Interictal Period #%d', i))
@@ -242,10 +260,48 @@ exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
-%Calculate Frequency Content
-indexEvents = find(events(:,3) > 10);
-% [nr, ~] = size (epileptiformEvent);   %Count how many interictal periods there are, "nr"
-% for i = 1:nr
+%Calculate Frequency Content of Interictal Period
+[nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
+for i = 1:nr
+
+    interictalVector = interictal{i,1};
+    
+    midPoint = numel(interictalVector)/2; 
+    startPoint = int64(midPoint - (windowSize/2)*frequency);
+    endPoint = int64(midPoint + (windowSize/2)*frequency);
+    
+    interictalBaselineVector = interictalVector(startPoint:endPoint-1); %I subtracted 1 because the midpoint adds an extra point to the window size
+    interictal{i,4} = interictalBaselineVector;
+    
+    %Time Vector
+    timeVector = (0:(length(interictalBaselineVector)- 1))/frequency;
+    timeVector = timeVector'; 
+        
+    %Calculate Frequency Content
+    s_baseline = periodogram(interictalBaselineVector);
+    interictal{i,5} = s_baseline;   %Store and use to normalize the frequency content of ictal events later on
+    
+%     figure;
+%     subplot (3,1,1)
+%     plot(timeVector, interictalBaselineVector)
+%     title (sprintf('Baseline #%d, sigma: %.4f', i, interictal{i,3}))
+%     ylabel ('Voltage Activity (mV)')
+%     xlabel ('time (sec)')
+%     subplot (3,1,2)
+%     plot (s_baseline)
+%     title ('Help: I have no idea what this graph represents')
+%     ylabel ('No Idea')
+%     xlabel ('No Idea')
+%     subplot (3,1,3)
+%     periodogram(interictalBaselineVector);
+    
+end
+
+%The averaged normalized baseline, use to normalize the frequency content
+avg_s_baseline = mean(interictal{:,5}); 
+
+%Calculate Frequency Content of Epileptiform Events
+indexEvents = find(events(:,3) > windowSize);
 for i = indexEvents'
     %Event Vector
     eventVector = epileptiformEvent{i, 1};
@@ -254,8 +310,8 @@ for i = indexEvents'
     timeVector = (0:(length(eventVector)- 1))/frequency;
     timeVector = timeVector';    
     
-    %Energy content of interictal event (serve as baseline to normalize data)
-    [s,f,t] = spectrogram (eventVector, 5*frequency, 2.5*frequency, [], frequency, 'yaxis');
+    %Frequency content of epileptiform event 
+    [s,f,t] = spectrogram (eventVector, windowSize*frequency, windowOverlap*frequency, [], frequency, 'yaxis');
 
     %Dominant Frequency at each time point
     [maxS, idx] = max(abs(s).^2);
@@ -273,7 +329,7 @@ for i = indexEvents'
     subplot (3,1,1)
     plot (timeVector, eventVector)
     hold on
-    plot (timeVector(windowOverlap*frequency), eventVector(windowOverlap*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (timeVector(windowSize*frequency), eventVector(windowSize*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(numel(eventVector)-(windowSize*frequency)), eventVector(numel(eventVector)-(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
     xlabel('Time (sec)')
@@ -281,11 +337,12 @@ for i = indexEvents'
     axis tight   
     
     subplot (3,1,2)
-    contour(t,f,abs(s).^2)
+%     contour(t,f,abs(s).^2)
+imagesc(t,f,10*log10(abs(s).^2))
     c = colorbar;
-    c.Label.String = 'Power (mV^2)';    %what is the unit really called? 
+    c.Label.String = 'Power (dB)';  
     ylim([0 100])
-    set(gca, 'YScale', 'log')
+%     set(gca, 'YScale', 'log')
     title (sprintf('Frequency Content of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
@@ -311,8 +368,8 @@ for i = indexEvents'
 end
 
 % save and close the .PPTX
-subtitle = '(characterizeEpileptiformEvents)';
-excelFileName = FileName(1:8);
+subtitle = guiInput{5};
+excelFileName = FileName(1:end-4);
 exportToPPTX('saveandclose',sprintf('%s%s', excelFileName, subtitle));
 
 
