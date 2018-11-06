@@ -298,11 +298,7 @@ for i = 1:nr
 end
 
 %The averaged normalized baseline, use to normalize the frequency content
-dim = ndims(interictal{5});          %# Get the number of dimensions for your arrays
-M = cat(dim+1,interictal{:});        %# Convert to a (dim+1)-dimensional matrix
-meanArray = mean(M,dim+1);  %# Get the mean across arrays
-
-interictalMatrix = cell2mat(interictal(:,1));
+%
 avg_s_baseline = mean(interictal{:,5}); %I don't know how to average them
 
 %Calculate Frequency Content of Epileptiform Events
@@ -343,7 +339,7 @@ for i = indexEvents'
     
     subplot (3,1,2)
 %     contour(t,f,abs(s).^2)
-imagesc(t,f,10*log10(abs(s).^2))
+imagesc(t,f,10*log10(abs(s).^2))/.s_baseline
     c = colorbar;
     c.Label.String = 'Power (dB)';  
     ylim([0 100])
@@ -352,19 +348,6 @@ imagesc(t,f,10*log10(abs(s).^2))
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
 
-    
-    subplot (3,1,3)
-%     contour(t,f,abs(s).^2)
-imagesc(t,f,10*log10(abs(s).^2./s_baseline))
-    c = colorbar;
-    c.Label.String = 'Power (dB)';  
-    ylim([0 100])
-%     set(gca, 'YScale', 'log')
-    title (sprintf('Normalized Frequency Content of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')
-    
-    
     subplot (3,2,5)
     plot(t,maxFreq) 
     title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
