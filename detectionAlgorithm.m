@@ -1,4 +1,4 @@
-% function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(FileName, userInput, x, samplingInterval, metadata)
+function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(FileName, userInput, x, samplingInterval, metadata)
 % detectionAlgorithm is a function designed to search for epileptiform
 % events from the in vitro and vivo mouse model. Author: Michael Chang
 %   Simply provide the directory to the filename, user inputs, and raw data
@@ -19,7 +19,7 @@ if ~exist('x','var') == 1
     clear all
     clc
 
-    %Manually set File DirectorYou seem really sweet and genuine from your profile.
+    %Manually set File Directory":
     inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\4) Manuscript IV (Spike Detection Program)\young #4';
 
     %% GUI to set thresholds
@@ -835,7 +835,7 @@ if userInput(3) == 1
     end
 
     %plot onset/offset markers
-    if SLE
+    if ~isempty(SLE)
         for i=1:numel(SLE(:,1))
         reduce_plot ((SLE(i,1)), (LFP_centered(int64(SLE(i,1)*frequency))), 'o'); %onset markers
         end
@@ -845,7 +845,7 @@ if userInput(3) == 1
         end
     end
 
-    title (sprintf ('Overview of LFP (10000 points/s), %s', FileName));
+    title (sprintf ('Overview of LFP (unfiltered), %s', FileName));
     ylabel ('LFP (mV)');
     xlabel ('Time (s)');
 
