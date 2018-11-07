@@ -1,14 +1,17 @@
-function [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata)
-% inVitro4APDetection is a function designed to search for epileptiform
-% events from the in vitro 4-AP seizurev model
+function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(FileName, userInput, x, samplingInterval, metadata)
+% detectionAlgorithm is a function designed to search for epileptiform
+% events from the in vitro and vivo mouse model. Author: Michael Chang
 %   Simply provide the directory to the filename, user inputs, and raw data
+%   for the moment it can only accurately classify epileptiform events from
+%   the in vitro 4-AP cortical seizure model. 
+
 
 
 %% Standalone function
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
 %Copyright (c) 2018, Valiante Lab
-%Version 7.5
+%Version 8.2
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -17,7 +20,7 @@ if ~exist('x','var') == 1
     clc
 
     %Manually set File DirectorYou seem really sweet and genuine from your profile.
-    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+    inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\4) Manuscript IV (Spike Detection Program)\young #4';
 
     %% GUI to set thresholds
     %Settings, request for user input on threshold
@@ -30,7 +33,7 @@ if ~exist('x','var') == 1
     prompt6 = 'To analyze multiple files in folder, provide File Directory:';
     prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
     dims = [1 70];
-    definput = {'3.9', '70', '0', '2', '0', ''};
+    definput = {'3.9', '70', '1', '2', '6', ''};
 
     opts = 'on';    %allow end user to resize the GUI window
     InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
@@ -42,8 +45,8 @@ if ~exist('x','var') == 1
 end
 
 %Label for titles
-excelFileName = FileName(1:8);
-finalTitle = '(V7,5)';
+excelFileName = FileName(1:end-4);
+finalTitle = '(V8)';
 
 %% Hard Coded values | Detection settings
 %findEvent function
@@ -228,7 +231,7 @@ for i = 1:size(events,1)
     events (i,6) = p2pAmplitude;
 
     %Identify epileptiform event phases
-    [events(i,[13:17 22:23]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i});
+    [events(i,[13:17 22:23]), spikeFrequency{i}] = findIctalPhases (spikeFrequency{i}, frequency);
 
     %Calculating the Intensity Ratio (High:Low) for SLE
 %     for i = 1:numel(events(:,1))
@@ -517,7 +520,7 @@ if userInput(5) > 0
             uniqueTitle = '(Artifacts)';
 
         case 5 %Review Events and Questionable SLEs
-            indexTroubleshoot = [indexReviewSLE, indexQuestionableSLE]';
+            indexTroubleshoot = [indexReviewSLE; indexQuestionableSLE]';
             uniqueTitle = '(reviewEvents)';
 
         case 6  %Plot all Events
@@ -537,7 +540,7 @@ if userInput(5) > 0
         set(gcf, 'Position', get(0, 'Screensize'));
 
         subplot (2,1,1)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse, 5, frequency);
         title (sprintf('LFP Recording, %s Event #%d | Frequency Change over time', label, i));
         ylabel ('mV');
         xlabel ('Time (sec)');
@@ -568,7 +571,7 @@ if userInput(5) > 0
         axis tight
 
         subplot (2,1,2)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse);
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse, 5, frequency);
         %Labels
         title ('Intensity Change over time');
         ylabel ('mV');
@@ -720,10 +723,12 @@ end
 
 %Sheet 2 = Artifacts
 if ~isempty(artifactLocation)
+    artifactSpikes = artifactLocation/frequency;
     subtitle2 = {A, B, C};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle2,'Artifacts','A1');
-    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),artifactLocation/frequency,'Artifacts','A2');
+    xlswrite(sprintf('%s%s',excelFileName, finalTitle ),artifactSpikes,'Artifacts','A2');
 else
+    artifactSpikes = [];
     disp ('No artifacts were detected.');
 end
 
@@ -733,6 +738,7 @@ if ~isempty(spikes)
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle3,'IIS' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),spikes(:,[1:3,8]),'IIS' ,'A2');
 else
+    spikes = [];
     disp ('No IISs were detected.');
 end
 
@@ -758,6 +764,7 @@ if ~isempty(SLE)
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE,'SLE' ,'A2');
 else
+    SLE = [];
     disp ('No SLEs were detected. Overview of data is being plotting for you to review the raw data. For in vivo recordings or noisier recordings, consider using a higher multiple (i.e. 10) of baseline sigma as the threshold.');
     userInput(3) = 1;
 end
@@ -828,7 +835,7 @@ if userInput(3) == 1
     end
 
     %plot onset/offset markers
-    if SLE(:,1)
+    if SLE
         for i=1:numel(SLE(:,1))
         reduce_plot ((SLE(i,1)), (LFP_centered(int64(SLE(i,1)*frequency))), 'o'); %onset markers
         end
@@ -894,7 +901,7 @@ if userInput(3) == 1
         set(gcf, 'Position', get(0, 'Screensize'));
 
         %Plot figure
-        figHandle = plotEvent (figHandle, LFP, t, SLE(i,1:2), locs_spike_2nd, lightpulse); %using Michael's function
+        figHandle = plotEvent (figHandle, LFP, t, SLE(i,1:2), locs_spike_2nd, lightpulse, 5, frequency); %using Michael's function
 
         %Title
         title (sprintf('LFP Recording, SLE #%d', i));
@@ -922,11 +929,11 @@ end
 indexSLE = events(:,7) == 1;
 if indexSLE
     intensity = events(indexSLE,18);
-    if mean(intensity) > 0.3
-        fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector %s.\n', finalTitle)
+    if mean(intensity) >= 0.49  %If below, likely contaminated by noise, issue a warning to End User to review raw data.
+        fprintf(1,'\nSuccessfully completed file: %s using The Mouse Model Epileptiform Detector %s.\n', FileName, finalTitle)
     else
         fprintf(2,'\nWarning! The detect ictal events in File: %s are unusual. Please review if detected ictal events are contaiminated by noise, or if multiple ictal events detected as one. If so, repeat the analysis at a higher threshold (i.e., sigma as 10, or at least double the current sigma).\n', FileName)
     end
 else
-    fprintf(1,'\nSuccessfully completed. Thank you for choosing to use the In Vitro 4-AP cortical model Epileptiform Detector %s.\n', finalTitle)
+    fprintf(1,'\nSuccessfully completed file: %s using The Mouse Model Epileptiform Detector %s.\n', FileName, finalTitle)
 end

@@ -3,11 +3,15 @@
 %Copyright (c) 2018, Valiante Lab
 %Version 7.5
 
+
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
 close all
 clear all
 clc
+
+% Add all subfolders in working directory to the path.
+addpath(genpath(pwd));  
 
 %Manually set File Directory
 inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
@@ -20,7 +24,7 @@ prompt2 = 'Artifact Threshold: average + (70 x Sigma)';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Review(5), all(6), None(0):';
-prompt6 = 'To analyze multiple files in folder, provide File Directory:';
+prompt6 = 'To analyze multiple files, provide the directory to folder containing files (otherwise leave blank):';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
 definput = {'3.9', '70', '0', '2', '0', ''};
