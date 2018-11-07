@@ -835,7 +835,7 @@ if userInput(3) == 1
     end
 
     %plot onset/offset markers
-    if SLE
+    if ~isempty(SLE)
         for i=1:numel(SLE(:,1))
         reduce_plot ((SLE(i,1)), (LFP_centered(int64(SLE(i,1)*frequency))), 'o'); %onset markers
         end
@@ -845,7 +845,7 @@ if userInput(3) == 1
         end
     end
 
-    title (sprintf ('Overview of LFP (10000 points/s), %s', FileName));
+    title (sprintf ('Overview of LFP (unfiltered), %s', FileName));
     ylabel ('LFP (mV)');
     xlabel ('Time (s)');
 
