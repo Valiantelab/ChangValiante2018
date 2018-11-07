@@ -3,7 +3,9 @@
 %Copyright (c) 2018, Valiante Lab
 
 % For quick start: i) Run the script, ii) click OK, iii) select individual 
-% .abf file to analyze. For full details, read the documentation provided.
+% .abf file to analyze. Select "13226009(exampleFile).abf" for demostration
+% For full details, read the documentation provided.
+
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
