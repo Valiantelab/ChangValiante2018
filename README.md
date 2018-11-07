@@ -1,4 +1,4 @@
-# Epileptiform-Event-Detection-Algorithm (detection.m)
+# Epileptiform-Event-Detection-Algorithm (detectionAlgorithm.m)
 
 Description: 
 High speed detection of ictal events (SLEs), as Chang et al., 2018 would mark them. This simple script detects all the spikes in the time series provided (.abf file) and groups spikes that are within 10 sec of each other as one event. These events are then classified based on their spiking characfteristics (duration, rate, intensity, and amplitude). Events can be classified as ictal event (SLE), interictal event (IIE), interictal spike (IIS), or an artifact.
@@ -17,8 +17,10 @@ The script outputs an excel sheet and powerpoint of detect SLEs and figures demo
 Thank you for choosing to use the Epileptiform Event Detector for your research needs. 
 
 Refer to Chang et al., 2018. Neurobiology of Disease.
+Link: https://www.sciencedirect.com/science/article/pii/S0969996117302255
 
-Authors: Michael Chang (michael.chang@live.ca), Christopher Lucasius, Fu-der (Fred) Chen, Liam Long, Thomas Lordello, Vitaly Topekha, Taufik A. Valiante.
- 
+Authors: Michael Chang (michael.chang@live.ca), Christopher Lucasius, Liam Long, and Taufik A. Valiante.
+
+Acknowledgements: Fu-der (Fred) Chenm Thomas Lordello, Vitaly Topekha, Kramay Patel, Adam Gierlach, and Gerard O'Leary.  
 
 Copyright 2018, Valiante Lab 
