@@ -11,7 +11,7 @@ function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(Fil
 %Program: Epileptiform Activity Detector
 %Author: Michael Chang (michael.chang@live.ca), Liam Long and Fred Chen 
 %Copyright (c) 2018, Valiante Lab
-%Version 8.5 
+%Version 8.3
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -97,7 +97,7 @@ powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
-waitbar(0.05, f, 'Detecting Epileptiform Events using Derivative of Signal', 'Name', 'Epileptiform Detection Algorithm Process');
+waitbar(0.1, f, 'Detecting Epileptiform Events using Derivative of Signal', 'Name', 'Epileptiform Detection Algorithm Process');
 % pause(1)
 [epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
@@ -120,7 +120,7 @@ avgBaseline = mean(AbsLFP_centeredFilteredBaseline); %Average
 sigmaBaseline = std(AbsLFP_centeredFilteredBaseline); %Standard Deviation
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
-waitbar(0.25, f, 'Confirming Epileptiform Events using Absolute Values of Signal');
+waitbar(0.3, f, 'Confirming Epileptiform Events using Absolute Values of Signal');
 % pause(1)
 
 %Recreate the Absolute filtered LFP (1st derived signal) vector
@@ -170,7 +170,7 @@ if isempty(epileptiformLocation)
 end
 
 %% Stage 2a: SLE Classifier; Part 1 - Classifier, duration
-waitbar(0.5, f, 'Detecting Exact Onset and Offset of Events using Signals Power');
+waitbar(0.6, f, 'Detecting Exact Onset and Offset of Events using Signals Power');
 % pause(1)
 %Putative IIS
 indexSpikes = (epileptiformLocation (:,3)<(minEventduration*frequency));
@@ -189,7 +189,7 @@ eventTimes = epileptiformEvents(:,1:2)/frequency;
 events = crawler(LFP, eventTimes, locs_spike_2nd, LED, frequency);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
-waitbar(0.6, f, 'Extracting Features from detected Epileptiform Events');
+waitbar(0.7, f, 'Extracting Features from detected Epileptiform Events');
 % pause(1)
 
 spikeFrequency = cell(size(events,1),1);
@@ -268,7 +268,7 @@ for i = 1:size(events,1)
 end
 
 %Part 3 - Classifier, extracted features
-waitbar(0.7, f, 'Classifying Epileptiform Events based on extracted features');
+waitbar(0.8, f, 'Classifying Epileptiform Events based on extracted features');
 % pause(1)
 
 [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier, algoFrequencyThreshold] = classifier_dynamic (events, 0);
@@ -851,11 +851,8 @@ if userInput(3) == 1
     subplot (3,1,2)
     reduce_plot (t, AbsLFP_Filtered, 'b');
     hold on
-    
-    if LED
-        reduce_plot (t, (lightpulse/2) - 0.75);
-    end
-    
+    reduce_plot (t, (lightpulse/2) - 0.75);
+
     %plot spikes (artifact removed)
     for i=1:size(locs_spike_2nd,1)
         plot (t(locs_spike_2nd(i,1)), (DiffLFP_Filtered(locs_spike_2nd(i,1))), 'x')
