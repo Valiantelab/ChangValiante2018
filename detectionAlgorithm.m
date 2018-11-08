@@ -9,9 +9,9 @@ function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(Fil
 
 %% Standalone function
 %Program: Epileptiform Activity Detector
-%Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
+%Author: Michael Chang (michael.chang@live.ca), Liam Long and Fred Chen 
 %Copyright (c) 2018, Valiante Lab
-%Version 8.2
+%Version 8.3
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -76,6 +76,9 @@ else
 end
 
 %% Data Processing
+f = waitbar(0,'Please wait Processing Data');
+pause(.5)
+
 %Center the LFP data
 LFP_centered = LFP - LFP(1);
 
@@ -94,6 +97,9 @@ powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
+f = waitbar(0.2,'Searching for Epileptiform Events based on the Signals Derivative Values');
+pause(1)
+
 [epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
 %remove potential events
@@ -115,6 +121,9 @@ avgBaseline = mean(AbsLFP_centeredFilteredBaseline); %Average
 sigmaBaseline = std(AbsLFP_centeredFilteredBaseline); %Standard Deviation
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
+f = waitbar(0.4,'Confirming Epileptiform Events based on the Signals Absolute Values');
+pause(1)
+
 %Recreate the Absolute filtered LFP (1st derived signal) vector
 AbsLFP_Filtered = abs(LFP_filtered); %the LFP analyzed
 
@@ -173,12 +182,18 @@ spikes = crawler(LFP, spikeTimes, locs_spike_2nd, LED, frequency, 'IIS');
 indexEvents = (epileptiformLocation (:,3)>=(minEventduration*frequency));
 epileptiformEvents = epileptiformLocation(indexEvents,:);
 
+f = waitbar(0.6,'Searching for Exact onset and offset of Epileptiform Events based on the Signals Power');
+pause(1)
+
 %SLE Crawler: Determine exact onset and offset times | Scan Low-Pass Filtered Power signal for precise onset/offset times
 eventTimes = epileptiformEvents(:,1:2)/frequency;
 % events = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike_2nd);
 events = crawler(LFP, eventTimes, locs_spike_2nd, LED, frequency);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
+f = waitbar(0.7,'Feature Extracting from Epileptiform Events ');
+pause(1)
+
 spikeFrequency = cell(size(events,1),1);
 intensityPerMinute = cell(size(events,1),1);
 totalPower = zeros(size(events,1),1);
@@ -255,6 +270,9 @@ for i = 1:size(events,1)
 end
 
 %Part 3 - Classifier, extracted features
+f = waitbar(0.8,'Classifying detected Epileptiform Events ');
+pause(1)
+
 [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier, algoFrequencyThreshold] = classifier_dynamic (events, userInput(3));
 %if no SLEs detected (because IIEs are absent) | Repeat classification using hard-coded thresholds,
 if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
@@ -462,6 +480,8 @@ reviewSLE = events(indexReviewSLE,:);
 
 %% Troubleshooting: Plot all figures
 if userInput(5) > 0
+    f = waitbar(0.9,'Exporting figures of Epileptiform Events and detection results');
+    pause(1)
 
     %set variables
     timeSeriesLFP = LFP_centered; %Time series to be plotted
@@ -924,6 +944,9 @@ if userInput(3) == 1
     exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName));
 end
 
+f = waitbar(1,'Finishing; checking to see final results are reasonable');
+    pause(1)
+    
 %% Check the detected ictal events were detected correctly
 %Intensity ratio of SLE should be >0.3
 indexSLE = events(:,7) == 1;
@@ -937,3 +960,5 @@ if indexSLE
 else
     fprintf(1,'\nSuccessfully completed file: %s using The Mouse Model Epileptiform Detector %s.\n', FileName, finalTitle)
 end
+
+close (f)
