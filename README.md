@@ -28,8 +28,8 @@ Thank you for choosing to use the Valiante Lab's Epileptiform Event Detector for
 Refer to Chang et al., 2018. Neurobiology of Disease.
 Link: https://www.sciencedirect.com/science/article/pii/S0969996117302255
 
-Authors: Michael Chang (michael.chang@live.ca), Christopher Lucasius, Liam Long, and Taufik A. Valiante.
+Authors: Michael Chang (michael.chang@live.ca), Christopher Lucasius, Liam Long, Fu-der (Fred) Chen and Taufik A. Valiante.
 
-Acknowledgements: Fu-der (Fred) Chenm Thomas Lordello, Vitaly Topekha, Kramay Patel, Adam Gierlach, and Gerard O'Leary.  
+Acknowledgements: Thomas Lordello, Vitaly Topekha, Kramay Patel, Adam Gierlach, and Gerard O'Leary.  
 
 Copyright 2018, Valiante Lab 
