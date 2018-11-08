@@ -1,4 +1,4 @@
-# Epileptiform-Event-Detection-Algorithm (detectionAlgorithm.m)
+# Epileptiform-Event-Detector(detectionAlgorithm.m)
 
 Requirements:
 - MatLab R2015a (or later)
@@ -9,7 +9,7 @@ Quick start (For demonstration):
 2) Open detectionAlgorithm.m
 3) Run the script
 4) Specify Detection Parameters, or click "OK" and use default settings 
-5) Select .abf you want to analyze, or selected 13226009(exampleFile) provided
+5) Select .abf you want to analyze, or select 13226009(exampleFile).abf provided
 
 Description:
 High speed detection of ictal events (SLEs), as Chang et al., 2018 would mark them. This simple script detects all the spikes in the time series provided (.abf file) and groups spikes that are within 10 sec of each other as one event. These events are then classified based on their spiking characteristics (duration, rate, intensity, and amplitude). Events can be classified as ictal event (SLE), interictal event (IIE), interictal spike (IIS), or an artifact.

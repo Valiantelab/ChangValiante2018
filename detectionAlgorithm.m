@@ -4,7 +4,7 @@
 %Version 8.5
 
 % For quick start: i) Run the script, ii) click OK, iii) select the 
-% .abf file to analyze. Select "13226009(exampleFile).abf" for demontration
+% .abf file to analyze; for demo select "13226009(exampleFile).abf" 
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
@@ -58,7 +58,7 @@ else
 end
 
 fprintf(1,'\nA summary of the detection results can be found in the current working folder: %s\n', pwd)
-fprintf(1,'\nThank you for choosing to use Chang & Valiante (2018) Epileptiform Activity Detector.\n')
+fprintf(1,'\nThank you for choosing to use Chang & Valiante (2018) Epileptiform Event Detector.\n')
 
    
 
