@@ -9,9 +9,9 @@ function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(Fil
 
 %% Standalone function
 %Program: Epileptiform Activity Detector
-%Author: Michael Chang (michael.chang@live.ca), Fred Chen and Liam Long;
+%Author: Michael Chang (michael.chang@live.ca), Liam Long and Fred Chen 
 %Copyright (c) 2018, Valiante Lab
-%Version 8.2
+%Version 8.5 
 
 if ~exist('x','var') == 1
     %clear all (reset)
@@ -19,7 +19,7 @@ if ~exist('x','var') == 1
     clear all
     clc
 
-    %Manually set File DirectorYou seem really sweet and genuine from your profile.
+    %Manually set File Directory":
     inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\4) Manuscript IV (Spike Detection Program)\young #4';
 
     %% GUI to set thresholds
@@ -73,9 +73,12 @@ if userInput(4)>0
 else
     LED =[];
     onsetDelay = [];
+    lightpulse =[];
 end
 
 %% Data Processing
+f = waitbar(0,'Detecting Epileptiform Events: Please wait Processing Data...','Name', 'Epileptiform Event Detection Progress');
+
 %Center the LFP data
 LFP_centered = LFP - LFP(1);
 
@@ -94,6 +97,8 @@ powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
+waitbar(0.05, f, 'Detecting Epileptiform Events using Derivative of Signal', 'Name', 'Epileptiform Detection Algorithm Process');
+% pause(1)
 [epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
 %remove potential events
@@ -115,6 +120,9 @@ avgBaseline = mean(AbsLFP_centeredFilteredBaseline); %Average
 sigmaBaseline = std(AbsLFP_centeredFilteredBaseline); %Standard Deviation
 
 %% Detect events (epileptiform/artifacts) | Absolute Values
+waitbar(0.25, f, 'Confirming Epileptiform Events using Absolute Values of Signal');
+% pause(1)
+
 %Recreate the Absolute filtered LFP (1st derived signal) vector
 AbsLFP_Filtered = abs(LFP_filtered); %the LFP analyzed
 
@@ -162,6 +170,8 @@ if isempty(epileptiformLocation)
 end
 
 %% Stage 2a: SLE Classifier; Part 1 - Classifier, duration
+waitbar(0.5, f, 'Detecting Exact Onset and Offset of Events using Signals Power');
+% pause(1)
 %Putative IIS
 indexSpikes = (epileptiformLocation (:,3)<(minEventduration*frequency));
 epileptiformLocation (indexSpikes,7) = 3;   %3 = IIS; 0 = unclassified.
@@ -179,6 +189,9 @@ eventTimes = epileptiformEvents(:,1:2)/frequency;
 events = crawler(LFP, eventTimes, locs_spike_2nd, LED, frequency);
 
 %Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
+waitbar(0.6, f, 'Extracting Features from detected Epileptiform Events');
+% pause(1)
+
 spikeFrequency = cell(size(events,1),1);
 intensityPerMinute = cell(size(events,1),1);
 totalPower = zeros(size(events,1),1);
@@ -255,11 +268,14 @@ for i = 1:size(events,1)
 end
 
 %Part 3 - Classifier, extracted features
-[events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier, algoFrequencyThreshold] = classifier_dynamic (events, userInput(3));
+waitbar(0.7, f, 'Classifying Epileptiform Events based on extracted features');
+% pause(1)
+
+[events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier, algoFrequencyThreshold] = classifier_dynamic (events, 0);
 %if no SLEs detected (because IIEs are absent) | Repeat classification using hard-coded thresholds,
 if sum(events (:,7) == 1)<1 || numel(events (:,7)) < 6
     fprintf(2,'\nDynamic Classifier did not detect any SLEs. Beginning second attempt with hard-coded thresholds to classify epileptiform events.\n')
-    [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, userInput(3), 0, 1, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data
+    [events, thresholdFrequency, thresholdIntensity, thresholdDuration, indexArtifact, thresholdAmplitudeOutlier] = classifier_dynamic (events, 0, 0, 1, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data
 end
 
 %% Stage 2b: IIE Classifier
@@ -275,11 +291,11 @@ else
 end
 
 %Part 1 - Classifier, extracted features | Located questionable SLEs
-[interictalEvents, thresholdFrequencyQSLE, thresholdIntensityQSLE, thresholdDurationQSLE] = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency); %the input "1" is to indicate it's a IIE classifier
+[interictalEvents, thresholdFrequencyQSLE, thresholdIntensityQSLE, thresholdDurationQSLE] = classifier_dynamic (interictalEvents, 0, 1, floorThresholdFrequency); %the input "1" is to indicate it's a IIE classifier
 %if no (questionable) SLEs detected | Repeat classification using hard-coded thresholds,
 if sum(interictalEvents (:,7) == 1.5)<2 || numel(interictalEvents (:,7)) < 6
     fprintf(2,'\nDynamic Classifier detect a limited number of interictal events (<6) or questable SLEs (<2). Beginning second attempt with hard-coded thresholds to classify interictal events.\n')
-    interictalEvents = classifier_dynamic (interictalEvents, userInput(3), 1, floorThresholdFrequency, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data
+    interictalEvents = classifier_dynamic (interictalEvents, 0, 1, floorThresholdFrequency, 1);   %Use hardcoded thresholds if there is only 1 event detected   Also, use in vivo classifier if analying in vivo data
 end
 
 %Transfer the results to the Events array
@@ -462,6 +478,8 @@ reviewSLE = events(indexReviewSLE,:);
 
 %% Troubleshooting: Plot all figures
 if userInput(5) > 0
+    waitbar(0.9, f, 'Exporting results and figures of detected Epileptiform Events');
+%     pause(1)
 
     %set variables
     timeSeriesLFP = LFP_centered; %Time series to be plotted
@@ -611,26 +629,7 @@ if userInput(5) > 0
 end
 
 %% Final Summary Report
-%Plot a 3D scatter plot of events
-if userInput(3) == 1
-    figEvents = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', '3D Scatter Plot of Epileptiform Events Detected'); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));
-    scatter3(events(:,4), events(:,5), events(:,6), 18, 'black', 'filled')  %All events excluding artifacts
-    hold on
-    scatter3(events(indexSLE ,4), events(indexSLE ,5), events(indexSLE ,6), 18, 'green', 'filled')   %All SLEs
-    scatter3(events(indexArtifact,4), events(indexArtifact,5), events(indexArtifact,6), 18, 'red', 'filled')  %All artifacts
-    %Label
-    title ('Classified Epileptiform Events');
-    xlabel ('Average Spiking Rate (Hz)');
-    ylabel ('Average Intensity (Power/Duration)');
-    zlabel ('Peak-to-Peak Amplitude (mV)');
-    legend ('IIE', 'SLE', 'Artifact')
-    legend ('Location', 'southeastoutside')
-end
-
-%% Struct to capture all parameters for analysis
+%Struct to capture all parameters for analysis
 %File Details
 details.FileNameInput = FileName;
 details.frequency = frequency;
@@ -852,8 +851,11 @@ if userInput(3) == 1
     subplot (3,1,2)
     reduce_plot (t, AbsLFP_Filtered, 'b');
     hold on
-    reduce_plot (t, (lightpulse/2) - 0.75);
-
+    
+    if LED
+        reduce_plot (t, (lightpulse/2) - 0.75);
+    end
+    
     %plot spikes (artifact removed)
     for i=1:size(locs_spike_2nd,1)
         plot (t(locs_spike_2nd(i,1)), (DiffLFP_Filtered(locs_spike_2nd(i,1))), 'x')
@@ -880,16 +882,36 @@ if userInput(3) == 1
     exportToPPTX('addpicture',figHandle);
     close(figHandle)
 
-    %% Plot figures of classification thresholds
-    if userInput(3) == 1
-        figHandles = findall(0, 'Type', 'figure');  %find all open figures exported from classifer
-        % Plot figure from Classifer
-        for i = numel(figHandles):-1:1      %plot them backwards (in the order they were exported)
-            exportToPPTX('addslide'); %Add to new powerpoint slide
-            exportToPPTX('addpicture',figHandles(i));
-            close(figHandles(i))
-        end
-    end
+%     %% Plot figures of classification thresholds
+%     if userInput(3) == 1
+%         figHandles = findall(0, 'Type', 'figure');  %find all open figures exported from classifer
+%         % Plot figure from Classifer
+%         for i = numel(figHandles):-1:1      %plot them backwards (in the order they were exported)
+%             exportToPPTX('addslide'); %Add to new powerpoint slide
+%             exportToPPTX('addpicture',figHandles(i));
+%             close(figHandles(i))
+%         end
+%     end
+
+    %Plot a 3D scatter plot of events
+    figEvents = figure;
+    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+    set(gcf,'Name', '3D Scatter Plot of Epileptiform Events Detected'); %select the name you want
+    set(gcf, 'Position', get(0, 'Screensize'));
+    scatter3(events(:,4), events(:,5), events(:,6), 18, 'black', 'filled')  %All events excluding artifacts
+    hold on
+    scatter3(events(indexSLE ,4), events(indexSLE ,5), events(indexSLE ,6), 18, 'green', 'filled')   %All SLEs
+    scatter3(events(indexArtifact,4), events(indexArtifact,5), events(indexArtifact,6), 18, 'red', 'filled')  %All artifacts
+    %Label
+    title ('Classified Epileptiform Events');
+    xlabel ('Average Spiking Rate (Hz)');
+    ylabel ('Average Intensity (Power/Duration)');
+    zlabel ('Peak-to-Peak Amplitude (mV)');
+    legend ('IIE', 'SLE', 'Artifact')
+    legend ('Location', 'southeastoutside')
+    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+    exportToPPTX('addpicture',figEvents);
+    close(figEvents)
 
     %% Plotting out detected SLEs with context | To figure out how off you are
     for i = 1:size(SLE,1)
@@ -924,6 +946,9 @@ if userInput(3) == 1
     exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName));
 end
 
+waitbar(1, f, 'Finishing; checking to see that results are reasonable');
+%     pause(1)
+    
 %% Check the detected ictal events were detected correctly
 %Intensity ratio of SLE should be >0.3
 indexSLE = events(:,7) == 1;
@@ -937,3 +962,5 @@ if indexSLE
 else
     fprintf(1,'\nSuccessfully completed file: %s using The Mouse Model Epileptiform Detector %s.\n', FileName, finalTitle)
 end
+
+close (f)
