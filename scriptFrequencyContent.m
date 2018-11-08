@@ -35,7 +35,7 @@ prompt5 = 'Unique Title';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'2.5', '1.25', '1', '1-50 Hz + Low Pass at 50 hz', 'frequencyContent', ''};
+definput = {'2.5', '1.25', '1', '1-50 Hz + Low Pass at 68 hz', 'frequencyContent', ''};
 
 opts = 'on';    %allow end user to resize the GUI window
 guiInput = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
@@ -424,7 +424,7 @@ for i = 1:nr
     timeVector = (0:(length(eventVector)- 1))/frequency;
     timeVector = timeVector';    
     
-    %Frequency content of epileptiform event 
+    %Frequency content of baseline event 
     [s,f,t,p] = spectrogram (eventVector, windowSize*frequency, windowOverlap*frequency, [], frequency, 'yaxis');
     
     %Dominant Frequency at each time point | NEW

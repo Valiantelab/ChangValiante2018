@@ -35,7 +35,7 @@ prompt5 = 'Unique Title';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'5.0', '2.5', '1', '1-50 Hz + Low Pass at 68 hz', 'frequencyContent', ''};
+definput = {'2.5', '1.25', '1', '1-50 Hz + Low Pass at 68 hz', 'frequencyContent', ''};
 
 opts = 'on';    %allow end user to resize the GUI window
 guiInput = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
@@ -219,7 +219,7 @@ exportToPPTX('addtext', 'By: Michael Chang, Liam Long, and Kramay Patel', 'Posit
 exportToPPTX('addslide');
 exportToPPTX('addtext', 'Legend', 'Position',[0 0 4 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 24);
-text = 'Note: If the dominant frequency detected was >300, it was ignored and replaced with 0 Hz (cant be physiological frequency)';
+text = 'Note: If the dominant frequency detected was >50, it was ignored and replaced with 0 Hz (Bandpass filter set 1-50 Hz)';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 1 6 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
 text = sprintf('Nyquist frequency (%d Hz) is the maximum valid frequency (sampling frequency/2)', frequency/2);
@@ -329,13 +329,13 @@ for i = indexEvents'
     %Dominant Frequency at each time point 
     [maxS, idx] = max(p);        
     maxFreq = f(idx);
-    indexInvalid = find (maxFreq >300);  %Ignore all frequency
+    indexInvalid = find (maxFreq > fc);  %Ignore all frequency
     maxFreq(indexInvalid) = 0;
     
     %Normalized Dominant Frequency at each time point
     [maxS, idx] = max((abs(s).^2)./avgPSDBaseline);    
     maxFreq_norm = f(idx);
-    indexInvalid = find (maxFreq_norm >300);  %Ignore all frequency
+    indexInvalid = find (maxFreq_norm > fc);  %Ignore all frequency
     maxFreq_norm(indexInvalid) = 0;    
 
     %decipher
@@ -424,19 +424,19 @@ for i = 1:nr
     timeVector = (0:(length(eventVector)- 1))/frequency;
     timeVector = timeVector';    
     
-    %Frequency content of epileptiform event 
+    %Frequency content of baseline event 
     [s,f,t,p] = spectrogram (eventVector, windowSize*frequency, windowOverlap*frequency, [], frequency, 'yaxis');
     
     %Dominant Frequency at each time point | NEW
     [maxS, idx] = max(p);    
     maxFreq = f(idx);
-    indexInvalid = find (maxFreq >300);  %Ignore all frequency
+    indexInvalid = find (maxFreq > fc);  %Ignore all frequency
     maxFreq(indexInvalid) = 0;
     
     %Normalized Dominant Frequency at each time point
     [maxS_norm, idx_norm] = max(p./avgPSDBaseline);    
     maxFreq_norm = f(idx_norm);
-    indexInvalid = find (maxFreq_norm >300);  %Ignore all frequency
+    indexInvalid = find (maxFreq_norm > fc);  %Ignore all frequency
     maxFreq_norm(indexInvalid) = 0;    
             
     %decipher
