@@ -1,6 +1,7 @@
-%Program: Epileptiform Activity Detector (V8.0)
+%Program: Epileptiform Event Detector 
 %Corresponding Author: Michael Chang (michael.chang@uhnresearch.ca) 
 %Copyright (c) 2018, Valiante Lab
+%Version 8.5
 
 % For quick start: i) Run the script, ii) click OK, iii) select the 
 % .abf file to analyze. Select "13226009(exampleFile).abf" for demontration
@@ -25,7 +26,7 @@ prompt2 = 'Artifact Threshold: average + (70 x Sigma)';
 prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Stimulus channel (enter 0 if none):';
 prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Review(5), all(6), None(0):';
-prompt6 = 'To analyze multiple files, provide the folder directory (leave blank to select files individually):';
+prompt6 = 'To analyze multiple files, provide the folder directory (leave blank to select individual files):';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
 definput = {'3.9', '70', '0', '2', '0', ''};
@@ -57,7 +58,7 @@ else
 end
 
 fprintf(1,'\nA summary of the detection results can be found in the current working folder: %s\n', pwd)
-fprintf(1,'\nThank you for choosing to use the Valiante Labs Epileptiform Activity Detector.\n')
+fprintf(1,'\nThank you for choosing to use Chang & Valiante (2018) Epileptiform Activity Detector.\n')
 
    
 
