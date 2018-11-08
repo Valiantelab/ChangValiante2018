@@ -3,7 +3,9 @@ function [spikes, events, SLE, details, artifactSpikes] = detectionAlgorithm(Fil
 % events from the in vitro and vivo mouse model. Author: Michael Chang
 %   Simply provide the directory to the filename, user inputs, and raw data
 %   for the moment it can only accurately classify epileptiform events from
-%   the in vitro 4-AP cortical seizure model. 
+%   the in vitro 4-AP cortical seizure model. Use 3.9 x Sigma as detection 
+%   threshold for in vitro recordings and 10 x Sgima as detection threshold
+%   for in vivo recordings (or noisy in vitro recordings).
 
 
 
@@ -44,6 +46,8 @@ if ~exist('x','var') == 1
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
 end
 
+f = waitbar(0,'Detecting Epileptiform Events: Please wait while Processing Data...','Name', 'Epileptiform Event Detection in progress');
+
 %Label for titles
 excelFileName = FileName(1:end-4);
 finalTitle = '(V8)';
@@ -77,7 +81,7 @@ else
 end
 
 %% Data Processing
-f = waitbar(0,'Detecting Epileptiform Events: Please wait Processing Data...','Name', 'Epileptiform Event Detection Progress');
+waitbar(0.02, f, 'Please wait while Processing Data...');
 
 %Center the LFP data
 LFP_centered = LFP - LFP(1);
@@ -97,7 +101,7 @@ powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
 %% Detect potential events (epileptiform/artifacts) | Derivative Values
-waitbar(0.05, f, 'Detecting Epileptiform Events using Derivative of Signal', 'Name', 'Epileptiform Detection Algorithm Process');
+waitbar(0.10, f, 'Detecting Epileptiform Events using Derivative of Signal', 'Name', 'Epileptiform Detection Algorithm Process');
 % pause(1)
 [epileptiformLocation, artifacts, locs_spike_1st] = findEvents (DiffLFP_Filtered, frequency);
 
@@ -170,7 +174,7 @@ if isempty(epileptiformLocation)
 end
 
 %% Stage 2a: SLE Classifier; Part 1 - Classifier, duration
-waitbar(0.5, f, 'Detecting Exact Onset and Offset of Events using Signals Power');
+waitbar(0.5, f, 'Detecting exact Onset and Offset of Events using Signals Power');
 % pause(1)
 %Putative IIS
 indexSpikes = (epileptiformLocation (:,3)<(minEventduration*frequency));
@@ -478,9 +482,8 @@ reviewSLE = events(indexReviewSLE,:);
 
 %% Troubleshooting: Plot all figures
 if userInput(5) > 0
-    waitbar(0.9, f, 'Exporting results and figures of detected Epileptiform Events');
-%     pause(1)
-
+    waitbar(0.75, f, 'Exporting figures for troubleshooting into PowerPoint');
+    
     %set variables
     timeSeriesLFP = LFP_centered; %Time series to be plotted
 
@@ -629,6 +632,8 @@ if userInput(5) > 0
 end
 
 %% Final Summary Report
+waitbar(0.9, f, 'Exporting results of detected Epileptiform Events into Excel');
+
 %Struct to capture all parameters for analysis
 %File Details
 details.FileNameInput = FileName;
@@ -774,6 +779,8 @@ writetable(struct2table(metadata, 'AsArray', true), sprintf('%s%s.xls',excelFile
 
 %% Optional: Plot Figures
 if userInput(3) == 1
+    waitbar(0.95, f, 'Exporting figures of detected Seizure-like Events into PowerPoint');
+    
     %% Creating powerpoint slide
     isOpen  = exportToPPTX();
     if ~isempty(isOpen)
@@ -946,7 +953,7 @@ if userInput(3) == 1
     exportToPPTX('saveandclose',sprintf('%s(SLEs)', excelFileName));
 end
 
-waitbar(1, f, 'Finishing; checking to see that results are reasonable');
+waitbar(1, f, 'Finishing... Final check that results are reasonable');
 %     pause(1)
     
 %% Check the detected ictal events were detected correctly
