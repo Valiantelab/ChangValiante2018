@@ -1,6 +1,6 @@
 # Epileptiform-Event-Detector(detectionAlgorithm.m)
 
-This repository contains documentation and code for the seizure detection algorithm published by Chang et al., 2018 in JoVE (https://www.jove.com/video/57952/generation-on-demand-initiation-acute-ictal-activity-rodent-human)
+This repository contains documentation and code for the seizure detection algorithm mentioned in Chang et al., 2018, JoVE. (https://www.jove.com/video/57952/generation-on-demand-initiation-acute-ictal-activity-rodent-human)
 
 Requirements:
 - Windows PC
@@ -8,6 +8,7 @@ Requirements:
 - Microsoft Office
 
 Video Tutorial: https://www.dropbox.com/s/wpta1wt5facegp4/Detection%20Algorithm%20%28Demo%29%20Nov%2022%2C%202018.mov?dl=0
+Full Documentation: https://www.dropbox.com/s/npggo1w8aj4b9qh/Documentation%20%28Detection%20Algorithm%20V8.6%29.pdf?dl=0
 
 Quick start (For demonstration):
 1) Set MatLab's working directory to ChangValiante2018.
