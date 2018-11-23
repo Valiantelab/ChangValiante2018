@@ -31,8 +31,9 @@ The script outputs an excel sheet of the detected events and their associated fe
 
 ---
 Authors: Michael Chang (michael.chang@live.ca), Christopher Lucasius, Liam Long and Taufik A. Valiante.
+
 Acknowledgements for coding strategies: Fu-der (Fred) Chen, Thomas Lordello, Vitaly Topekha, and Kramay Patel.  
-Acknowledgements for labelling the seizure data: Shadini, Alina, Barret,  
+Acknowledgements for labelling the seizure data: Shadini, Alina, Barret)  
 Copyright 2018, Valiante Lab
 
 Epileptiform Event Detection Code mentioned in Chang et al., 2018b. JoVE
