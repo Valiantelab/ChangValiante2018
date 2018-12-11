@@ -836,18 +836,18 @@ if userInput(3) == 1
     %plot artifacts (red), found in 2nd search
     if artifactLocation
         for i = 1:numel(artifactLocation(:,1))
-            reduce_plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_centered(artifactLocation(i,1):artifactLocation(i,2)), 'r');
+            plot (t(artifactLocation(i,1):artifactLocation(i,2)), LFP_centered(artifactLocation(i,1):artifactLocation(i,2)), 'r');
         end
     end
 
     %plot onset/offset markers
     if ~isempty(SLE)
         for i=1:numel(SLE(:,1))
-        reduce_plot ((SLE(i,1)), (LFP_centered(int64(SLE(i,1)*frequency))), 'o'); %onset markers
+        plot ((SLE(i,1)), (LFP_centered(int64(SLE(i,1)*frequency))), 'o'); %onset markers
         end
 
         for i=1:numel(SLE(:,2))
-        reduce_plot ((SLE(i,2)), (LFP_centered(int64(SLE(i,2)*frequency))), 'x'); %offset markers
+        plot ((SLE(i,2)), (LFP_centered(int64(SLE(i,2)*frequency))), 'x'); %offset markers
         end
     end
 
