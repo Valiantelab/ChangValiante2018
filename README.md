@@ -8,6 +8,7 @@ Requirements:
 - Microsoft Office
 
 Video Tutorial: https://www.dropbox.com/s/wpta1wt5facegp4/Detection%20Algorithm%20%28Demo%29%20Nov%2022%2C%202018.mov?dl=0
+
 Full Documentation: https://www.dropbox.com/s/npggo1w8aj4b9qh/Documentation%20%28Detection%20Algorithm%20V8.6%29.pdf?dl=0
 
 Quick start (For demonstration):
