@@ -1,7 +1,7 @@
 %Program: Epileptiform Event Detector 
 %Corresponding Author: Michael Chang (michael.chang@uhnresearch.ca) 
 %Copyright (c) 2018, Valiante Lab
-%Version 8.5
+%Version 8.6 
 
 % For quick start: i) Run the script, ii) click OK, iii) select the 
 % .abf file to analyze; for demo select "13226009(exampleFile).abf" 

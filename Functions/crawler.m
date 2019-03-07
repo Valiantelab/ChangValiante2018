@@ -129,7 +129,7 @@ switch crawlerType
 end
 
 % Find Light pulse
-if LED       
+if ~isempty(LED)       
     [P] = pulse_seq(LED);   %determine location of light pulses     
 
     %Find range of time when light pulse has potential to trigger an event,
@@ -214,7 +214,7 @@ for i = 1:size(eventTimes,1)
     SLEonset_final(i,1) = t(onsetContext(onsetIndex)); 
         
     %Store time of spike's peak | to determine if it was light-triggered 
-    if LED
+    if ~isempty(LED)
         SLEonset_peak(i,1) = t(onsetContext(peakIndex));
     end
 
@@ -227,7 +227,7 @@ for i = 1:size(eventTimes,1)
     end
     %Locate the offset time as the last point above threshold
     if numel(offsetContext) > (calculateMeanOffsetBaseline*frequency)
-        meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext(1:calculateMeanOffsetBaseline*frequency))); %Calcaluate mean baseline for first 1.5 s
+        meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext(1:int64(calculateMeanOffsetBaseline*frequency)))); %Calcaluate mean baseline for first 1.5 s
     else
         meanOffsetAbsBaseline = mean(offsetDetectionSignal(offsetContext)); %Mean baseline calculated from whatever context there is
     end                                    
@@ -383,7 +383,7 @@ SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
 %Preallocate
 SLE_final(:,20)= 0;
 
-if LED
+if ~isempty(LED)
     %Classify which SLEs were light triggered | if the peak of spike is after light pulse
     for i=1:size(SLE_final,1) 
         %use the "ismember" function 

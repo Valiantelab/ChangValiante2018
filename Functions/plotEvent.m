@@ -56,7 +56,7 @@ end
 
     %Plot applied stimulus (i.e., LED signal), if present
     if ~isempty(appliedStimulus)
-        lightpulse = appliedStimulus > 1;
+        lightpulse = appliedStimulus;
         centerLED = abs(min(timeSeriesLFP(backgroundVector)-centerLFP));
         pulseHeight = max(lightpulse(backgroundVector)/4);
         plot (t(backgroundVector),((lightpulse(backgroundVector))/4)-(centerLED+pulseHeight) , 'b') %plot LED 

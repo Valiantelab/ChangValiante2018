@@ -827,7 +827,7 @@ if userInput(3) == 1
     hold on
     xL = get(gca, 'XLim');  %plot dashed reference line at y = 0
 
-    if LED
+    if ~isempty(LED)
         reduce_plot (t, lightpulse - abs(min(LFP_centered))); %Plot light pulses, if present
     end
 
