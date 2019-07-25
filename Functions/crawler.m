@@ -212,7 +212,7 @@ for i = 1:size(eventTimes,1)
     end
     %Store time of the spike's onset
     SLEonset_final(i,1) = t(onsetContext(onsetIndex)); 
-        
+    SLEonset_final(i,1) = t(onsetContext(onsetIndex));               
     %Store time of spike's peak | to determine if it was light-triggered 
     if ~isempty(LED)
         SLEonset_peak(i,1) = t(onsetContext(peakIndex));
@@ -379,6 +379,7 @@ end
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
 SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
+SLE_final((SLE_final(:,1)==0),:) = [];     %remove all the rows where SLE onset is 0 because it will cause an error later down the code at line 227 of detectioniInVitro4AP, it needs to be a positive logical/interger, and it's likely an artifact at the start of the recording due to filtering.
 
 %Preallocate
 SLE_final(:,20)= 0;

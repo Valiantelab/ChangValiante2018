@@ -216,7 +216,7 @@ for i = 1:size(events,1)
     %Calculate the spiking rate and intensity (per sec) for epileptiform events
     clear spikeRateMinute intensity    
     for j = 1:sleDuration
-        startWindow = onsetTime+((windowSize*frequency)*(j-1));
+        startWindow = onsetTime+((windowSize*frequency)*(j-1));          
         endWindow = onsetTime+((windowSize*frequency)*j);
         %Calculate the spiking rate for epileptiform events
         spikeRate = and(startWindow<=locs_spike_2nd, endWindow >=locs_spike_2nd);
@@ -773,9 +773,18 @@ else
     userInput(3) = 1;
 end
 
-%Sheet 0 = Details
+%Sheet 0 = Details (write to excel)
 writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Print details at end to prevent extra worksheets being produced
+%Clean metadata, which is a nested structure 
+metadata.tags = NaN;
+metadata.recChNames = NaN;
+metadata.recChUnits = NaN;
+%write metatable to excel
 writetable(struct2table(metadata, 'AsArray', true), sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A5:IV99')    %Print the metadata
+%write userInput parameters to excel
+xlswrite(sprintf('%s%s.xls',excelFileName, finalTitle), {'userInput'}, 'Sheet1', 'A9')
+writematrix(userInput, sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the metadata
+
 
 %% Optional: Plot Figures
 if userInput(3) == 1
