@@ -173,6 +173,10 @@ for i = 1:size(eventTimes,1)
     %Baseline adjacent to event
     onsetBaselineStart = (onsetSLE-(durationOnsetBaseline*frequency));
     onsetBaselineEnd = (onsetSLE+(0.5*frequency));
+    %In case a spike occurs right at the end of the recording, it can cause issue with the crawler function when searching past 0.5 s for the spike's onset
+    if onsetBaselineEnd > numel(powerFeatureLowPassFiltered25)  
+        onsetBaselineEnd = numel(powerFeatureLowPassFiltered25);
+    end  
     offsetBaselineStart = (offsetSLE-(0.5*frequency));
     offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));
 
@@ -211,11 +215,10 @@ for i = 1:size(eventTimes,1)
         onsetIndex = peakIndex; %treat the peak as the event's onset, (it will just be slightly delayed detection).
     end
     %Store time of the spike's onset
-    SLEonset_final(i,1) = t(onsetContext(onsetIndex)); 
     SLEonset_final(i,1) = t(onsetContext(onsetIndex));               
     %Store time of spike's peak | to determine if it was light-triggered 
     if ~isempty(LED)
-        SLEonset_peak(i,1) = t(onsetContext(peakIndex));
+        SLEonset_peak(i,1) = t(onsetContext(peakIndex));    %Note this is a time variable (seconds)
     end
 
     %% Locating Event Offset
@@ -385,10 +388,20 @@ SLE_final((SLE_final(:,1)==0),:) = [];     %remove all the rows where SLE onset 
 SLE_final(:,20)= 0;
 
 if ~isempty(LED)
-    %Classify which SLEs were light triggered | if the peak of spike is after light pulse
+    %Classify which SLEs were light triggered | if the spike onset is after light pulse
     for i=1:size(SLE_final,1) 
         %use the "ismember" function 
+        SLE_final(i,8)=ismember (int64(SLEonset_final(i,1)*frequency), lightTriggeredOnsetZones);    
+    end
+    
+    %Back-up algorithm to detect which SLEs were light triggered | if the peak of spike is after light pulse; in case the crawler function detects the onset prior to light pulse
+    for i=1:size(SLE_final,1) 
+        if SLE_final(i,8) == 1
+            continue
+        else            
+        %use the "ismember" function 
         SLE_final(i,8)=ismember (int64(SLEonset_peak(i,1)*frequency), lightTriggeredOnsetZones);    
+        end
     end
 end
 

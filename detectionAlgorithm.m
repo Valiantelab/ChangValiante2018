@@ -16,7 +16,7 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\Control Data\1) Control (VGAT-ChR2, light-triggered)\1) abf files';
+inputdir = 'C:\Users\micha\Desktop\Mouse 17 - August 9, 2019';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -29,7 +29,7 @@ prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Revie
 prompt6 = 'To analyze multiple files, provide the folder directory (leave blank to select individual files):';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '70', '0', '2', '0', ''};
+definput = {'4', '70', '1', '2', '5', ''};
 
 opts = 'on';    %allow end user to resize the GUI window
 InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs

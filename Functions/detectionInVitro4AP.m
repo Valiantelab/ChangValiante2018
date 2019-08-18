@@ -203,6 +203,13 @@ for i = 1:size(events,1)
     %make epileptiform event vector
     onsetTime = int64(events(i,1)*frequency);
     offsetTime = int64(events(i,2)*frequency);
+    
+    %Incase crawler function set offsetTime prior to onsetTime
+    if onsetTime > offsetTime   %onset comes after offset, means error has occured
+        events(i,2) = events(i,1) + 1; %add 1 second to onset to find arbitary offset
+        offsetTime = int64(events(i,2)*frequency);
+    end
+        
     eventVector = int64(onsetTime:offsetTime);  %SLE Vector
 
     %Split the event vector into (1 min) windows
@@ -210,7 +217,7 @@ for i = 1:size(events,1)
     sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
-        fprintf(2,'\nWarning! You detected a epileptiform that is shroter than 1 sec, this is an issue with your algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
+        fprintf(2,'\nWarning! You detected a epileptiform that is shorter than 1 sec, this is an issue with your algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
     end
 
     %Calculate the spiking rate and intensity (per sec) for epileptiform events
