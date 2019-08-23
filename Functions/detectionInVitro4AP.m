@@ -462,7 +462,7 @@ end
 %SLE
 %indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
 indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
-SLE = events(indexSLE, [1:8 13:18]);
+SLE = events(indexSLE, [1:8 13:18 26:27]);
 
 %Questionable SLEs
 indexQuestionableSLE = find(events(:,7)==1.5);  %events that may be potential ictal events

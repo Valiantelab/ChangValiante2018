@@ -385,7 +385,7 @@ SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
 SLE_final((SLE_final(:,1)==0),:) = [];     %remove all the rows where SLE onset is 0 because it will cause an error later down the code at line 227 of detectioniInVitro4AP, it needs to be a positive logical/interger, and it's likely an artifact at the start of the recording due to filtering.
 
 %Preallocate
-SLE_final(:,20)= 0;
+SLE_final(:,27)= 0; %Column 26/27 is for delay to ictal onset and interstimulus interval
 
 if ~isempty(LED)
     %Classify which SLEs were light triggered | if the spike onset is after light pulse
@@ -403,7 +403,35 @@ if ~isempty(LED)
         SLE_final(i,8)=ismember (int64(SLEonset_peak(i,1)*frequency), lightTriggeredOnsetZones);    
         end
     end
+      
+    
+    %Preallocate for delays between ictal event onset and all light pulses
+    calcIctalOnsetDelay(numel(P.range(:,1)),1) = 0;
+    
+    %Calculate total number of light pulses
+    totalLightPulses = numel(P.range(:,1)); %Permanent code line
+    
+    %Calculate delay between ictal event onset and preceeding light pulse 
+    for i=1:size(SLE_final,1)        
+        %Calculate the delay between ictal event onset and all light pulses                           
+        for j = 1:numel(P.range(:,1))
+            calcIctalOnsetDelay(j) = SLE_final(i,1) - P.range(j,1)/frequency;
+        end
+        %Determine location of the preceding light pulse
+        [ictalOnsetDelay, index_ictalOnsetDelay] = min(calcIctalOnsetDelay(calcIctalOnsetDelay>0));  %Find the smallest positive value
+        %Calculate the interstimulus interval
+        if index_ictalOnsetDelay < totalLightPulses %to account for the last stimulus that triggers an event (won't have another stimulus afterwardsto subtract)
+            interstimulusInterval = (P.range(index_ictalOnsetDelay+1,1) - P.range(index_ictalOnsetDelay,1))/frequency;
+        else
+            interstimulusInterval = (numel(LFP) - P.range(index_ictalOnsetDelay,1))/frequency;  %consider the interstimulus interval to end when the recording ends
+        end
+        %Store the ictal onset delay and interstimulus interval
+        SLE_final (i, 26) = ictalOnsetDelay;
+        SLE_final (i, 27) = interstimulusInterval;        
+    end
+    
 end
+
 
 
 %% Light pulse detect algorithm by Taufik A. Valiante
