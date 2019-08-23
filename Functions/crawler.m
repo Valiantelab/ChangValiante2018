@@ -406,7 +406,7 @@ if ~isempty(LED)
       
     
     %Preallocate for delays between ictal event onset and all light pulses
-    calcIctalOnsetDelay(numel(P.range(:,1)),1) = 0;
+    calcIctalOnsetDelays(numel(P.range(:,1)),1) = 0;
     
     %Calculate total number of light pulses
     totalLightPulses = numel(P.range(:,1)); %Permanent code line
@@ -415,12 +415,18 @@ if ~isempty(LED)
     for i=1:size(SLE_final,1)        
         %Calculate the delay between ictal event onset and all light pulses                           
         for j = 1:numel(P.range(:,1))
-            calcIctalOnsetDelay(j) = SLE_final(i,1) - P.range(j,1)/frequency;
+            calcIctalOnsetDelays(j) = SLE_final(i,1) - P.range(j,1)/frequency;
         end
         %Determine location of the preceding light pulse
-        [ictalOnsetDelay, index_ictalOnsetDelay] = min(calcIctalOnsetDelay(calcIctalOnsetDelay>0));  %Find the smallest positive value
+        if any(calcIctalOnsetDelays>0)   %In case a spontaneous ictal event occurs before the first light pulse, there will be no preceding light pulse
+            [ictalOnsetDelay, index_ictalOnsetDelay] = min(calcIctalOnsetDelays(calcIctalOnsetDelays>0));  %Find the smallest positive value
+        else
+            ictalOnsetDelay = 0;    %0 = spontaneous event; didn't want to put Nan in case it threw off my code.
+            index_ictalOnsetDelay = 1;  %I put the first light pulse to push the code forwards
+        end
+        
         %Calculate the interstimulus interval
-        if index_ictalOnsetDelay < totalLightPulses %to account for the last stimulus that triggers an event (won't have another stimulus afterwardsto subtract)
+        if index_ictalOnsetDelay < totalLightPulses %In the event the last stimulus triggers an event, there won't be a subseqent stimulus afterwardsto to subtract
             interstimulusInterval = (P.range(index_ictalOnsetDelay+1,1) - P.range(index_ictalOnsetDelay,1))/frequency;
         else
             interstimulusInterval = (numel(LFP) - P.range(index_ictalOnsetDelay,1))/frequency;  %consider the interstimulus interval to end when the recording ends

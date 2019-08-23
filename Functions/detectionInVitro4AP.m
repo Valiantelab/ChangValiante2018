@@ -713,10 +713,16 @@ R = 'Intensity Ratio, SLE';  %18
 S = sprintf('%.02f', thresholdIntensityRatioSLE);
 T = 'Intensity Ratio, IIE';  %20
 U = sprintf('%.02f', thresholdIntensityRatioIIE);
+V = 'Start-TonicPhase';
+W = 'End-TonicPhase';
+X = '?some ratio';
+Y = '?past threshold';
+Z = 'Delay to onset (s)';
+AA = 'Interstimulus Interval (s)';
 
 %Sheet 1 = Events
 if ~isempty(events)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
@@ -771,7 +777,7 @@ end
 
 %Sheet 5 = SLE
 if ~isempty(SLE)
-    subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
+    subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q, Z, AA};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE,'SLE' ,'A2');
 else
