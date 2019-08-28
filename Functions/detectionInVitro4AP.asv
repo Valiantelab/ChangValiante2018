@@ -802,7 +802,8 @@ matlabVersion = version('-release');
 if matlabVersion(1:4) == '2019'
     writematrix(userInput, sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the userInput data
 else 
-    xlswrite(sprintf('%s%s.xls',excelFileName, finalTitle), userInput, 'Sheet1', 'A10:A14')    %Print the userInput data
+    xlswrite(struct2table(userInput,'AsArray', true), sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the userInput data
+    writecell(userInput, sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the userInput data
 end
 
 %% Optional: Plot Figures
