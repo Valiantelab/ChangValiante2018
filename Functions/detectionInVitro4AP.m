@@ -203,6 +203,13 @@ for i = 1:size(events,1)
     %make epileptiform event vector
     onsetTime = int64(events(i,1)*frequency);
     offsetTime = int64(events(i,2)*frequency);
+    
+    %Incase crawler function set offsetTime prior to onsetTime
+    if onsetTime > offsetTime   %onset comes after offset, means error has occured
+        events(i,2) = events(i,1) + 1; %add 1 second to onset to find arbitary offset
+        offsetTime = int64(events(i,2)*frequency);
+    end
+        
     eventVector = int64(onsetTime:offsetTime);  %SLE Vector
 
     %Split the event vector into (1 min) windows
@@ -210,13 +217,13 @@ for i = 1:size(events,1)
     sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
-        fprintf(2,'\nWarning! You detected a epileptiform that is shroter than 1 sec, this is an issue with your algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
+        fprintf(2,'\nWarning! You detected a epileptiform that is shorter than 1 sec, this is an issue with your algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
     end
 
     %Calculate the spiking rate and intensity (per sec) for epileptiform events
     clear spikeRateMinute intensity    
     for j = 1:sleDuration
-        startWindow = onsetTime+((windowSize*frequency)*(j-1));
+        startWindow = onsetTime+((windowSize*frequency)*(j-1));          
         endWindow = onsetTime+((windowSize*frequency)*j);
         %Calculate the spiking rate for epileptiform events
         spikeRate = and(startWindow<=locs_spike_2nd, endWindow >=locs_spike_2nd);
@@ -455,7 +462,7 @@ end
 %SLE
 %indexSLE = events (:,7) == 1;  %Boolean index to indicate which ones are SLEs
 indexSLE = find(events (:,7) == 1); %Actual index where SLEs occur, good if you want to perform iterations and maintain position in events
-SLE = events(indexSLE, [1:8 13:18]);
+SLE = events(indexSLE, [1:8 13:18 26:27]);
 
 %Questionable SLEs
 indexQuestionableSLE = find(events(:,7)==1.5);  %events that may be potential ictal events
@@ -706,10 +713,16 @@ R = 'Intensity Ratio, SLE';  %18
 S = sprintf('%.02f', thresholdIntensityRatioSLE);
 T = 'Intensity Ratio, IIE';  %20
 U = sprintf('%.02f', thresholdIntensityRatioIIE);
+V = 'Start-TonicPhase';
+W = 'End-TonicPhase';
+X = '?some ratio';
+Y = '?past threshold';
+Z = 'Delay to onset (s)';
+AA = 'Interstimulus Interval (s)';
 
 %Sheet 1 = Events
 if ~isempty(events)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
@@ -764,7 +777,7 @@ end
 
 %Sheet 5 = SLE
 if ~isempty(SLE)
-    subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q};
+    subtitle4 = {A, B, C, D, E, F, G, H, M, N, O, P, Q, Z, AA};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle4,'SLE' ,'A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),SLE,'SLE' ,'A2');
 else
@@ -773,9 +786,18 @@ else
     userInput(3) = 1;
 end
 
-%Sheet 0 = Details
+%Sheet 0 = Details (write to excel)
 writetable(struct2table(details), sprintf('%s%s.xls',excelFileName, finalTitle))    %Print details at end to prevent extra worksheets being produced
+%Clean metadata, which is a nested structure 
+metadata.tags = NaN;
+metadata.recChNames = NaN;
+metadata.recChUnits = NaN;
+%write metatable to excel
 writetable(struct2table(metadata, 'AsArray', true), sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A5:IV99')    %Print the metadata
+%write userInput parameters to excel
+xlswrite(sprintf('%s%s.xls',excelFileName, finalTitle), {'userInput'}, 'Sheet1', 'A9')
+writematrix(userInput, sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the metadata
+
 
 %% Optional: Plot Figures
 if userInput(3) == 1

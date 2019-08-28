@@ -173,6 +173,10 @@ for i = 1:size(eventTimes,1)
     %Baseline adjacent to event
     onsetBaselineStart = (onsetSLE-(durationOnsetBaseline*frequency));
     onsetBaselineEnd = (onsetSLE+(0.5*frequency));
+    %In case a spike occurs right at the end of the recording, it can cause issue with the crawler function when searching past 0.5 s for the spike's onset
+    if onsetBaselineEnd > numel(powerFeatureLowPassFiltered25)  
+        onsetBaselineEnd = numel(powerFeatureLowPassFiltered25);
+    end  
     offsetBaselineStart = (offsetSLE-(0.5*frequency));
     offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));
 
@@ -211,11 +215,10 @@ for i = 1:size(eventTimes,1)
         onsetIndex = peakIndex; %treat the peak as the event's onset, (it will just be slightly delayed detection).
     end
     %Store time of the spike's onset
-    SLEonset_final(i,1) = t(onsetContext(onsetIndex)); 
-        
+    SLEonset_final(i,1) = t(onsetContext(onsetIndex));               
     %Store time of spike's peak | to determine if it was light-triggered 
     if ~isempty(LED)
-        SLEonset_peak(i,1) = t(onsetContext(peakIndex));
+        SLEonset_peak(i,1) = t(onsetContext(peakIndex));    %Note this is a time variable (seconds)
     end
 
     %% Locating Event Offset
@@ -379,17 +382,62 @@ end
 duration_final = SLEoffset_final - SLEonset_final;
 SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
 SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
+SLE_final((SLE_final(:,1)==0),:) = [];     %remove all the rows where SLE onset is 0 because it will cause an error later down the code at line 227 of detectioniInVitro4AP, it needs to be a positive logical/interger, and it's likely an artifact at the start of the recording due to filtering.
 
 %Preallocate
-SLE_final(:,20)= 0;
+SLE_final(:,27)= 0; %Column 26/27 is for delay to ictal onset and interstimulus interval
 
 if ~isempty(LED)
-    %Classify which SLEs were light triggered | if the peak of spike is after light pulse
+    %Classify which SLEs were light triggered | if the spike onset is after light pulse
     for i=1:size(SLE_final,1) 
         %use the "ismember" function 
-        SLE_final(i,8)=ismember (int64(SLEonset_peak(i,1)*frequency), lightTriggeredOnsetZones);    
+        SLE_final(i,8)=ismember (int64(SLEonset_final(i,1)*frequency), lightTriggeredOnsetZones);    
     end
+    
+    %Back-up algorithm to detect which SLEs were light triggered | if the peak of spike is after light pulse; in case the crawler function detects the onset prior to light pulse
+    for i=1:size(SLE_final,1) 
+        if SLE_final(i,8) == 1
+            continue
+        else            
+        %use the "ismember" function 
+        SLE_final(i,8)=ismember (int64(SLEonset_peak(i,1)*frequency), lightTriggeredOnsetZones);    
+        end
+    end
+      
+    
+    %Preallocate for delays between ictal event onset and all light pulses
+    calcIctalOnsetDelays(numel(P.range(:,1)),1) = 0;
+    
+    %Calculate total number of light pulses
+    totalLightPulses = numel(P.range(:,1)); %Permanent code line
+    
+    %Calculate delay between ictal event onset and preceeding light pulse 
+    for i=1:size(SLE_final,1)        
+        %Calculate the delay between ictal event onset and all light pulses                           
+        for j = 1:numel(P.range(:,1))
+            calcIctalOnsetDelays(j) = SLE_final(i,1) - P.range(j,1)/frequency;
+        end
+        %Determine location of the preceding light pulse
+        if any(calcIctalOnsetDelays>0)   %In case a spontaneous ictal event occurs before the first light pulse, there will be no preceding light pulse
+            [ictalOnsetDelay, index_ictalOnsetDelay] = min(calcIctalOnsetDelays(calcIctalOnsetDelays>0));  %Find the smallest positive value
+        else
+            ictalOnsetDelay = 0;    %0 = spontaneous event; didn't want to put Nan in case it threw off my code.
+            index_ictalOnsetDelay = 1;  %I put the first light pulse to push the code forwards
+        end
+        
+        %Calculate the interstimulus interval
+        if index_ictalOnsetDelay < totalLightPulses %In the event the last stimulus triggers an event, there won't be a subseqent stimulus afterwardsto to subtract
+            interstimulusInterval = (P.range(index_ictalOnsetDelay+1,1) - P.range(index_ictalOnsetDelay,1))/frequency;
+        else
+            interstimulusInterval = (numel(LFP) - P.range(index_ictalOnsetDelay,1))/frequency;  %consider the interstimulus interval to end when the recording ends
+        end
+        %Store the ictal onset delay and interstimulus interval
+        SLE_final (i, 26) = ictalOnsetDelay;
+        SLE_final (i, 27) = interstimulusInterval;        
+    end
+    
 end
+
 
 
 %% Light pulse detect algorithm by Taufik A. Valiante

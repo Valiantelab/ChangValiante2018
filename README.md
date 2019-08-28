@@ -6,6 +6,7 @@ Requirements:
 - Windows PC
 - MatLab R2015a (or later)
 - Microsoft Office
+- 8 GB of RAM
 
 Video Tutorial: https://www.dropbox.com/s/wpta1wt5facegp4/Detection%20Algorithm%20%28Demo%29%20Nov%2022%2C%202018.mov?dl=0
 

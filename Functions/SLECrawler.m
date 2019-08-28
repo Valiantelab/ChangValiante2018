@@ -1,5 +1,6 @@
 function [SLE_final] = SLECrawler(LFP_filtered, eventTimes, frequency, LED, onsetDelay, offsetDelay, locs_spike, troubleshooting, durationOnsetBaseline, durationOffsetBaseline)
-%'SLE Crawl' function detects exact onset and offset time of ictal event
+%'SLE Crawl' is a retired function that previously detected ictal event
+%onset/offset.
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
 %   where all the SLEs (aka ictal events) roughly occur to the nearest 0.5
 %   sec, 3) the frequency of the sampling rate. The slecrawl function will
