@@ -29,7 +29,7 @@ prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Revie
 prompt6 = 'To analyze multiple files, provide the folder directory (leave blank to select individual files):';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'3.9', '70', '0', '2', '0', ''};
+definput = {'4', '100', '1', '2', '0', ''};
 
 opts = 'on';    %allow end user to resize the GUI window
 InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
