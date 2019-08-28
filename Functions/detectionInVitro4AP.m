@@ -796,8 +796,14 @@ metadata.recChUnits = NaN;
 writetable(struct2table(metadata, 'AsArray', true), sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A5:IV99')    %Print the metadata
 %write userInput parameters to excel
 xlswrite(sprintf('%s%s.xls',excelFileName, finalTitle), {'userInput'}, 'Sheet1', 'A9')
-writematrix(userInput, sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the metadata
 
+%write table to .xlsx is different depending on the version of matlab
+matlabVersion = version('-release');
+if matlabVersion(1:4) == '2019'
+    writematrix(userInput, sprintf('%s%s.xls',excelFileName, finalTitle), 'Sheet', 1, 'Range', 'A10:A14')    %Print the userInput data
+else 
+    xlswrite(sprintf('%s%s.xls',excelFileName, finalTitle), userInput, 'Sheet1', 'A10:A14')    %Print the userInput data
+end
 
 %% Optional: Plot Figures
 if userInput(3) == 1
