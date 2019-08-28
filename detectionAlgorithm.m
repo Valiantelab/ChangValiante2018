@@ -1,10 +1,18 @@
 %Program: Epileptiform Event Detector 
 %Corresponding Author: Michael Chang (michael.chang@uhnresearch.ca) 
 %Copyright (c) 2018, Valiante Lab
-%Version 8.6 
+%Version FrequencyAnalysis V1.0 
 
 % For quick start: i) Run the script, ii) click OK, iii) select the 
 % .abf file to analyze; for demo select "13226009(exampleFile).abf" 
+
+%Description: Standard stage 1 to detect epileptiform events. THe script
+%can process a single file that you select or a collection of files from a
+%directory that you have provided. Additionally, this script will save the
+%work space as a .mat file which contains the time points of the seizure
+%onset and offset and classificaitons, as well as details regarding how the
+%files were detected. These variables will be saved as a struct (.mat
+%file).
 
 %% Stage 1: Detect Epileptiform Events
 %clear all (reset)
@@ -40,6 +48,7 @@ if (InputGUI(6)=="")
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
     [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+    save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace  
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
@@ -51,6 +60,7 @@ else
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+        save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace 
         %Collect the average intensity ratio for SLEs
         %indexSLE = events(:,7) == 1;
         %intensity{k} = events(indexSLE,18);                   
@@ -59,7 +69,3 @@ end
 
 fprintf(1,'\nA summary of the detection results can be found in the current working folder: %s\n', pwd)
 fprintf(1,'\nThank you for choosing to use Chang & Valiante (2018) Epileptiform Event Detector.\n')
-
-   
-
-
