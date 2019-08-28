@@ -1,5 +1,6 @@
 function [SLE_final] = crawler(LFP, eventTimes, locs_spike, LED, frequency, crawlerType, troubleshooting, offsetDetectionSignal, onsetDelayLED, offsetDelayLED, durationOnsetBaseline, durationOffsetBaseline)
-%'SLE Crawl' function detects exact onset and offset time of ictal event
+%'Crawler' function detects exact onset and offset time of epileptiform
+%events (last updated: Aug 27, 2019)
 %   You upload 1) bandpass filtered LFP data to analyze, 2) the times
 %   where all the SLEs (aka ictal events) roughly occur to the nearest 0.5
 %   sec, 3) the frequency of the sampling rate. The slecrawl function will
@@ -206,7 +207,7 @@ for i = 1:size(eventTimes,1)
 
     %Set Threshold for spike onset
     maxPower = max(powerFeatureLowPassFiltered25(onsetContext));
-    onsetThreshold = 0.05 * maxPower;    %spike onset threshold is 1/10 the power of the spike's max power
+    onsetThreshold = 0.05 * maxPower;    %spike onset threshold is 1/10 the power of the spike's max power (slight delay, but it's alright)
 
     %Locating onset 
     onsetLocsBoolean = powerFeatureLowPassFiltered25(onsetContext(1:peakIndex)) < onsetThreshold; %Finds all values below the threshold, prior to the spike's peak
@@ -380,18 +381,19 @@ end
 
 %% Store output 
 duration_final = SLEoffset_final - SLEonset_final;
-SLE_final = [SLEonset_final, SLEoffset_final, duration_final];  %final list of SLEs, need to filter out artifacts
+SLE_final = [SLEonset_final, SLEoffset_final, duration_final, SLEonset_peak];  %final list of SLEs, need to filter out artifacts
 SLE_final((SLE_final(:,2)==-1),:) = [];     %remove all the rows where SLE is -1
 SLE_final((SLE_final(:,1)==0),:) = [];     %remove all the rows where SLE onset is 0 because it will cause an error later down the code at line 227 of detectioniInVitro4AP, it needs to be a positive logical/interger, and it's likely an artifact at the start of the recording due to filtering.
 
 %Preallocate
-SLE_final(:,27)= 0; %Column 26/27 is for delay to ictal onset and interstimulus interval
+SLE_final(:,28)= 0; %Column 26/27/28 is for delay to ictal onset and interstimulus interval and time of onset spike's peak
+SLE_final(:,28)=SLE_final(:,4); %save when the peak of the SLE onset occurs
 
 if ~isempty(LED)
     %Classify which SLEs were light triggered | if the spike onset is after light pulse
     for i=1:size(SLE_final,1) 
         %use the "ismember" function 
-        SLE_final(i,8)=ismember (int64(SLEonset_final(i,1)*frequency), lightTriggeredOnsetZones);    
+        SLE_final(i,8)=ismember (int64(SLE_final(i,1)*frequency), lightTriggeredOnsetZones);    
     end
     
     %Back-up algorithm to detect which SLEs were light triggered | if the peak of spike is after light pulse; in case the crawler function detects the onset prior to light pulse
@@ -400,29 +402,28 @@ if ~isempty(LED)
             continue
         else            
         %use the "ismember" function 
-        SLE_final(i,8)=ismember (int64(SLEonset_peak(i,1)*frequency), lightTriggeredOnsetZones);    
+        SLE_final(i,8)=ismember (int64(SLE_final(i,28)*frequency), lightTriggeredOnsetZones);    
         end
     end
-      
-    
-    %Preallocate for delays between ictal event onset and all light pulses
-    calcIctalOnsetDelays(numel(P.range(:,1)),1) = 0;
+         
+    %Find the delay between ictal event onset (peak of the first spike) and all light pulses
+    calcIctalOnsetDelays(numel(P.range(:,1)),1) = 0; %Preallocate 
     
     %Calculate total number of light pulses
     totalLightPulses = numel(P.range(:,1)); %Permanent code line
     
-    %Calculate delay between ictal event onset and preceeding light pulse 
+    %Calculate delay between ictal event onset (peak of the first spike) and preceeding light pulse 
     for i=1:size(SLE_final,1)        
-        %Calculate the delay between ictal event onset and all light pulses                           
+        %Calculate the delay between peak of first spike in ictal event and all light pulses                           
         for j = 1:numel(P.range(:,1))
-            calcIctalOnsetDelays(j) = SLE_final(i,1) - P.range(j,1)/frequency;
+            calcIctalOnsetDelays(j) = SLE_final(i,28) - P.range(j,1)/frequency;
         end
         %Determine location of the preceding light pulse
         if any(calcIctalOnsetDelays>0)   %In case a spontaneous ictal event occurs before the first light pulse, there will be no preceding light pulse
             [ictalOnsetDelay, index_ictalOnsetDelay] = min(calcIctalOnsetDelays(calcIctalOnsetDelays>0));  %Find the smallest positive value
         else
-            ictalOnsetDelay = 0;    %0 = spontaneous event; didn't want to put Nan in case it threw off my code.
-            index_ictalOnsetDelay = 1;  %I put the first light pulse to push the code forwards
+            ictalOnsetDelay = 0;    %0 = spontaneous event, no preceding light pulse; didn't want to put Nan in case it threw off my code.
+            index_ictalOnsetDelay = 1;  %Arbitarily use the first light pulse to push the code forwards
         end
         
         %Calculate the interstimulus interval
@@ -433,9 +434,9 @@ if ~isempty(LED)
         end
         %Store the ictal onset delay and interstimulus interval
         SLE_final (i, 26) = ictalOnsetDelay;
-        SLE_final (i, 27) = interstimulusInterval;        
+        SLE_final (i, 27) = interstimulusInterval;                
     end
-    
+        SLE_final (:, 28) = []; %delete the time of the peaks for ictal event onset (no longer necessary to keep
 end
 
 
