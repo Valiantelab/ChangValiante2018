@@ -51,38 +51,44 @@ posttestEnd = 10140;
 %Control Condition
 feature = 3;
 durationControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
+[h,p] = adtest(durationControl)
+%plot distribution for visualization
 histfit(durationControl, 20)
 title('Frequency histogram for duration of ictal event')
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
+%Statistics
 median(durationControl);
 prctile(durationControl, 25)
 prctile(durationControl, 75)
-[h,p] = adtest(durationControl)
 
 %Test Condition
 feature = 3;
 durationTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
-histfit(durationTest(1:24), 20)
+[h, p] = adtest(durationTest)
+%plot distribution for visualization
+histfit(durationTest, 20)
 title('Frequency histogram for duration of ictal event')
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
-median(durationTest(1:24));
-prctile(durationTest(1:24), 25)
-prctile(durationTest(1:24), 75)
-[h, p] = adtest(durationTest(1:24))
+%Statistics
+median(durationTest);
+prctile(durationTest, 25)
+prctile(durationTest, 75)
 
 %Posttest Conditions
 feature = 3;
 durationPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
+[h,p] = adtest(durationPosttest)
+%plot distribution for visualization
 histfit(durationPosttest, 20)
 title('Frequency histogram for duration of ictal event')
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
+%Staistics
 median(durationPosttest);
 prctile(durationPosttest, 25)
 prctile(durationPosttest, 75)
-[h,p] = adtest(durationPosttest)
 
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
@@ -90,56 +96,66 @@ durationMatrix(1:numel(durationTest),2) = durationTest
 durationMatrix(1:numel(durationPosttest),3) = durationPosttest
 durationMatrix(durationMatrix==0) = NaN;
 
-%Analysis
+%Analysis, comparison
+%Independent sample Student's T-test
+[h,p,ci,stats] = ttest2(durationControl, durationTest)
+
+%one-way ANOVA
+[p,tbl,stats] = anova1(durationMatrix)
+title('Box Plot of ictal event duration from different time periods')
+xlabel ('Time Period')
+ylabel ('Duration of ictal events (s)')
+
 %Kruskal Wallis
 p = kruskalwallis(durationMatrix)
 title('Boxplot: duration of ictal events from different treatment groups')
 xlabel ('Treatment Group')
 ylabel ('Duration (s)')
 
-%Friedman for duration
-p = friedman(durationMatrix(1:6,1:3),3)
-p = friedman(durationMatrix(1:24,1:2))
-
 %% Compare Intensity
 
 %Control Condition
 feature = 5;
 intensityControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
+[h,p] = adtest(intensityControl);
+%plot distribution for visualization
 histfit(intensityControl, 20)
 title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
+%Statistics
 medianIntensity = median(intensityControl);
 intensity25prctile = prctile(intensityControl, 25);
 intensity75prctile = prctile(intensityControl, 75);
-[h,p] = adtest(intensityControl);
+
 
 %Test Condition
 feature = 5;
 intensityTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
-histfit(intensityTest(1:24), 20)
+[h, p] = adtest(intensityTest)
+%Plot distribution for visualization
+histfit(intensityTest, 20)
 title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
-median(intensityTest(1:24))
-prctile(intensityTest(1:24), 25)
-prctile(intensityTest(1:24), 75)
-[h, p] = adtest(intensityTest(1:24))
+%Statistics
+median(intensityTest)
+prctile(intensityTest, 25)
+prctile(intensityTest, 75)
 
 %Posttest Conditions
-posttestStart = 9360;
-posttestEnd = 10140;
 feature = 5;
 intensityPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
+[h,p] = adtest(intensityPosttest)
+%Plot distribution for visualization
 histfit(intensityPosttest, 20);
 title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
+%Statistics
 median(intensityPosttest);
 prctile(intensityPosttest, 25)
 prctile(intensityPosttest, 75)
-[h,p] = adtest(intensityPosttest);
 
 %intensity Matrix
 intensityMatrix(1:numel(intensityControl),1) = intensityControl;
@@ -147,16 +163,22 @@ intensityMatrix(1:numel(intensityTest),2) = intensityTest;
 intensityMatrix(1:numel(intensityPosttest),3) = intensityPosttest;
 intensityMatrix(intensityMatrix==0) = NaN;
 
-%Analysis 
+%Analysis, comparison
+%Independent sample Student's T-test
+[h,p,ci,stats] = ttest2(intensityControl, intensityTest)
+%one-way ANOVA
+[p,tbl,stats] = anova1(intensityMatrix)
+title('Box Plot of ictal event intensity from different time periods')
+xlabel ('Time Period')
+ylabel ('intensity of ictal events (mV^2/s)')
+
+
 %Kruskal Wallis
 p = kruskalwallis(intensityMatrix)
 title('Boxplot intensity of ictal events from different treatment groups')
 xlabel ('Treatment Group')
-ylabel ('Frequency (e-5)')
+ylabel ('intensity (e-5)')
 
-%Friedman for duration
-p = friedman(intensityMatrix(1:7,1:3))
-p = friedman(intensityMatrix(1:24,1:2))
 
 %% Circular Variance and Plots of Ictal Event with photosimulation
     
