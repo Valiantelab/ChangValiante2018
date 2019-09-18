@@ -436,7 +436,7 @@ if ~isempty(LED)
         SLE_final (i, 26) = ictalOnsetDelay;
         SLE_final (i, 27) = interstimulusInterval;                
     end
-        SLE_final (:, 28) = []; %delete the time of the peaks for ictal event onset (no longer necessary to keep
+%         SLE_final (:, 28) = []; %delete the time of the peaks for ictal event onset (no longer necessary to keep
 end
 
 

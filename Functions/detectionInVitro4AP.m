@@ -719,10 +719,11 @@ X = '?some ratio';
 Y = '?past threshold';
 Z = 'Delay to onset (s)';
 AA = 'Interstimulus Interval (s)';
+AB = 'Location of initial onset peak (s)';
 
 %Sheet 1 = Events
 if ~isempty(events)
-    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, AA, AB};
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),subtitle1,'Events','A1');
     xlswrite(sprintf('%s%s',excelFileName, finalTitle ),events,'Events','A2');
 else
