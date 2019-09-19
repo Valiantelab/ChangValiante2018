@@ -47,6 +47,12 @@ testEnd = 9300;
 posttestStart = 9360;
 posttestEnd = 10140;
 
+%groups for Duration
+feature = 3;
+durationControl = events(events(:,4)==1,feature);
+durationTest = events(events(:,4)==2,feature);
+durationPosttest = events(events(:,4)==3,feature);
+
 %% Duration
 %Control Condition
 feature = 3;
@@ -114,6 +120,12 @@ ylabel ('Duration (s)')
 
 %% Compare Intensity
 
+%Groupings for Intensity
+feature = 5;
+intensityControl = events(events(:,4)==1,feature);
+intensityTest = events(events(:,4)==2,feature);
+intensityPosttest = events(events(:,4)==3,feature);
+
 %Control Condition
 feature = 5;
 intensityControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
@@ -166,6 +178,7 @@ intensityMatrix(intensityMatrix==0) = NaN;
 %Analysis, comparison
 %Independent sample Student's T-test
 [h,p,ci,stats] = ttest2(intensityControl, intensityTest)
+
 %one-way ANOVA
 [p,tbl,stats] = anova1(intensityMatrix)
 title('Box Plot of ictal event intensity from different time periods')
@@ -183,14 +196,18 @@ ylabel ('intensity (e-5)')
 %% Circular Variance and Plots of Ictal Event with photosimulation
     
 %Calculate Theta
-for i = 1:numel(SLE(:,1))
-    SLE(i, 17) = SLE(i, 15)/SLE(i, 16) * (2*pi);
+for i = 1:numel(events(:,1))
+    events(i, 29) = events(i, 26)/events(i, 27) * (2*pi);
 end
 
-feature = 17;
-thetaControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
-thetaTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
-thetaPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
+feature = 29;
+thetaControl = events(events(:,4)==1,feature);
+thetaTest = events(events(:,4)==2,feature);
+thetaPosttest = events(events(:,4)==3,feature);
+
+% thetaControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
+% thetaTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
+% thetaPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
   
   vtest_P_value_control=circ_vtest(thetaControl,0);
   vtest_P_value_test=circ_vtest(thetaTest,0);
