@@ -78,7 +78,7 @@ title('Frequency histogram for duration of ictal event')
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-median(durationTest);
+median(durationTest)
 prctile(durationTest, 25)
 prctile(durationTest, 75)
 
@@ -92,7 +92,7 @@ title('Frequency histogram for duration of ictal event')
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Staistics
-median(durationPosttest);
+median(durationPosttest)
 prctile(durationPosttest, 25)
 prctile(durationPosttest, 75)
 
@@ -136,9 +136,9 @@ title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-medianIntensity = median(intensityControl);
-intensity25prctile = prctile(intensityControl, 25);
-intensity75prctile = prctile(intensityControl, 75);
+medianIntensity = median(intensityControl)
+intensity25prctile = prctile(intensityControl, 25)
+intensity75prctile = prctile(intensityControl, 75)
 
 
 %Test Condition
@@ -165,7 +165,7 @@ title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-median(intensityPosttest);
+median(intensityPosttest)
 prctile(intensityPosttest, 25)
 prctile(intensityPosttest, 75)
 
@@ -184,7 +184,6 @@ intensityMatrix(intensityMatrix==0) = NaN;
 title('Box Plot of ictal event intensity from different time periods')
 xlabel ('Time Period')
 ylabel ('intensity of ictal events (mV^2/s)')
-
 
 %Kruskal Wallis
 p = kruskalwallis(intensityMatrix)

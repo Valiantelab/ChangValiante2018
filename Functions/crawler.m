@@ -178,7 +178,12 @@ for i = 1:size(eventTimes,1)
     if onsetBaselineEnd > numel(powerFeatureLowPassFiltered25)  
         onsetBaselineEnd = numel(powerFeatureLowPassFiltered25);
     end  
-    offsetBaselineStart = (offsetSLE-(0.5*frequency));
+    %In case a spike occurs right at the start of the recording, it can cause issues with the crawler function when searching prior 0.5 s to the start of the recording
+    if offsetSLE >(0.5*frequency)
+        offsetBaselineStart = (offsetSLE-(0.5*frequency));
+    else
+        offsetBaselineStart = 1;    %the very start of the recording
+    end            
     offsetBaselineEnd = (offsetSLE+(durationOffsetBaseline*frequency));
 
     %Range of LFP to scan for onset
