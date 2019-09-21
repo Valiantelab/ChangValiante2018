@@ -9,7 +9,7 @@
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\4) Acidosis\Mouse 19 - August 13, 2019';
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\4) Acidosis\Mouse 20 - August 14, 2019';
 
 % Load .mat file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
@@ -165,7 +165,8 @@ if ~isempty(LED)
     totalLightPulses = numel(P.range(:,1)); %Permanent code line
     
     %Calculate delay between ictal event onset (peak of the first spike) and preceeding light pulse 
-    for i=1:size(events,1)        
+    for i=1:size(events,1) 
+        clear calcIctalOnsetDelays
         %Calculate the delay between peak of first spike in ictal event and all light pulses                           
         for j = 1:numel(P.range(:,1))
             calcIctalOnsetDelays(j) = events(i,28) - P.range(j,1)/frequency;
