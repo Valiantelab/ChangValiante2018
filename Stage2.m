@@ -5,7 +5,7 @@
 % LFP time series, LED if there is light, and filters the data using a
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
-% %clear all (reset)
+%clear all (reset)
 % close all
 % clear all
 % clc
@@ -194,5 +194,6 @@ if ~isempty(LED)
         events (i, 26) = ictalOnsetDelay;
         events (i, 27) = interstimulusInterval;                
     end
-      
 end
+    %save final output
+    save(sprintf('%s(stage2).mat', FileName(1:end-4)))  %Save Workspace
