@@ -1,36 +1,9 @@
-%% Stage 2: Process the File
+%% Stage 3: Analyze the file
 % Author: Michael Chang
-% Run this file after the detection algorithm to analyze the results and do
+% Run this file after Stage 2 to analyze the results and do
 % additional analysis to the detected events. This creats the time vector,
 % LFP time series, LED if there is light, and filters the data using a
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
-
-%Create time vector
-frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
-t = (0:(length(x)- 1))/frequency;
-t = t';
-
-%Seperate signals from .abf files
-LFP = x(:,1);   %original LFP signal
-if userInput(4)>0
-    LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
-    onsetDelay = 0.13;  %seconds
-    offsetDelay = 1.5;  %seconds
-    lightpulse = LED > 1;
-else
-    LED =[];
-    onsetDelay = [];
-end
-
-% %Filter Bank
-% %Band Pass Filter
-% [b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
-% LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
-% 
-% %Low Pass Filter
-% fc = 68; % Cut off frequency
-% [b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
-% LFP_filtered = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
 
 %% Duration
@@ -42,39 +15,54 @@ durationPosttest = events(events(:,4)==3,feature);
 
 %Control Condition
 [h,p] = adtest(durationControl); %AD test for normality
+if h == 0
+    msg = 'normally distributed';
+else
+    msg = 'not normally distributed';
+end
+results(1,3) = p;
 %plot distribution for visualization
 histfit(durationControl, 20)
-title(sprintf('Frequency histogram for duration of ictal event, p = %.1e', p))
+title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-median(durationControl)
-prctile(durationControl, 25)
-prctile(durationControl, 75)
+results(1,1) = mean(durationControl)
+results(1,2) = std(durationControl)
 
 %Test Condition
 [h, p] = adtest(durationTest)
+if h == 0
+    msg = 'normally distributed';
+else
+    msg = 'not normally distributed';
+end
+results(2,3) = p;
 %plot distribution for visualization
 histfit(durationTest, 20)
-title('Frequency histogram for duration of ictal event')
+title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-median(durationTest)
-prctile(durationTest, 25)
-prctile(durationTest, 75)
+results(2,1) = mean (durationTest)
+results(2,2) = std(durationTest)
 
 %Posttest Conditions
 [h,p] = adtest(durationPosttest)
+if h == 0
+    msg = 'normally distributed';
+else
+    msg = 'not normally distributed';
+end
+results(3,3) = p;
 %plot distribution for visualization
 histfit(durationPosttest, 20)
-title('Frequency histogram for duration of ictal event')
+title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Staistics
-median(durationPosttest)
-prctile(durationPosttest, 25)
-prctile(durationPosttest, 75)
+results (3,1) = mean(durationPosttest)
+results (3,2) = std(durationPosttest)
 
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
@@ -85,6 +73,9 @@ durationMatrix(durationMatrix==0) = NaN;
 %Analysis, comparison
 %Independent sample Student's T-test
 [h,p,ci,stats] = ttest2(durationControl, durationTest)
+
+[h,p] = kstest2(durationControl, durationTest)
+
 
 %one-way ANOVA
 [p,tbl,stats] = anova1(durationMatrix)
@@ -101,8 +92,7 @@ xlabel ('Treatment Group')
 ylabel ('Duration (s)')
 
 %% Compare Intensity
-
-%Groupings for Intensity
+%Organize groups
 feature = 5;
 intensityControl = events(events(:,4)==1,feature);
 intensityTest = events(events(:,4)==2,feature);
@@ -110,40 +100,45 @@ intensityPosttest = events(events(:,4)==3,feature);
 
 %Control Condition
 [h,p] = adtest(intensityControl);
+if h == 0
+    msg = 'normally distributed';
+else
+    msg = 'not normally distributed';
+end
+resultsIntensity(1,3) = p;
 %plot distribution for visualization
-histfit(intensityControl, 20)
-title('Frequency histogram for intensity of ictal event')
+histfit(intensityControl, 20);
+title(sprintf('Intensity of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-medianIntensity = median(intensityControl)
-intensity25prctile = prctile(intensityControl, 25)
-intensity75prctile = prctile(intensityControl, 75)
+resultsIntensity(1,1) = mean(intensityControl);
+resultsIntensity(1,2) = std(intensityControl);
 
 
 %Test Condition
-[h, p] = adtest(intensityTest)
+[h, p] = adtest(intensityTest);
+resultsIntensity(2,3) = p;
 %Plot distribution for visualization
-histfit(intensityTest, 20)
+histfit(intensityTest, 20);
 title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-median(intensityTest)
-prctile(intensityTest, 25)
-prctile(intensityTest, 75)
+resultsIntensity(2,1) = mean(intensityTest);
+resultsIntensity(2,2) = std(intensityTest);
 
 %Posttest Conditions
-[h,p] = adtest(intensityPosttest)
+[h,p] = adtest(intensityPosttest);
+resultsIntensity(3,3) = p;
 %Plot distribution for visualization
 histfit(intensityPosttest, 20);
 title('Frequency histogram for intensity of ictal event')
 xlabel ('Intensity (mW^2/s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-median(intensityPosttest)
-prctile(intensityPosttest, 25)
-prctile(intensityPosttest, 75)
+resultsIntensity(3,1) = mean(intensityPosttest);
+resultsIntensity(3,2) = std(intensityPosttest);
 
 %intensity Matrix
 intensityMatrix(1:numel(intensityControl),1) = intensityControl;
@@ -153,7 +148,8 @@ intensityMatrix(intensityMatrix==0) = NaN;
 
 %Analysis, comparison
 %Independent sample Student's T-test
-[h,p,ci,stats] = ttest2(intensityControl, intensityTest)
+[h,p,ci,stats] = ttest2(intensityControl, intensityTest);
+[h,p] = kstest2 (intensityControl, intensityTest);
 
 %one-way ANOVA
 [p,tbl,stats] = anova1(intensityMatrix)
@@ -161,7 +157,7 @@ title('Box Plot of ictal event intensity from different time periods')
 xlabel ('Time Period')
 ylabel ('intensity of ictal events (mV^2/s)')
 
-c = multcompare(stats)
+c = multcompare(stats);
 
 %Kruskal Wallis
 p = kruskalwallis(intensityMatrix)
@@ -186,23 +182,24 @@ thetaPosttest = events(events(:,4)==3,feature);
 % thetaTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
 % thetaPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
   
-  vtest_P_value_control=circ_vtest(thetaControl,0);
-  vtest_P_value_test=circ_vtest(thetaTest,0);
-  vtest_P_value_posttest=circ_vtest(thetaPosttest,0);
+  resultsTheta(1,1)=circ_vtest(thetaControl,0);
+  resultsTheta(2,1)=circ_vtest(thetaTest,0);
+  resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
   
     FigE=figure;
     set(gcf,'Name','G. theta 4-Aminopyrimidine', 'NumberTitle', 'off');
     circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Control Condition, p = %.2e', vtest_P_value_control));
+    title (sprintf('Control Condition, p = %.2e', resultsTheta(1,1)));
 
     FigF=figure;
     set(gcf,'Name','I. theta Hepes-Buffered ACSF','NumberTitle', 'off');
     circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Test Condition, p = %.2e', vtest_P_value_test));
+    title (sprintf('Test Condition, p = %.2e', resultsTheta(2,1)));
     
     FigG=figure;
     set(gcf,'Name','I. theta Hepes-Buffered ACSF','NumberTitle', 'off');
     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Post-Test Condition,p = %.2e',vtest_P_value_posttest));
+    title (sprintf('Post-Test Condition,p = %.2e',resultsTheta(3,1)));
 
-    
+%Combine all the results
+result = horzcat(results,resultsIntensity,resultsTheta);
