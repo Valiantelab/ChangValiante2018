@@ -27,8 +27,8 @@ title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-results(1,1) = mean(durationControl)
-results(1,2) = std(durationControl)
+results(1,1) = mean(durationControl);
+results(1,2) = std(durationControl);
 
 %Test Condition
 [h, p] = adtest(durationTest)
@@ -44,8 +44,8 @@ title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Statistics
-results(2,1) = mean (durationTest)
-results(2,2) = std(durationTest)
+results(2,1) = mean (durationTest);
+results(2,2) = std(durationTest);
 
 %Posttest Conditions
 [h,p] = adtest(durationPosttest)
@@ -61,8 +61,8 @@ title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
 %Staistics
-results (3,1) = mean(durationPosttest)
-results (3,2) = std(durationPosttest)
+results (3,1) = mean(durationPosttest);
+results (3,2) = std(durationPosttest);
 
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
@@ -154,7 +154,7 @@ intensityMatrix(intensityMatrix==0) = NaN;
 %one-way ANOVA
 [p,tbl,stats] = anova1(intensityMatrix)
 title('Box Plot of ictal event intensity from different time periods')
-xlabel ('Time Period')
+xlabel ('Treatment Condition')
 ylabel ('intensity of ictal events (mV^2/s)')
 
 c = multcompare(stats);
@@ -189,17 +189,17 @@ thetaPosttest = events(events(:,4)==3,feature);
     FigE=figure;
     set(gcf,'Name','G. theta 4-Aminopyrimidine', 'NumberTitle', 'off');
     circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Control Condition, p = %.2e', resultsTheta(1,1)));
+    title (sprintf('Control Condition, p = %.3f', resultsTheta(1,1)));
 
     FigF=figure;
     set(gcf,'Name','I. theta Hepes-Buffered ACSF','NumberTitle', 'off');
     circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Test Condition, p = %.2e', resultsTheta(2,1)));
+    title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
     
     FigG=figure;
     set(gcf,'Name','I. theta Hepes-Buffered ACSF','NumberTitle', 'off');
     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Post-Test Condition,p = %.2e',resultsTheta(3,1)));
+    title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
 
 %Combine all the results
 result = horzcat(results,resultsIntensity,resultsTheta);
