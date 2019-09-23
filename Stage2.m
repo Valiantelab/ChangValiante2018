@@ -23,7 +23,7 @@ inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (N
     load(sprintf('%s', fnm), myVars{:})
     S = load(sprintf('%s', fnm));
 
-f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
+% f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
     
 %Load excel file
     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
@@ -69,7 +69,7 @@ end
 
 
 %% Filter Bank
-waitbar(0.02, f, 'Please wait while Processing Data...');
+% waitbar(0.02, f, 'Please wait while Processing Data...');
 
 %Center the LFP data
 LFP_centered = LFP - LFP(1);
