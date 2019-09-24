@@ -66,8 +66,8 @@ results (3,2) = std(durationPosttest);
 
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
-durationMatrix(1:numel(durationTest),2) = durationTest
-durationMatrix(1:numel(durationPosttest),3) = durationPosttest
+durationMatrix(1:numel(durationTest),2) = durationTest;
+durationMatrix(1:numel(durationPosttest),3) = durationPosttest;
 durationMatrix(durationMatrix==0) = NaN;
 
 %Analysis, comparison
