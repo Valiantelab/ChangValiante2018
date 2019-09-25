@@ -14,7 +14,7 @@
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\4) Acidosis\Mouse 20 - August 14, 2019';
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\2) Hepes-buffered Experiments\Mouse 21 - August 15, 2019';
 
 % Load .mat file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    

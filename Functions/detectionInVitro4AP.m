@@ -375,8 +375,6 @@ for i = 1:numel(events(:,1))
     if events(i,7) == 1.5 && events(i,19) == 0  %&& events(i,3) < (minDurationSLE/2)
         events(i,7) = 2.1;    %This is an IIE
     end
-
-
 end
 
 %% Questionable IIE (w/o tonic phase)
