@@ -5,36 +5,9 @@
 % LFP time series, LED if there is light, and filters the data using a
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
-%% Write results to .xls 
 
-excelFileName = 'result.xlsx';
-sheetName = FileName(1:8);
-treatmentGroups = [1:3]';
-
-%set subtitle
-A = 'Treatment Group';
-B = 'Duration (s), average';
-C = 'Duration (s), Std';
-D = 'AD test, normality';
-E = 'Intensity (mV^2/s), average';
-F = 'Intensity (mV^2/s), std';
-G = 'AD test, normality';
-H = 'Light-triggered';
-I = 'Dominant Frequency';
-
-J = 'KS Test, 1 vs 2';
-K = 'one-way ANOVA, duration';
-M = 'Multiple Comparison (Tukey-Kramer method), duration';
-N = 'one-way ANOVA, intensity';
-O = 'Multiple Comparison (Tukey-Kramer method), intensity';
-
-P = 'Group';
-Q = 'p-value';
-
-    subtitle1 = {A, B, C, D, E, F, G, H, I};
-    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A1');
-    xlswrite(sprintf('%s',excelFileName),treatmentGroups,sprintf('%s',sheetName),'A2');
-    xlswrite(sprintf('%s',excelFileName),result,sprintf('%s',sheetName),'B2');
+%Add all subfolders in working directory to the path.
+addpath(genpath(pwd));  
 
 %% Duration
 %Organize groups 
@@ -52,7 +25,7 @@ else
 end
 resultsDuration(1,3) = p;
 %plot distribution for visualization
-histfit(durationControl, 20)
+histfit(durationControl, 20);
 title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
@@ -61,7 +34,7 @@ resultsDuration(1,1) = mean(durationControl);
 resultsDuration(1,2) = std(durationControl);
 
 %Test Condition
-[h, p] = adtest(durationTest)
+[h, p] = adtest(durationTest);
 if h == 0
     msg = 'normally distributed';
 else
@@ -69,7 +42,7 @@ else
 end
 resultsDuration(2,3) = p;
 %plot distribution for visualization
-histfit(durationTest, 20)
+histfit(durationTest, 20);
 title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
@@ -78,7 +51,7 @@ resultsDuration(2,1) = mean (durationTest);
 resultsDuration(2,2) = std(durationTest);
 
 %Posttest Conditions
-[h,p] = adtest(durationPosttest)
+[h,p] = adtest(durationPosttest);
 if h == 0
     msg = 'normally distributed';
 else
@@ -86,7 +59,7 @@ else
 end
 resultsDuration(3,3) = p;
 %plot distribution for visualization
-histfit(durationPosttest, 20)
+histfit(durationPosttest, 20);
 title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
 xlabel ('Duration (s)')
 ylabel ('Frequency (# of ictal events)')
@@ -105,18 +78,21 @@ durationMatrix(durationMatrix==0) = NaN;
 [h,p,ci,stats] = ttest2(durationControl, durationTest);
 %2-sample KS Test
 [h,p] = kstest2(durationControl, durationTest);
+p_value_KS_duration = p;
 %one-way ANOVA
 [p,tbl,stats] = anova1(durationMatrix);
 title('Box Plot of ictal event duration from different time periods')
 xlabel ('Time Period')
 ylabel ('Duration of ictal events (s)')
+tbl_1ANOVA_duration = tbl;
 %multiple comparisons, Tukey-Kramer Method
 c = multcompare(stats);
+c_duration = c;
 %Kruskal Wallis
-p = kruskalwallis(durationMatrix);
-title('Boxplot: duration of ictal events from different treatment groups')
-xlabel ('Treatment Group')
-ylabel ('Duration (s)')
+% p = kruskalwallis(durationMatrix);
+% title('Boxplot: duration of ictal events from different treatment groups')
+% xlabel ('Treatment Group')
+% ylabel ('Duration (s)')
 
 %% Intensity
 %Organize groups
@@ -141,7 +117,6 @@ ylabel ('Frequency (# of ictal events)')
 %Statistics
 resultsIntensity(1,1) = mean(intensityControl);
 resultsIntensity(1,2) = std(intensityControl);
-
 
 %Test Condition
 [h, p] = adtest(intensityTest);
@@ -178,19 +153,21 @@ intensityMatrix(intensityMatrix==0) = NaN;
 [h,p,ci,stats] = ttest2(intensityControl, intensityTest);
 %2-sample KS Test
 [h,p] = kstest2 (intensityControl, intensityTest);
+p_value_KS_intensity = p;
 %one-way ANOVA
-[p,tbl,stats] = anova1(intensityMatrix)
+[p,tbl,stats] = anova1(intensityMatrix);
 title('Box Plot of ictal event intensity from different time periods')
 xlabel ('Treatment Condition')
 ylabel ('intensity of ictal events (mV^2/s)')
+tbl_1ANOVA_intensity = tbl;
 %Multiple Comparisons, Tukey-Kramer Method
 c = multcompare(stats);
-%Kruskal Wallis
-p = kruskalwallis(intensityMatrix);
-title('Boxplot intensity of ictal events from different treatment groups')
-xlabel ('Treatment Group')
-ylabel ('intensity (e-5)')
-
+c_intensity = c;
+% %Kruskal Wallis
+% p = kruskalwallis(intensityMatrix);
+% title('Boxplot intensity of ictal events from different treatment groups')
+% xlabel ('Treatment Group')
+% ylabel ('intensity (e-5)')
 
 %% Circular Variance and Plots of Ictal Event with photosimulation    
 %Calculate Theta
@@ -230,3 +207,63 @@ resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
 
 %Combine all the results
 result = horzcat(resultsDuration,resultsIntensity,resultsTheta);
+
+%% Write results to .xls 
+
+excelFileName = 'result.xlsx';
+sheetName = FileName(1:8);
+treatmentGroups = [1:3]';
+
+%set subtitle
+A = 'Treatment Group';
+B = 'Duration (s), average';
+C = 'Duration (s), Std';
+D = 'AD test, normality';
+E = 'Intensity (mV^2/s), average';
+F = 'Intensity (mV^2/s), std';
+G = 'AD test, normality';
+H = 'Light-triggered';
+I = 'Dominant Frequency';
+
+J = 'KS Test, 1 vs 2';
+K = 'one-way ANOVA, duration';
+M = 'Multiple Comparison (Tukey-Kramer method), duration';
+N = 'one-way ANOVA, intensity';
+O = 'Multiple Comparison (Tukey-Kramer method), intensity';
+
+P = 'Group';
+Q = 'p-value';
+
+%Write General Results
+    subtitle1 = {A, B, C, D, E, F, G, H, I};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A1');
+    xlswrite(sprintf('%s',excelFileName),treatmentGroups,sprintf('%s',sheetName),'A2');
+    xlswrite(sprintf('%s',excelFileName),result,sprintf('%s',sheetName),'B2');
+%Write KS Test results
+    subtitle1 = {J};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');
+    xlswrite(sprintf('%s',excelFileName),p_value_KS_duration,sprintf('%s',sheetName),'B6');
+    xlswrite(sprintf('%s',excelFileName),p_value_KS_intensity,sprintf('%s',sheetName),'E6');
+%Write one-way ANOVA results, duration
+    subtitle1 = {K};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A8');
+    xlswrite(sprintf('%s',excelFileName),tbl_1ANOVA_duration,sprintf('%s',sheetName),'A9');
+%Write multiple comparison (Tukey-Kramer), duration
+    subtitle1 = {M};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A14');
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'A15'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B15'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F15'); %p-value subtitle
+    xlswrite(sprintf('%s',excelFileName),c_duration,sprintf('%s',sheetName),'A16');
+%Write one-way ANOVA results, intensity
+    subtitle1 = {N};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A20');
+    xlswrite(sprintf('%s',excelFileName),tbl_1ANOVA_intensity,sprintf('%s',sheetName),'A21');
+%Write multiple comparison (Tukey-Kramer), duration
+    subtitle1 = {O};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A26');
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'A27'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B27'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F27'); %p-value subtitle
+    xlswrite(sprintf('%s',excelFileName),c_intensity,sprintf('%s',sheetName),'A28');
+    
