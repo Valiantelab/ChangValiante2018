@@ -191,17 +191,17 @@ resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
 
 %Figures for Visual Analysis
     FigE=figure;
-    set(gcf,'Name','G. theta 4-Aminopyrimidine', 'NumberTitle', 'off');
+    set(gcf,'Name','Control', 'NumberTitle', 'off');
     circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
     title (sprintf('Control Condition, p = %.3f', resultsTheta(1,1)));
 
     FigF=figure;
-    set(gcf,'Name','I. theta Hepes-Buffered ACSF','NumberTitle', 'off');
+    set(gcf,'Name','Test','NumberTitle', 'off');
     circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
     title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
     
     FigG=figure;
-    set(gcf,'Name','I. theta Hepes-Buffered ACSF','NumberTitle', 'off');
+    set(gcf,'Name','Post-Test','NumberTitle', 'off');
     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
     title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
 
