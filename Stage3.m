@@ -207,12 +207,17 @@ resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
 
 %Combine all the results
 result = horzcat(resultsDuration,resultsIntensity,resultsTheta);
+%Label treatment groups
+treatmentGroups = [1:3]';
+%ictal events # in each group
+n(1,1)=numel(thetaControl);
+n(2,1)=numel(thetaTest);
+n(3,1)=numel(thetaPosttest);
 
 %% Write results to .xls 
 
 excelFileName = 'result.xlsx';
 sheetName = FileName(1:8);
-treatmentGroups = [1:3]';
 
 %set subtitle
 A = 'Treatment Group';
@@ -225,6 +230,8 @@ G = 'AD test, normality';
 H = 'Light-triggered';
 I = 'Dominant Frequency';
 
+II = 'n';
+
 J = 'KS Test, 1 vs 2';
 K = 'one-way ANOVA, duration';
 M = 'Multiple Comparison (Tukey-Kramer method), duration';
@@ -235,10 +242,11 @@ P = 'Group';
 Q = 'p-value';
 
 %Write General Results
-    subtitle1 = {A, B, C, D, E, F, G, H, I};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, II};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A1');
     xlswrite(sprintf('%s',excelFileName),treatmentGroups,sprintf('%s',sheetName),'A2');
     xlswrite(sprintf('%s',excelFileName),result,sprintf('%s',sheetName),'B2');
+    xlswrite(sprintf('%s',excelFileName),n,sprintf('%s',sheetName),'J2');
 %Write KS Test results
     subtitle1 = {J};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');
