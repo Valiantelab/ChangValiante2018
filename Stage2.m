@@ -13,18 +13,18 @@
 %Add all subfolders in working directory to the path.
 addpath(genpath(pwd));  
 
-%Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\2) Hepes-buffered Experiments\Mouse 21 - August 15, 2019';
-
-% Load .mat file
-    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    fnm = fullfile(PathName,FileName);
-    myVars = {'details', 'samplingInterval', 'x', 'metadata'};
-    load(sprintf('%s', fnm), myVars{:})
-    S = load(sprintf('%s', fnm));
-
-% f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
-    
+% %Manually set File Directory
+% inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\2) Hepes-buffered Experiments\Mouse 21 - August 15, 2019';
+% 
+% % Load .mat file
+%     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
+%     fnm = fullfile(PathName,FileName);
+%     myVars = {'details', 'samplingInterval', 'x', 'metadata'};
+%     load(sprintf('%s', fnm), myVars{:})
+%     S = load(sprintf('%s', fnm));
+% 
+% % f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
+%     
 %Load excel file
     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
     excel_filename = fullfile(PathName, FileName);
