@@ -34,13 +34,17 @@ resultsDuration(1,1) = mean(durationControl);
 resultsDuration(1,2) = std(durationControl);
 
 %Test Condition
-[h, p] = adtest(durationTest);
-if h == 0
-    msg = 'normally distributed';
+if numel(durationTest) > 3 %Need 4 or more samples to perform AD test for normality
+    [h, p] = adtest(durationTest);
+    if h == 0
+        msg = 'normally distributed';
+    else
+        msg = 'not normally distributed';
+    end
+    resultsDuration(2,3) = p;
 else
-    msg = 'not normally distributed';
+    resultsDuration(2,3) = NaN;
 end
-resultsDuration(2,3) = p;
 %plot distribution for visualization
 histfit(durationTest, 20);
 title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
@@ -51,13 +55,18 @@ resultsDuration(2,1) = mean (durationTest);
 resultsDuration(2,2) = std(durationTest);
 
 %Posttest Conditions
-[h,p] = adtest(durationPosttest);
-if h == 0
-    msg = 'normally distributed';
-else
-    msg = 'not normally distributed';
-end
-resultsDuration(3,3) = p;
+if numel(durationPosttest) >2
+    if numel(durationPosttest) >3
+        [h,p] = adtest(durationPosttest);
+        if h == 0
+            msg = 'normally distributed';
+        else
+            msg = 'not normally distributed';
+        end
+        resultsDuration(3,3) = p;
+    else
+        resultsDuration(3,3) = NaN;
+    end
 %plot distribution for visualization
 histfit(durationPosttest, 20);
 title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
@@ -66,6 +75,7 @@ ylabel ('Frequency (# of ictal events)')
 %Staistics
 resultsDuration (3,1) = mean(durationPosttest);
 resultsDuration (3,2) = std(durationPosttest);
+end
 
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
@@ -79,6 +89,7 @@ durationMatrix(durationMatrix==0) = NaN;
 %2-sample KS Test
 [h,p] = kstest2(durationControl, durationTest);
 p_value_KS_duration = p;
+
 %one-way ANOVA
 [p,tbl,stats] = anova1(durationMatrix);
 title('Box Plot of ictal event duration from different time periods')
@@ -93,6 +104,7 @@ c_duration = c;
 % title('Boxplot: duration of ictal events from different treatment groups')
 % xlabel ('Treatment Group')
 % ylabel ('Duration (s)')
+
 
 %% Intensity
 %Organize groups
@@ -119,8 +131,12 @@ resultsIntensity(1,1) = mean(intensityControl);
 resultsIntensity(1,2) = std(intensityControl);
 
 %Test Condition
-[h, p] = adtest(intensityTest);
-resultsIntensity(2,3) = p;
+if numel(intensityTest)>3   %Need 4 or more samples to perform AD test for normality
+    [h, p] = adtest(intensityTest);
+    resultsIntensity(2,3) = p;
+else
+    resultsIntensity(2,3) = NaN;
+end
 %Plot distribution for visualization
 histfit(intensityTest, 20);
 title('Frequency histogram for intensity of ictal event')
@@ -131,16 +147,22 @@ resultsIntensity(2,1) = mean(intensityTest);
 resultsIntensity(2,2) = std(intensityTest);
 
 %Posttest Conditions
-[h,p] = adtest(intensityPosttest);
-resultsIntensity(3,3) = p;
-%Plot distribution for visualization
-histfit(intensityPosttest, 20);
-title('Frequency histogram for intensity of ictal event')
-xlabel ('Intensity (mW^2/s)')
-ylabel ('Frequency (# of ictal events)')
-%Statistics
-resultsIntensity(3,1) = mean(intensityPosttest);
-resultsIntensity(3,2) = std(intensityPosttest);
+if numel(intensityPosttest)>2
+    if numel(intensityPosttest)>3
+        [h,p] = adtest(intensityPosttest);
+        resultsIntensity(3,3) = p;
+    else 
+        resultsIntensity(3,3) = NaN;
+    end    
+    %Plot distribution for visualization
+    histfit(intensityPosttest, 20);
+    title('Frequency histogram for intensity of ictal event')
+    xlabel ('Intensity (mW^2/s)')
+    ylabel ('Frequency (# of ictal events)')
+    %Statistics
+    resultsIntensity(3,1) = mean(intensityPosttest);
+    resultsIntensity(3,2) = std(intensityPosttest);
+end
 
 %intensity Matrix
 intensityMatrix(1:numel(intensityControl),1) = intensityControl;
@@ -154,6 +176,8 @@ intensityMatrix(intensityMatrix==0) = NaN;
 %2-sample KS Test
 [h,p] = kstest2 (intensityControl, intensityTest);
 p_value_KS_intensity = p;
+
+
 %one-way ANOVA
 [p,tbl,stats] = anova1(intensityMatrix);
 title('Box Plot of ictal event intensity from different time periods')
@@ -187,7 +211,6 @@ thetaPosttest = events(events(:,4)==3,feature);
 %Analysis, light correlation?
 resultsTheta(1,1)=circ_vtest(thetaControl,0);
 resultsTheta(2,1)=circ_vtest(thetaTest,0);
-resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
 
 %Figures for Visual Analysis
     FigE=figure;
@@ -199,11 +222,15 @@ resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
     set(gcf,'Name','Test','NumberTitle', 'off');
     circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
     title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
-    
+
+if numel(thetaPosttest)>2
+    resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
+    %Figures for visual analysis
     FigG=figure;
     set(gcf,'Name','Post-Test','NumberTitle', 'off');
     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
     title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
+end
 
 %Combine all the results
 result = horzcat(resultsDuration,resultsIntensity,resultsTheta);
@@ -216,7 +243,7 @@ n(3,1)=numel(thetaPosttest);
 
 %% Write results to .xls 
 
-excelFileName = 'result.xlsx';
+excelFileName = 'result_acidosis.xlsx';
 sheetName = FileName(1:8);
 
 %set subtitle
@@ -252,6 +279,8 @@ Q = 'p-value';
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');
     xlswrite(sprintf('%s',excelFileName),p_value_KS_duration,sprintf('%s',sheetName),'B6');
     xlswrite(sprintf('%s',excelFileName),p_value_KS_intensity,sprintf('%s',sheetName),'E6');
+
+% if numel(durationPosttest)>2
 %Write one-way ANOVA results, duration
     subtitle1 = {K};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A8');
@@ -274,4 +303,6 @@ Q = 'p-value';
     xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B27'); %Group subtitle
     xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F27'); %p-value subtitle
     xlswrite(sprintf('%s',excelFileName),c_intensity,sprintf('%s',sheetName),'A28');
+% end
+
     

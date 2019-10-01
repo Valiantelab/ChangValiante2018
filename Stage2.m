@@ -5,7 +5,7 @@
 % LFP time series, LED if there is light, and filters the data using a
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
-%clear all (reset)
+% % clear all (reset)
 % close all
 % clear all
 % clc
@@ -13,8 +13,8 @@
 %Add all subfolders in working directory to the path.
 addpath(genpath(pwd));  
 
-% %Manually set File Directory
-% inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\2) Hepes-buffered Experiments\Mouse 21 - August 15, 2019';
+%Manually set File Directory
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\4) Acidosis\Mouse 16 - August 8, 2019';
 % 
 % % Load .mat file
 %     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
@@ -22,9 +22,9 @@ addpath(genpath(pwd));
 %     myVars = {'details', 'samplingInterval', 'x', 'metadata'};
 %     load(sprintf('%s', fnm), myVars{:})
 %     S = load(sprintf('%s', fnm));
-% 
-% % f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
-%     
+
+% f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
+    
 %Load excel file
     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
     excel_filename = fullfile(PathName, FileName);
@@ -91,7 +91,6 @@ avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshol
 
 %% Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
 
-spikeFrequency = cell(size(events,1),1);
 intensityPerMinute = cell(size(events,1),1);
 totalPower = zeros(size(events,1),1);
 for i = 1:size(events,1)
@@ -141,6 +140,9 @@ for i = 1:size(events,1)
     p2pAmplitude = max(eventVectorLFP) - min (eventVectorLFP);
     events (i,6) = p2pAmplitude;
 
+    %Calculate the event's duration 
+    events (i,3) = events (i,2) - events (i,1);
+    
     %m calculation
 %     test=WP_MultipleRegression(eventVectorLFP', 10000);
 end
