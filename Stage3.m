@@ -87,8 +87,12 @@ durationMatrix(durationMatrix==0) = NaN;
 %Independent sample Student's T-test
 [h,p,ci,stats] = ttest2(durationControl, durationTest);
 %2-sample KS Test
-[h,p] = kstest2(durationControl, durationTest);
+[h,p,D] = kstest2(durationControl, durationTest);
 p_value_KS_duration = p;
+d = CliffDelta(durationControl, durationTest);
+%Mann Whitney U Test (aka Wilcoxin Ranked Sum Test)
+[p,h,stats] = ranksum(durationControl, durationTest)
+
 
 %one-way ANOVA
 [p,tbl,stats] = anova1(durationMatrix);
