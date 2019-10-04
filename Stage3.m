@@ -5,7 +5,6 @@
 % LFP time series, LED if there is light, and filters the data using a
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
-
 %% Customize Analysis 
 excelFileName = 'result_acidosis.xlsx'; %excel sheet output is written
 %Label treatment groups
