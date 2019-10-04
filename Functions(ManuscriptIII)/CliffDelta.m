@@ -24,4 +24,4 @@ for i = 1:lx
 end
 
 % calculate delta. 
-d = sum(mat(:)) / (lx * ly)
+d = sum(mat(:)) / (lx * ly);

@@ -6,6 +6,14 @@
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
 
+%% Customize Analysis 
+excelFileName = 'result_acidosis.xlsx'; %excel sheet output is written
+%Label treatment groups
+treatmentGroups(1,1) = {'Control'};
+treatmentGroups(2,1) = {'Test'};
+treatmentGroups(3,1) = {'Washout'};
+% treatmentGroups = [1:3]';
+
 %Add all subfolders in working directory to the path.
 addpath(genpath(pwd));  
 
@@ -16,93 +24,46 @@ durationControl = events(events(:,4)==1,feature);
 durationTest = events(events(:,4)==2,feature);
 durationPosttest = events(events(:,4)==3,feature);
 
-%Control Condition
-[h,p] = adtest(durationControl); %AD test for normality
-if h == 0
-    msg = 'normally distributed';
-else
-    msg = 'not normally distributed';
-end
-resultsDuration(1,3) = p;
-%plot distribution for visualization
-histfit(durationControl, 20);
-title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
-xlabel ('Duration (s)')
-ylabel ('Frequency (# of ictal events)')
-%Statistics
-resultsDuration(1,1) = mean(durationControl);
-resultsDuration(1,2) = std(durationControl);
-
-%Test Condition
-if numel(durationTest) > 3 %Need 4 or more samples to perform AD test for normality
-    [h, p] = adtest(durationTest);
-    if h == 0
-        msg = 'normally distributed';
-    else
-        msg = 'not normally distributed';
-    end
-    resultsDuration(2,3) = p;
-else
-    resultsDuration(2,3) = NaN;
-end
-%plot distribution for visualization
-histfit(durationTest, 20);
-title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
-xlabel ('Duration (s)')
-ylabel ('Frequency (# of ictal events)')
-%Statistics
-resultsDuration(2,1) = mean (durationTest);
-resultsDuration(2,2) = std(durationTest);
-
-%Posttest Conditions
-if numel(durationPosttest) >2
-    if numel(durationPosttest) >3
-        [h,p] = adtest(durationPosttest);
-        if h == 0
-            msg = 'normally distributed';
-        else
-            msg = 'not normally distributed';
-        end
-        resultsDuration(3,3) = p;
-    else
-        resultsDuration(3,3) = NaN;
-    end
-%plot distribution for visualization
-histfit(durationPosttest, 20);
-title(sprintf('Duration of ictal events are %s, p = %.2f', msg, p))
-xlabel ('Duration (s)')
-ylabel ('Frequency (# of ictal events)')
-%Staistics
-resultsDuration (3,1) = mean(durationPosttest);
-resultsDuration (3,2) = std(durationPosttest);
-end
-
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
 durationMatrix(1:numel(durationTest),2) = durationTest;
 durationMatrix(1:numel(durationPosttest),3) = durationPosttest;
 durationMatrix(durationMatrix==0) = NaN;
 
-%Analysis, comparison
-%Independent sample Student's T-test
-[h,p,ci,stats] = ttest2(durationControl, durationTest);
-%2-sample KS Test
-[h,p,D] = kstest2(durationControl, durationTest);
-p_value_KS_duration = p;
-d = CliffDelta(durationControl, durationTest);
-%Mann Whitney U Test (aka Wilcoxin Ranked Sum Test)
-[p,h,stats] = ranksum(durationControl, durationTest)
+%Analysis
+%Control Condition
+[resultsDuration(1,:)] = stage3Analysis (durationControl, 'nonparametric', 'no figure');
+%Test Condition
+resultsDuration(2,:) = stage3Analysis (durationTest, 'nonparametric', 'no figure');
+%Posttest Conditions
+if numel(durationPosttest) >2
+resultsDuration(3,:) = stage3Analysis (durationPosttest, 'nonparametric', 'no figure');   
+end
 
+%Comparisons
+[h,p,D] = kstest2(durationControl, durationTest); %2-sample KS Test
+p_value_KS_duration = p;    %KS Test's p value
+d_KS_duration = D;  %KS Test's D statistic
+cliffs_d_duration = CliffDelta(durationControl, durationTest);   %Cliff's d
+
+% %Mann Whitney U Test (aka Wilcoxin Ranked Sum Test)
+% [p,h,stats] = ranksum(durationControl, durationTest)
+
+% %Independent sample Student's T-test
+% [h,p,ci,stats] = ttest2(durationControl, durationTest);
 
 %one-way ANOVA
 [p,tbl,stats] = anova1(durationMatrix);
-title('Box Plot of ictal event duration from different time periods')
-xlabel ('Time Period')
-ylabel ('Duration of ictal events (s)')
 tbl_1ANOVA_duration = tbl;
+
+% title('Box Plot of ictal event duration from different time periods')
+% xlabel ('Time Period')
+% ylabel ('Duration of ictal events (s)')
+
 %multiple comparisons, Tukey-Kramer Method
 c = multcompare(stats);
 c_duration = c;
+
 %Kruskal Wallis
 % p = kruskalwallis(durationMatrix);
 % title('Boxplot: duration of ictal events from different treatment groups')
@@ -117,80 +78,44 @@ intensityControl = events(events(:,4)==1,feature);
 intensityTest = events(events(:,4)==2,feature);
 intensityPosttest = events(events(:,4)==3,feature);
 
-%Control Condition
-[h,p] = adtest(intensityControl);
-if h == 0
-    msg = 'normally distributed';
-else
-    msg = 'not normally distributed';
-end
-resultsIntensity(1,3) = p;
-%plot distribution for visualization
-histfit(intensityControl, 20);
-title(sprintf('Intensity of ictal events are %s, p = %.2f', msg, p))
-xlabel ('Intensity (mW^2/s)')
-ylabel ('Frequency (# of ictal events)')
-%Statistics
-resultsIntensity(1,1) = mean(intensityControl);
-resultsIntensity(1,2) = std(intensityControl);
-
-%Test Condition
-if numel(intensityTest)>3   %Need 4 or more samples to perform AD test for normality
-    [h, p] = adtest(intensityTest);
-    resultsIntensity(2,3) = p;
-else
-    resultsIntensity(2,3) = NaN;
-end
-%Plot distribution for visualization
-histfit(intensityTest, 20);
-title('Frequency histogram for intensity of ictal event')
-xlabel ('Intensity (mW^2/s)')
-ylabel ('Frequency (# of ictal events)')
-%Statistics
-resultsIntensity(2,1) = mean(intensityTest);
-resultsIntensity(2,2) = std(intensityTest);
-
-%Posttest Conditions
-if numel(intensityPosttest)>2
-    if numel(intensityPosttest)>3
-        [h,p] = adtest(intensityPosttest);
-        resultsIntensity(3,3) = p;
-    else 
-        resultsIntensity(3,3) = NaN;
-    end    
-    %Plot distribution for visualization
-    histfit(intensityPosttest, 20);
-    title('Frequency histogram for intensity of ictal event')
-    xlabel ('Intensity (mW^2/s)')
-    ylabel ('Frequency (# of ictal events)')
-    %Statistics
-    resultsIntensity(3,1) = mean(intensityPosttest);
-    resultsIntensity(3,2) = std(intensityPosttest);
-end
-
 %intensity Matrix
 intensityMatrix(1:numel(intensityControl),1) = intensityControl;
 intensityMatrix(1:numel(intensityTest),2) = intensityTest;
 intensityMatrix(1:numel(intensityPosttest),3) = intensityPosttest;
 intensityMatrix(intensityMatrix==0) = NaN;
 
-%Analysis, comparison
-%Independent sample Student's T-test
-[h,p,ci,stats] = ttest2(intensityControl, intensityTest);
-%2-sample KS Test
-[h,p] = kstest2 (intensityControl, intensityTest);
-p_value_KS_intensity = p;
+%Analysis
+%Control Condition
+resultsIntensity(1,:) = stage3Analysis (intensityControl, 'nonparametric', 'nofigure');
+%Test Condition
+resultsIntensity(2,:) = stage3Analysis (intensityTest, 'nonparametric', 'nofigure');
+%Posttest Conditions
+if numel(intensityPosttest)>2
+resultsIntensity(3,:) = stage3Analysis (intensityPosttest, 'nonparametric', 'nofigure');
+end
 
+%Analysis, comparison
+%2-sample KS Test
+[h,p,D] = kstest2 (intensityControl, intensityTest);    %KS Test's p value
+p_value_KS_intensity = p; %KS Test's D statistic
+d_KS_intensity = D; %KS Test's D statistic
+cliffs_d_intensity = CliffDelta(intensityControl,intensityTest); %Cliff's D
+
+% %Independent sample Student's T-test
+% [h,p,ci,stats] = ttest2(intensityControl, intensityTest);
 
 %one-way ANOVA
 [p,tbl,stats] = anova1(intensityMatrix);
-title('Box Plot of ictal event intensity from different time periods')
-xlabel ('Treatment Condition')
-ylabel ('intensity of ictal events (mV^2/s)')
 tbl_1ANOVA_intensity = tbl;
+
+% title('Box Plot of ictal event intensity from different time periods')
+% xlabel ('Treatment Condition')
+% ylabel ('intensity of ictal events (mV^2/s)')
+
 %Multiple Comparisons, Tukey-Kramer Method
 c = multcompare(stats);
 c_intensity = c;
+
 % %Kruskal Wallis
 % p = kruskalwallis(intensityMatrix);
 % title('Boxplot intensity of ictal events from different treatment groups')
@@ -237,23 +162,20 @@ if numel(thetaPosttest)>2
 end
 
 %Combine all the results
-result = horzcat(resultsDuration,resultsIntensity,resultsTheta);
-%Label treatment groups
-treatmentGroups = [1:3]';
+result = horzcat(resultsDuration(:,1:3),resultsIntensity(:,1:3),resultsTheta);  %only the first three columns
+
 %ictal events # in each group
 n(1,1)=numel(thetaControl);
 n(2,1)=numel(thetaTest);
 n(3,1)=numel(thetaPosttest);
 
 %% Write results to .xls 
-
-excelFileName = 'result_acidosis.xlsx';
 sheetName = FileName(1:8);
 
 %set subtitle
 A = 'Treatment Group';
-B = 'Duration (s), average';
-C = 'Duration (s), Std';
+B = 'Duration (s), median';
+C = 'Duration (s), IQR';
 D = 'AD test, normality';
 E = 'Intensity (mV^2/s), average';
 F = 'Intensity (mV^2/s), std';
@@ -272,6 +194,10 @@ O = 'Multiple Comparison (Tukey-Kramer method), intensity';
 P = 'Group';
 Q = 'p-value';
 
+R = 'p-value';
+S = 'KS D stat';
+T = 'Cliffs D';
+
 %Write General Results
     subtitle1 = {A, B, C, D, E, F, G, H, I, II};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A1');
@@ -280,10 +206,16 @@ Q = 'p-value';
     xlswrite(sprintf('%s',excelFileName),n,sprintf('%s',sheetName),'J2');
 %Write KS Test results
     subtitle1 = {J};
-    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');
-    xlswrite(sprintf('%s',excelFileName),p_value_KS_duration,sprintf('%s',sheetName),'B6');
-    xlswrite(sprintf('%s',excelFileName),p_value_KS_intensity,sprintf('%s',sheetName),'E6');
-
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');    
+    xlswrite(sprintf('%s',excelFileName),p_value_KS_duration,sprintf('%s',sheetName),'B6'); %KS Test p-value
+    xlswrite(sprintf('%s',excelFileName),d_KS_duration,sprintf('%s',sheetName),'C6');   %KS Test D Value
+    xlswrite(sprintf('%s',excelFileName),cliffs_d_duration,sprintf('%s',sheetName),'D6');    %Cliff's D        
+    xlswrite(sprintf('%s',excelFileName),p_value_KS_intensity,sprintf('%s',sheetName),'E6'); %KS Test p-value
+    xlswrite(sprintf('%s',excelFileName),d_KS_intensity,sprintf('%s',sheetName),'F6'); %KS Test D value
+    xlswrite(sprintf('%s',excelFileName),cliffs_d_intensity, sprintf('%s',sheetName),'G6'); %Cliff's D
+    subtitle2 = {R,S,T};
+    xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'B5');
+    xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'E5');
 % if numel(durationPosttest)>2
 %Write one-way ANOVA results, duration
     subtitle1 = {K};
@@ -309,4 +241,5 @@ Q = 'p-value';
     xlswrite(sprintf('%s',excelFileName),c_intensity,sprintf('%s',sheetName),'A28');
 % end
 
+fprintf(1,'\nComplete: A summary of the results can be found in the current working folder: %s\n', pwd)
     
