@@ -566,7 +566,7 @@ if userInput(5) > 0
         set(gcf, 'Position', get(0, 'Screensize'));
 
         subplot (2,1,1)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse, 5, frequency);
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd(:,1), lightpulse, 5, frequency);   %locs_spike_2nd(:,1) is location; (:,2) is the width of spike
         title (sprintf('LFP Recording, %s Event #%d | Frequency Change over time', label, i));
         ylabel ('mV');
         xlabel ('Time (sec)');
@@ -597,7 +597,7 @@ if userInput(5) > 0
         axis tight
 
         subplot (2,1,2)
-        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd, lightpulse, 5, frequency);
+        figHandle = plotEvent (figHandle, LFP_centered, t, events(i,1:2), locs_spike_2nd(:,1), lightpulse, 5, frequency); %locs_spike_2nd(:,1) is location; (:,2) is the width of spike
         %Labels
         title ('Intensity Change over time');
         ylabel ('mV');

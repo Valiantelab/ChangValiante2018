@@ -47,7 +47,7 @@ if (InputGUI(6)=="")
     %Load .abf file (raw data), analyze single file
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
-    [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+    [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
     save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace  
 else
     % Analyze all files in folder, multiple files
@@ -59,7 +59,7 @@ else
         fnm = fullfile(PathName,S(k).name);
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
-        [spikes, events, SLE, details] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
+        [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
         save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace 
         %Collect the average intensity ratio for SLEs
         %indexSLE = events(:,7) == 1;
