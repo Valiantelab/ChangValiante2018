@@ -69,7 +69,8 @@ end
 % detecting epileptiform and baseline frequency content
 
 %Create time vector
-frequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
+exactFrequency = 1000000/samplingInterval; %Hz. si is the sampling interval in microseconds from the metadata
+frequency = round(exactFrequency);
 t = (0:(length(x)- 1))/frequency;
 t = t';
 
@@ -262,6 +263,7 @@ close(figHandle)
 
 %Calculate Frequency Content of Interictal Period
 [nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
+
 for i = 1:nr
 
     interictalVector = interictal{i,1};
@@ -324,7 +326,8 @@ for i = indexEvents'
     timeVector = timeVector';    
     
     %Frequency content of epileptiform event 
-    [s,f,t,p] = spectrogram (eventVector, windowSize*frequency, windowOverlap*frequency, 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
+%     [s,f,t,p] = spectrogram (eventVector, windowSize*frequency, windowOverlap*frequency, 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
+    [s,f,t,p] = spectrogram (eventVector,round(windowSize*frequency),round(windowOverlap*frequency), 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
     
     %Dominant Frequency at each time point 
     [maxS, idx] = max(p);        
@@ -350,8 +353,8 @@ for i = indexEvents'
     subplot (3,1,1)
     plot (timeVector, eventVector)
     hold on
-    plot (timeVector(windowSize*frequency), eventVector(windowSize*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(numel(eventVector)-(windowSize*frequency)), eventVector(numel(eventVector)-(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+    plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
@@ -382,7 +385,6 @@ for i = indexEvents'
     xlabel('Time (sec)')
     axis tight
     ylim  ([0 70])
-
     
     subplot (3,2,6)
     plot(t,maxFreq_norm) 
@@ -425,7 +427,7 @@ for i = 1:nr
     timeVector = timeVector';    
     
     %Frequency content of baseline event 
-    [s,f,t,p] = spectrogram (eventVector, windowSize*frequency, windowOverlap*frequency, 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
+    [s,f,t,p] = spectrogram (eventVector, round(windowSize*frequency), round(windowOverlap*frequency), 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
     
     %Dominant Frequency at each time point | NEW
     [maxS, idx] = max(p);    
@@ -452,8 +454,8 @@ for i = 1:nr
     subplot (3,1,1)
     plot (timeVector, eventVector)
     hold on
-    plot (timeVector(windowSize*frequency), eventVector(windowSize*frequency), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(numel(eventVector)-(windowSize*frequency)), eventVector(numel(eventVector)-(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+    plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
