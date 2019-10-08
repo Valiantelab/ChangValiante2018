@@ -94,7 +94,7 @@ filter = guiInput{4}; %Description for subtitles
 LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
 %Low Pass Filter
-fc = 68; % Cut off frequency
+fc = 50; % Cut off frequency; a hard stop at 50 Hz
 [b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
 LFP_filteredLowPass = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
@@ -261,7 +261,7 @@ exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
 
-%Calculate Frequency Content of Interictal Period
+%Calculate Frequency Content of Interictal Period to calculate the average baseline
 [nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
 
 for i = 1:nr
@@ -280,33 +280,33 @@ for i = 1:nr
     timeVector = (0:(length(interictalBaselineVector)- 1))/frequency;
     timeVector = timeVector'; 
         
-    %Calculate Power Spectral Density (PSD), frequency content
-    s_baseline = periodogram(interictalBaselineVector, [], [], frequency);  
-    interictal{i,5} = s_baseline;   %Store the PSD | PSD = abs(s).^2
+%     %Calculate Power Spectral Density (PSD), frequency content
+%     s_baseline = periodogram(interictalBaselineVector, [], [], frequency);  
+%     interictal{i,5} = s_baseline;   %Store the PSD | PSD = abs(s).^2
     
-    figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('Baseline #%d', i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize')); %Full Screen Display
-    
-    subplot (3,1,1)
-    plot(timeVector, interictalBaselineVector)
-    title (sprintf('Baseline #%d, sigma: %.4f', i, interictal{i,3}))
-    ylabel ('Voltage Activity (mV)')
-    xlabel ('time (sec)')
-    subplot (3,1,2)
-    plot (s_baseline)
-    title ('Periodogram, PSD')
-    ylabel ('No Idea')
-    xlabel ('No Idea')
-    subplot (3,1,3)
-    periodogram(interictalBaselineVector);
+%     figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('Baseline #%d', i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize')); %Full Screen Display
+%     
+%     subplot (3,1,1)
+%     plot(timeVector, interictalBaselineVector)
+%     title (sprintf('Baseline #%d, sigma: %.4f', i, interictal{i,3}))
+%     ylabel ('Voltage Activity (mV)')
+%     xlabel ('time (sec)')
+%     subplot (3,1,2)
+%     plot (s_baseline)
+%     title ('Periodogram, PSD')
+%     ylabel ('No Idea')
+%     xlabel ('No Idea')
+%     subplot (3,1,3)
+%     periodogram(interictalBaselineVector);
     
 end
 
-%Average PSD of baselines
-PSDBaselineMatrix = cell2mat(interictal(:,5)');
-avgPSDBaseline = mean(PSDBaselineMatrix')';  %PSD = abs(s).^2
+% %Average PSD of baselines
+% PSDBaselineMatrix = cell2mat(interictal(:,5)');
+% avgPSDBaseline = mean(PSDBaselineMatrix')';  %PSD = abs(s).^2
 
 % figure;
 % subplot (2,1,1)
@@ -335,11 +335,11 @@ for i = indexEvents'
     indexInvalid = find (maxFreq > fc);  %Ignore all frequency
     maxFreq(indexInvalid) = 0;
     
-    %Normalized Dominant Frequency at each time point
-    [maxS, idx] = max((abs(s).^2)./avgPSDBaseline);    
-    maxFreq_norm = f(idx);
-    indexInvalid = find (maxFreq_norm > fc);  %Ignore all frequency
-    maxFreq_norm(indexInvalid) = 0;    
+%     %Normalized Dominant Frequency at each time point
+%     [maxS, idx] = max((abs(s).^2)./avgPSDBaseline);    
+%     maxFreq_norm = f(idx);
+%     indexInvalid = find (maxFreq_norm > fc);  %Ignore all frequency
+%     maxFreq_norm(indexInvalid) = 0;    
 
     %decipher
     [label, classification] = decipher (events,i);
@@ -351,7 +351,7 @@ for i = indexEvents'
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector, eventVector)
+    plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -360,7 +360,19 @@ for i = indexEvents'
     ylabel('Voltage (mV)')
     axis tight   
     
-    subplot (3,2,3)
+%     %test
+%     subplot (3,1,2)
+%     plot (timeVector, eventVector)
+%     hold on
+%     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+%     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+%     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
+%     xlabel('Time (sec)')
+%     ylabel('Voltage (mV)')
+%     axis tight   
+    
+    
+    subplot (3,1,2)
     imagesc(t,f,10*log10(p))
     c = colorbar;
     c.Label.String = 'Power (dB)';  
@@ -369,16 +381,16 @@ for i = indexEvents'
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')   
     
-    subplot (3,2,4)
-    imagesc(t,f,10*log10(p./avgPSDBaseline))
-    c = colorbar;
-    c.Label.String = 'Power (dB)';  
-    ylim([0 100])    
-    title (sprintf('Normalized Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')      
+%     subplot (3,2,4)
+%     imagesc(t,f,10*log10(p./avgPSDBaseline))
+%     c = colorbar;
+%     c.Label.String = 'Power (dB)';  
+%     ylim([0 100])    
+%     title (sprintf('Normalized Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
+%     ylabel('Frequency (Hz)')
+%     xlabel('Time (sec)')      
     
-    subplot (3,2,5)
+    subplot (3,1,3)
     plot(t,maxFreq) 
     title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
     ylabel('Frequency (Hz)')
@@ -386,13 +398,13 @@ for i = indexEvents'
     axis tight
     ylim  ([0 70])
     
-    subplot (3,2,6)
-    plot(t,maxFreq_norm) 
-    title (sprintf('Normalized Dominant Frequency over duration of %s Event #%d', label, i))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')
-    axis tight
-    ylim  ([0 70])
+%     subplot (3,2,6)
+%     plot(t,maxFreq_norm) 
+%     title (sprintf('Normalized Dominant Frequency over duration of %s Event #%d', label, i))
+%     ylabel('Frequency (Hz)')
+%     xlabel('Time (sec)')
+%     axis tight
+%     ylim  ([0 70])
     
 %     subplot (3,2,6)
 %     histogram (eventVector)
@@ -434,13 +446,7 @@ for i = 1:nr
     maxFreq = f(idx);
     indexInvalid = find (maxFreq > fc);  %Ignore all frequency
     maxFreq(indexInvalid) = 0;
-    
-    %Normalized Dominant Frequency at each time point
-    [maxS_norm, idx_norm] = max(p./avgPSDBaseline);    
-    maxFreq_norm = f(idx_norm);
-    indexInvalid = find (maxFreq_norm > fc);  %Ignore all frequency
-    maxFreq_norm(indexInvalid) = 0;    
-            
+                
     %decipher
     label = 'baseline';
     classification = 'baseline';   
@@ -452,7 +458,7 @@ for i = 1:nr
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector, eventVector)
+    plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -461,7 +467,7 @@ for i = 1:nr
     ylabel('Voltage (mV)')
     axis tight   
           
-    subplot (3,2,3)
+    subplot (3,1,2)
     imagesc(t,f,10*log10(p))
     c = colorbar;
     c.Label.String = 'Power (dB)';  
@@ -470,30 +476,13 @@ for i = 1:nr
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')   
     
-    subplot (3,2,4)
-    imagesc(t,f,10*log10(p./avgPSDBaseline))
-    c = colorbar;
-    c.Label.String = 'Power (dB)';  
-    ylim([0 100])
-    title (sprintf('Normalized Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')      
-   
-    subplot (3,2,5)
+    subplot (3,1,3)
     plot(t,maxFreq) 
     title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
     axis tight
-    ylim  ([0 70])    
-        
-    subplot (3,2,6)
-    plot(t,maxFreq_norm) 
-    title (sprintf('Normalized Dominant Frequency over duration of %s Event #%d', label, i))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')
-    axis tight
-    ylim  ([0 70])        
+    ylim  ([0 70])            
     
     %Export figures to .pptx
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
