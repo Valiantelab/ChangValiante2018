@@ -15,21 +15,21 @@ addpath(genpath(pwd));
 
 %Manually set File Directory
 inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\4) Acidosis\Mouse 16 - August 8, 2019';
-% 
-% % Load .mat file
-%     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-%     fnm = fullfile(PathName,FileName);
-%     myVars = {'details', 'samplingInterval', 'x', 'metadata'};
-%     load(sprintf('%s', fnm), myVars{:})
-%     S = load(sprintf('%s', fnm));
+
+% Load .mat file
+    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
+    fnm = fullfile(PathName,FileName);
+    myVars = {'details', 'samplingInterval', 'x', 'metadata'};
+    load(sprintf('%s', fnm), myVars{:})
+    S = load(sprintf('%s', fnm));
 
 % f = waitbar(0,'Loading Data: Please wait while data loads...','Name', 'Epileptiform Event Detection in progress');
     
-%Load excel file
+%Load excel file - with human adjusted onset/offset times
     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
     excel_filename = fullfile(PathName, FileName);
     excelSheet = xlsread(excel_filename, 3);
-    %events that were selected after editing the excel sheet
+    %events that were selected after editing the excel sheet by humans
     events = excelSheet(2:end,:);   
     
 %Create time vector
@@ -89,21 +89,22 @@ powerFeature = (LFP_filtered).^2;                     %3rd derived signal
 avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshold, later
 
 
-%% Part 2 - Feature Extraction: Duration, Spiking Frequency, Intensity, and Peak-to-Peak Amplitude
+%% Part 2 - Feature Extraction: Duration, Intensity, and Peak-to-Peak Amplitude
 
 intensityPerMinute = cell(size(events,1),1);
 totalPower = zeros(size(events,1),1);
 for i = 1:size(events,1)
-    %make epileptiform event vector
+    %Convert times (s) into points in data
     onsetTime = int64(events(i,1)*frequency);
     offsetTime = int64(events(i,2)*frequency);
     
-    %Incase crawler function set offsetTime prior to onsetTime
+    %Incase crawler function sets offsetTime prior to onsetTime
     if onsetTime > offsetTime   %onset comes after offset, means error has occured
         events(i,2) = events(i,1) + 1; %add 1 second to onset to find arbitary offset
         offsetTime = int64(events(i,2)*frequency);
     end
-        
+    
+    %make epileptiform event vector
     eventVector = int64(onsetTime:offsetTime);  %SLE Vector
 
     %Split the event vector into (1 min) windows
@@ -111,10 +112,10 @@ for i = 1:size(events,1)
     sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
-        fprintf(2,'\nWarning! You detected a epileptiform that is shorter than 1 sec, this is an issue with your algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
+        fprintf(2,'\nWarning! You detected a epileptiform that is shorter than 1 sec, this is an issue with your SLECrawler.m algorithm.')   %testing if I still need this if statement, I think I've fixed teh algorithm so no events <1 s have their features extracted
     end
 
-    %Calculate the spiking rate and intensity (per sec) for epileptiform events
+    %Calculate the intensity (per sec) for epileptiform events; intensity (per sec) is average power
     clear spikeRateMinute intensity    
     for j = 1:sleDuration
         startWindow = onsetTime+((windowSize*frequency)*(j-1));          
@@ -132,8 +133,8 @@ for i = 1:size(events,1)
     intensityPerMinute{i} = intensity;    %store the intensity per minute of each SLE for analysis later
     
     %Calculate average intensity of epileptiform event
-    totalPower(i) = sum(powerFeature(eventVector));
-    events (i,5) = totalPower(i) /sleDuration;
+    totalPower(i) = sum(powerFeature(eventVector)); %This is the power of the event
+    events (i,5) = totalPower(i) /sleDuration;  %This is the average power/minute
 
     %Calculate peak-to-peak amplitude of epileptiform event
     eventVectorLFP = LFP_centered(eventVector);

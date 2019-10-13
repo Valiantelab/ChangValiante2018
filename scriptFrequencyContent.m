@@ -15,12 +15,12 @@
 % This particular script will open previous workspaces to speed up
 % development time.
 
-%% Stage 1: Import .Mat Files (workspace)
-%clear all (reset)
+%% clear all (reset)
 close all
 clear all
 clc
 
+%% Stage 1: Import .Mat Files (workspace)
 %Manually set File Directory
 inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelAlgorithm(InVivo)\Training Dataset\young #4 (.mat)\V9.0';
 
@@ -42,7 +42,7 @@ guiInput = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect E
 userInput = str2double(guiInput(1:5)); %convert inputs into numbers
 
 if (guiInput(6)=="")    
-    %Load .abf file (raw data), analyze single file
+    %Load .mat file analyze single file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
     fnm = fullfile(PathName,FileName);
     myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
@@ -98,7 +98,7 @@ fc = 50; % Cut off frequency; a hard stop at 50 Hz
 [b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
 LFP_filteredLowPass = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
-%% Stage 3: Find suitable baseline (interictal period with no epileptiform activity)
+%% Stage 3: Find suitable baseline (interictal period with no epileptiform activity), originally used to normalize frequency content 
 interictalPeriod = LFP_filteredLowPass;    %data analyzed will be the LFP_filtered
 
 %Part A: Indices for interictal periods (between all detected events)
@@ -180,11 +180,11 @@ interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between 
 interictal = cell(interictalPeriodCount, 5);
 for i = 1:interictalPeriodCount
     interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %Make vectors based on adjusted times to errors made by detection algorithm
-    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacts or like pulses during the interictal period 
+    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacts or light pulses during the interictal period 
     if length(interictal{i}) < (minInterictalPeriod*frequency)
         interictal{i} = -1; %This is a marker to ignore the interictal period below the minimum; I only want to analyze periods larger than 10 s
     end
-    %Characterize baseline features from absolute value of the filtered data
+    %Characterize baseline features from absolute value of the filtered/processed data
     interictal{i,2} = mean(interictal{i}); %Average
     interictal{i,3} = std(interictal{i}); %Standard Deviation
 %     figure
@@ -332,7 +332,7 @@ for i = indexEvents'
     %Dominant Frequency at each time point 
     [maxS, idx] = max(p);        
     maxFreq = f(idx);
-    indexInvalid = find (maxFreq > fc);  %Ignore all frequency
+    indexInvalid = find (maxFreq > fc);  %Ignore all frequency above fc (frequency cutoff)
     maxFreq(indexInvalid) = 0;
     
 %     %Normalized Dominant Frequency at each time point
