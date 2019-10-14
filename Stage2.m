@@ -146,6 +146,10 @@ for i = 1:size(events,1)
     
     %m calculation
 %     test=WP_MultipleRegression(eventVectorLFP', 10000);
+
+    %Calculate dominant frequency
+    [epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, FileName, 2.5, 1.25, 1);
+
 end
 
 %Determine if event is light-triggered, delay to onset

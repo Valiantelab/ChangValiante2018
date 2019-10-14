@@ -61,7 +61,7 @@ if numel(spikeFrequency(:,1)) > 3   %Analyze if the event is greater than 3 seco
                 while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & spikeFrequency(j,2) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
                     j = j+1;    %keep sliding along the SLE until the statement above is false.
                     if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
-                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 69/70
                         classification = 2;   %1 = SLE;   2 = Tonic-only     
                         break
                     end                                    

@@ -1,5 +1,6 @@
 function [resultsDuration, FigA] = stage3Analysis (durationControl,type, figure)
-%Stage3Analysis.m is a function designed to perform the series of
+%Stage3Analysis.m determines if a series of numbers is normally distributed 
+%and calculates the summary statistics accordingly. 
 %statistical analysis (paarametric or non-parametric) on an array of 
 %numbers and determine if it is normally distributed based on the 
 %Anderson-Darling Test. A figure of the histrogram can optionally plotted

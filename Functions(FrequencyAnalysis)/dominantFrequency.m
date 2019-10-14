@@ -1,3 +1,4 @@
+function [epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, FileName, windowSize, windowOverlap, figureInput)
 %Program: Frequency Content of Epileptiform Events, Work Space 
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
@@ -15,51 +16,14 @@
 % This particular script will open previous workspaces to speed up
 % development time.
 
-%% clear all (reset)
-close all
-clear all
-clc
-
-%% Stage 1: Import .Mat Files (workspace)
-%Manually set File Directory
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelAlgorithm(InVivo)\Training Dataset\young #4 (.mat)\V9.0';
-
-%GUI to set thresholds
-%Settings, request for user input on threshold
-titleInput = 'Specify Spectrogram Parameters';
-prompt1 = 'Window Size (sec)';
-prompt2 = 'Overlap between windows (sec)';
-prompt3 = 'Figure: Yes (1) or No (0)';
-prompt4 = 'Filter Description:';
-prompt5 = 'Unique Title';
-prompt6 = 'To analyze multiple files in folder, provide File Directory:';
-prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
-dims = [1 70];
-definput = {'2.5', '1.25', '1', '1-50 Hz + Low Pass at 50 hz', 'frequencyContent', ''};
-
-opts = 'on';    %allow end user to resize the GUI window
-guiInput = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
-userInput = str2double(guiInput(1:5)); %convert inputs into numbers
-
-if (guiInput(6)=="")    
-    %Load .mat file analyze single file
-    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    fnm = fullfile(PathName,FileName);
-    myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
-    load(sprintf('%s', fnm), myVars{:})      
-else
-    % Analyze all files in folder, multiple files
-    PathName = char(guiInput(6));
-    S = dir(fullfile(PathName,'*.mat'));
-
-    for k = 1:numel(S)
-        fnm = fullfile(PathName,S(k).name);
-        FileName = S(k).name;
-        myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
-        load(sprintf('%s', fnm), myVars{:})       
-
-    end
+%% Set parameters for frequency content analysis
+if nargin < 6
+    windowSize = 2.5;  %seconds; userInput(1)
+    windowOverlap = 1.25;   %seconds; userInput(2)
+    figureInput = 1; %plot Figure: Yes (1) or No (0)
 end
+    filter = '1-50 Hz + Low Pass at 50 hz'; %Description for subtitles; guiInput{4}
+    subtitle = 'frequencyContent';  %set the unique title for .ppt output; guiInput{5}
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -76,8 +40,8 @@ t = t';
 
 %Seperate signals from .abf files
 LFP = x(:,1);   %original LFP signal
-if userInput(4)>0
-    LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
+if size(x,2)>1
+    LED = x(:,size(x,2));   %light pulse signal, as defined by user's input via GUI
     onsetDelay = 0.13;  %seconds
     offsetDelay = 1.5;  %seconds
     lightpulse = LED > 1;
@@ -87,7 +51,7 @@ else
 end
 
 %Filter Bank
-filter = guiInput{4}; %Description for subtitles
+% filter = guiInput{4}; %Description for subtitles
 
 %Band Pass Filter
 [b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
@@ -143,6 +107,7 @@ if LED
         lightTriggeredOnsetZone{i} = lightTriggeredOnsetRange;
         clear lightTriggeredRange
     end
+    
     %Combine all the ranges where light triggered events occur into one array
     lightTriggeredOnsetZones = cat(2, lightTriggeredOnsetZone{:});  %2 is vertcat
 
@@ -156,21 +121,13 @@ end
 epileptiformEvent = cell(numel(events(:,1)),3);   %preallocate cell array
 
 %Pad the epileptiform event vector equal to the overlapSize and windowSize
-windowSize = userInput(1);
-windowOverlap = userInput(2);
+% windowSize = userInput(1);
+% windowOverlap = userInput(2);
 minInterictalPeriod = windowSize*2;   %secs
 
 %Make vectors of SLEs 
-for i = 1:numel(events(:,1))
-%     if events(i,1) > windowOverlap
-%         startTime = int64((events(i,1-windowOverlap)*frequency);
-%     else
-%         startTime = int64((events(i,1-windowOverlap)*frequency)
-%     end
-%     
-%     endTime = int64((events(i,2)+windowSize)*frequency);    
-    [~, indicesBackground] = eventIndices(LFP_filteredLowPass, events(i,:), windowSize, frequency);    %Make vectors based on original times detected by algorithm, padded by windowSize (2.5 s)
-            
+for i = 1:numel(events(:,1))  
+    [~, indicesBackground] = eventIndices(LFP_filteredLowPass, events(i,:), windowSize, frequency);    %Make vectors based on original times detected by algorithm
     epileptiformEvent{i,1} = LFP_filteredLowPass(indicesBackground); 
 end
 
@@ -196,7 +153,10 @@ indexDelete = find ([interictal{:,4}] == -1); %locate
 interictal(indexDelete,:)=[]; %Delete
 clear indexDelete
 
+
 %Creating powerpoint slide
+if figureInput == 1
+    
 isOpen  = exportToPPTX();
 if ~isempty(isOpen)
     % If PowerPoint already started, then close first and then open a new one
@@ -235,6 +195,7 @@ text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant fr
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
+
 %Part D: Analysis
 %Locate the interictal with the lowest sigma, use as baseline
 [~, indexMin] = min ([interictal{:,5}]); %locate 
@@ -259,6 +220,8 @@ xlabel('Size of Voltage Activity (mV)')
 exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
+
+end
 
 
 %Calculate Frequency Content of Epileptiform Events
@@ -286,7 +249,8 @@ for i = indexEvents'
 
     %decipher
     [label, classification] = decipher (events,i);
-        
+    
+    if figureInput == 1
     %Plot Figures
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -295,7 +259,6 @@ for i = indexEvents'
 
     subplot (3,1,1)
     plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
-%     plot (timeVector(round(windowOverlap*frequency):max(t)*frequency)), eventVector(round(windowOverlap*frequency):max(t)*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -325,8 +288,11 @@ for i = indexEvents'
      exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
      exportToPPTX('addpicture',figHandle);
      close(figHandle)
+     
+    end    
 end
 
+if figureInput == 1
 %Add New Slide
 exportToPPTX('addslide');
 exportToPPTX('addtext', 'Interictal periods used as Baseline Segments to normalized the frequency', 'Position',[2 1 8 2],...
@@ -336,7 +302,8 @@ exportToPPTX('addtext', sprintf('File: %s', FileName), 'Position',[3 3 6 2],...
 text = 'The spectrogram of all the baselines, only the center portion equal to the window size was used to calculate PSD';
 exportToPPTX('addtext', sprintf('%s', text), 'Position',[4 4 4 2],...
              'Horiz','center', 'Vert','middle', 'FontSize', 20);
-             
+end
+
 %Calculate Frequency Content of Baseline (interictal period)
 [nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
 
@@ -360,11 +327,12 @@ for i = 1:nr
     %store the max frequency content of each event 
     interictal{i, 2} = t;
     interictal{i, 3} = maxFreq;    
-                
+    
+    if figureInput == 1
     %decipher
     label = 'baseline';
     classification = 'baseline';   
-         
+    
     %Plot Figures
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -402,15 +370,19 @@ for i = 1:nr
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);
     close(figHandle)
+    end    
 end
 
 
 %% save and close the .PPTX
-subtitle = guiInput{5};
+if figureInput == 1
+% subtitle = guiInput{5};
 excelFileName = FileName(1:end-4);
 exportToPPTX('saveandclose',sprintf('%s(%s)', excelFileName, subtitle));
+end
 
 %Closing Message
 fprintf(1,'\nFrequency Content Analysis is Complete.\n')
+
 
    

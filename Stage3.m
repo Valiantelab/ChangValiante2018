@@ -16,12 +16,17 @@ treatmentGroups(3,1) = {'Washout'};
 %Add all subfolders in working directory to the path.
 addpath(genpath(pwd));  
 
+%organize groups index
+indexControl = events(:,4)==1;
+indexTest = events(:,4)==2;
+indexPosttest = events(:,4)==3;
+
 %% Duration
 %Organize groups 
 feature = 3;    %column #, i.e., duration is the 3rd column
 durationControl = events(events(:,4)==1,feature);
 durationTest = events(events(:,4)==2,feature);
-durationPosttest = events(events(:,4)==3,feature);
+durationPosttest = events(events(:,4)==3,feature);/.;
 
 %duration Matrix
 durationMatrix(1:numel(durationControl),1) = durationControl;
@@ -157,7 +162,7 @@ if numel(thetaPosttest)>2
     FigG=figure;
     set(gcf,'Name','Post-Test','NumberTitle', 'off');
     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
+    title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
 end
 
 %Combine all the results
@@ -167,6 +172,125 @@ result = horzcat(resultsDuration(:,1:3),resultsIntensity(:,1:3),resultsTheta);  
 n(1,1)=numel(thetaControl);
 n(2,1)=numel(thetaTest);
 n(3,1)=numel(thetaPosttest);
+
+%% Dominant Frequency Content; the frequency that carries more power (PSD) w.r.t.
+%https://dsp.stackexchange.com/questions/40180/the-exact-definition-of-dominant-frequency
+
+%Preallocate
+frequencyContentAnalysis = zeros(size(epileptiformEvent,1),7);
+
+for i = 1:size(epileptiformEvent,1)
+    %Place time next to the dominant frequency for each epileptiform event
+    epileptiformEvent{i,3}(:,2) = epileptiformEvent{i,2};
+    
+    %Calculate Tonic Phase
+    tonicPhase = 5; %Hz
+    dominantFreq = epileptiformEvent{i,3}(:,1:2);
+    indexTonic = dominantFreq(:,1) > tonicPhase;   %locate the period of time when ictal event has tonic phase
+    epileptiformEvent{i,3}(:,3) = indexTonic;  %store Boolean index          
+    
+    %locate start of Tonic phase | Contingous segments above threshold    
+    for j = 1: numel (indexTonic) %slide along the SLE; 
+        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, classify event as a IIE            
+            j = find(indexTonic(:),1,'first');  %Take the 1st sec where frequency is 'high' as the onset if back-to-back high frequency are not found
+                if isempty(j)
+                    j = 1;  %honory position, just to push the function through                    
+                end                
+            startTonicPhase(1,1) = dominantFreq(j,2);    %time (s)
+            startTonicPhase(1,2) = j;    %store the index
+                
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & dominantFreq(j,1) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                    j = j+1;    %keep sliding along the SLE until the statement above is false.
+                    if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
+                        classification = 2;   %1 = SLE;   2 = Tonic-only     
+                        break
+                    end                                    
+                end            
+                endTonic(1,1) = dominantFreq(j-1,2); %take the point before the frequency drops to be the end of the tonic-phase
+                endTonic(1,2) = j-1;  %store the index                    
+        else                        
+            if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
+                startTonicPhase(1,1) = dominantFreq(j,2);  %store the onset time
+                startTonicPhase(1,2) = j;    %store the index
+                classification = 1;   %1 = tonic-clonic SLE;   2 = tonic-only
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & dominantFreq(j,1) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                    j = j+1;    %keep sliding along the SLE until the statement above is false.
+                    if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
+                        classification = 2;   %1 = SLE;   2 = Tonic-only     
+                        break
+                    end                                    
+                end            
+                endTonic(1,1) = dominantFreq(j-1,2); %take the point before the frequency drops to be the end of the tonic-phase
+                endTonic(1,2) = j-1;  %store the index   
+                %This is to confirm the tonic phase is >3s
+                if (endTonic(1)-startTonicPhase(1)) < 1  %There needs to be at least 3 seconds of tonic phase
+                    continue
+                else                                  
+                    break
+                end                
+            end
+        end        
+    end
+    
+    %Calculate window size
+    windowOverlap = epileptiformEvent{i,3}(1,2);
+    windowSize = windowOverlap*2;
+    
+    frequencyContentAnalysis(i,1) = classification;
+    frequencyContentAnalysis(i,2) = startTonicPhase(1)-windowSize; %remove the padding added on to ictal event onset
+    frequencyContentAnalysis(i,3) = endTonic(1)-windowSize; %remove the padding added on to ictal event onset
+    frequencyContentAnalysis(i,4) = endTonic(1) - startTonicPhase(1);        
+    frequencyContentAnalysis(i,5) = frequencyContentAnalysis(i,2)/ events(i,3); %Calculate percentage into SLE tonic phase starts
+        
+    %Max Frequency
+    [~, maxIndex] = max(dominantFreq(:,1));
+    frequencyContentAnalysis(i,6) = dominantFreq(maxIndex,1)
+    frequencyContentAnalysis(i,7) = dominantFreq(maxIndex,2) - windowSize;      
+        
+end
+
+%organize groups
+dominantFreqControl = frequencyContentAnalysis (indexControl, :);
+dominantFreqTest = frequencyContentAnalysis (indexTest, :);
+dominantFreqPosttest = frequencyContentAnalysis (indexPosttest, :);
+
+%Analysis
+%Control Condition
+resultsDominantFreq(1,:) = stage3Analysis (dominantFreqControl(:,6), 'nonparametric', 'figure');
+%Test Condition
+resultsDominantFreq(2,:) = stage3Analysis (dominantFreqTest(:,6), 'nonparametric', 'figure');
+%Posttest Conditions
+if numel(durationPosttest) >2
+resultsDuration(3,:) = stage3Analysis (durationPosttest, 'nonparametric', 'no figure');   
+end
+
+%Comparisons
+[h,p,D] = kstest2(dominantFreqControl(:,6), dominantFreqTest(:,6)); %2-sample KS Test
+p_value_KS_duration = p;    %KS Test's p value
+d_KS_duration = D;  %KS Test's D statistic
+cliffs_d_duration = CliffDelta(dominantFreqControl(:,6), dominantFreqTest(:,6));   %Cliff's d
+
+% %Mann Whitney U Test (aka Wilcoxin Ranked Sum Test)
+% [p,h,stats] = ranksum(durationControl, durationTest)
+
+% %Independent sample Student's T-test
+% [h,p,ci,stats] = ttest2(durationControl, durationTest);
+
+%one-way ANOVA
+[p,tbl,stats] = anova1(durationMatrix);
+tbl_1ANOVA_duration = tbl;
+
+% title('Box Plot of ictal event duration from different time periods')
+% xlabel ('Time Period')
+% ylabel ('Duration of ictal events (s)')
+
+%multiple comparisons, Tukey-Kramer Method
+c = multcompare(stats);
+c_duration = c;
+
+
 
 %% Write results to .xls 
 sheetName = FileName(1:8);
