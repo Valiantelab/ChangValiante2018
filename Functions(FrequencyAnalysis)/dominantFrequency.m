@@ -1,16 +1,11 @@
+function [epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, FileName, windowSize, windowOverlap, figureInput)
 %Program: Frequency Content of Epileptiform Events, Work Space 
 %Author: Michael Chang (michael.chang@live.ca)
 %Copyright (c) 2018, Valiante Lab
 %Version 8.2: Analyze Frequency of Epileptiform Events (Complete)
 
-%This is a standalone script to analyze frequency content of ictal events
-%from a saved workspace
-
-% Description: Locates segments in the time series that do not have any
-% epileptiform activity by looking for sections of activty between
-% detected events by the algorithm. It will then select the interictal period 
-% with the lowest sigma to be the best segment of the time series to use as
-% baseline. It will analyze the frequency content of the baseline,
+% Description: Function reports the dominant frequency (w/ max PSD) during
+% the ictal event. Run function within a script. The data is filted: 
 % bandpassed between 0-50 Hz; this is because ictal activity in population 
 % activity have important frequencies that are below 20 Hz, we don't need
 % any of the frequency above that. Furthermore, we have 60 Hz noise and 76
@@ -18,51 +13,14 @@
 % This particular script will open previous workspaces to speed up
 % development time.
 
-%% clear all (reset)
-close all
-clear all
-clc
-
-%% Stage 1: Import .Mat Files (workspace)
-%Manually set File Directory
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\8) Seizure Detection Program\MichaelAlgorithm(InVivo)\Training Dataset\young #4 (.mat)\V9.0';
-
-%GUI to set thresholds
-%Settings, request for user input on threshold
-titleInput = 'Specify Spectrogram Parameters';
-prompt1 = 'Window Size (sec)';
-prompt2 = 'Overlap between windows (sec)';
-prompt3 = 'Figure: Yes (1) or No (0)';
-prompt4 = 'Filter Description:';
-prompt5 = 'Unique Title';
-prompt6 = 'To analyze multiple files in folder, provide File Directory:';
-prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
-dims = [1 70];
-definput = {'2.5', '1.25', '1', '1-50 Hz + Low Pass at 50 hz', 'frequencyContent', ''};
-
-opts = 'on';    %allow end user to resize the GUI window
-guiInput = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs
-userInput = str2double(guiInput(1:5)); %convert inputs into numbers
-
-if (guiInput(6)=="")    
-    %Load .mat file analyze single file
-    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    fnm = fullfile(PathName,FileName);
-    myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
-    load(sprintf('%s', fnm), myVars{:})      
-else
-    % Analyze all files in folder, multiple files
-    PathName = char(guiInput(6));
-    S = dir(fullfile(PathName,'*.mat'));
-
-    for k = 1:numel(S)
-        fnm = fullfile(PathName,S(k).name);
-        FileName = S(k).name;
-        myVars = {'spikes', 'events', 'SLE', 'artifactSpikes', 'details', 'samplingInterval', 'x', 'metadata'};
-        load(sprintf('%s', fnm), myVars{:})       
-
-    end
+%% Set parameters for frequency content analysis
+if nargin < 6
+    windowSize = 2.5;  %seconds; userInput(1)
+    windowOverlap = 1.25;   %seconds; userInput(2)
+    figureInput = 1; %plot Figure: Yes (1) or No (0)
 end
+    filter = '1-50 Hz + Low Pass at 50 hz'; %Description for subtitles; guiInput{4}
+    subtitle = 'frequencyContent';  %set the unique title for .ppt output; guiInput{5}
 
 %% Stage 2: Process the File
 % Author: Michael Chang
@@ -297,7 +255,7 @@ for i = indexEvents'
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
+    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -379,7 +337,7 @@ for i = 1:nr
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
+    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -422,3 +380,6 @@ end
 
 %Closing Message
 fprintf(1,'\nFrequency Content Analysis is Complete.\n')
+
+
+   

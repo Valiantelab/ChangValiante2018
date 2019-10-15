@@ -6,15 +6,21 @@
 % bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
 
 %% Customize Analysis 
-excelFileName = 'result_acidosis.xlsx'; %excel sheet output is written
+excelFileName = 'result_summary.xlsx'; %excel sheet output is written
+
 %Label treatment groups
 treatmentGroups(1,1) = {'Control'};
 treatmentGroups(2,1) = {'Test'};
-treatmentGroups(3,1) = {'Washout'};
+treatmentGroups(3,1) = {'PostTest'};
 % treatmentGroups = [1:3]';
 
 %Add all subfolders in working directory to the path.
 addpath(genpath(pwd));  
+
+%organize groups index
+indexControl = events(:,4)==1;
+indexTest = events(:,4)==2;
+indexPosttest = events(:,4)==3;
 
 %% Duration
 %Organize groups 
@@ -157,11 +163,130 @@ if numel(thetaPosttest)>2
     FigG=figure;
     set(gcf,'Name','Post-Test','NumberTitle', 'off');
     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
+    title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
 end
 
-%Combine all the results
-result = horzcat(resultsDuration(:,1:3),resultsIntensity(:,1:3),resultsTheta);  %only the first three columns
+%% Dominant Frequency Content; the frequency that carries more power (PSD) w.r.t.
+%https://dsp.stackexchange.com/questions/40180/the-exact-definition-of-dominant-frequency
+
+%Preallocate
+frequencyContentAnalysis = zeros(size(epileptiformEvent,1),7);
+
+for i = 1:size(epileptiformEvent,1)
+    %Place time next to the dominant frequency for each epileptiform event
+    epileptiformEvent{i,3}(:,2) = epileptiformEvent{i,2};
+    
+    %Calculate Tonic Phase
+    tonicPhase = 5; %Hz
+    dominantFreq = epileptiformEvent{i,3}(:,1:2);
+    indexTonic = dominantFreq(:,1) > tonicPhase;   %locate the period of time when ictal event has tonic phase
+    epileptiformEvent{i,3}(:,3) = indexTonic;  %store Boolean index          
+    
+    %locate start of Tonic phase | Contingous segments above threshold    
+    for j = 1: numel (indexTonic) %slide along the SLE; 
+        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, classify event as a IIE            
+            j = find(indexTonic(:),1,'first');  %Take the 1st sec where frequency is 'high' as the onset if back-to-back high frequency are not found
+                if isempty(j)
+                    j = 1;  %honory position, just to push the function through                    
+                end                
+            startTonicPhase(1,1) = dominantFreq(j,2);    %time (s)
+            startTonicPhase(1,2) = j;    %store the index
+                
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & dominantFreq(j,1) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                    j = j+1;    %keep sliding along the SLE until the statement above is false.
+                    if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
+                        classification = 2;   %1 = SLE;   2 = Tonic-only     
+                        break
+                    end                                    
+                end            
+                endTonic(1,1) = dominantFreq(j-1,2); %take the point before the frequency drops to be the end of the tonic-phase
+                endTonic(1,2) = j-1;  %store the index                    
+        else                        
+            if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
+                startTonicPhase(1,1) = dominantFreq(j,2);  %store the onset time
+                startTonicPhase(1,2) = j;    %store the index
+                classification = 1;   %1 = tonic-clonic SLE;   2 = tonic-only
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & dominantFreq(j,1) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                    j = j+1;    %keep sliding along the SLE until the statement above is false.
+                    if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
+                        j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
+                        classification = 2;   %1 = SLE;   2 = Tonic-only     
+                        break
+                    end                                    
+                end            
+                endTonic(1,1) = dominantFreq(j-1,2); %take the point before the frequency drops to be the end of the tonic-phase
+                endTonic(1,2) = j-1;  %store the index   
+                %This is to confirm the tonic phase is >3s
+                if (endTonic(1)-startTonicPhase(1)) < 1  %There needs to be at least 3 seconds of tonic phase
+                    continue
+                else                                  
+                    break
+                end                
+            end
+        end        
+    end
+    
+    %Calculate window size
+    windowOverlap = epileptiformEvent{i,3}(1,2);    %the first window size represents the overlap
+    windowSize = windowOverlap*2;
+    
+    %Ictal Event Classification 
+    frequencyContentAnalysis(i,1) = classification; %0 = no ictal; 1 = tonic-clonic ictal; 2 = tonic-only ictal
+    %Ictal Event Onset Time
+    frequencyContentAnalysis(i,2) = startTonicPhase(1)-windowSize; %remove the padding added on to ictal event onset
+    %Ictal Evenet Offset Time
+    frequencyContentAnalysis(i,3) = endTonic(1)-windowSize; %remove the padding added on to ictal event onset
+    %Ictal Evenet Duration
+    frequencyContentAnalysis(i,4) = endTonic(1) - startTonicPhase(1);        
+    %Percentage into SLE tonic phase starts
+    frequencyContentAnalysis(i,5) = frequencyContentAnalysis(i,2)/ events(i,3);        
+    
+    [~, maxIndex] = max(dominantFreq(:,1)); %Find index max frequency occurs
+    %Max Frequency
+    frequencyContentAnalysis(i,6) = dominantFreq(maxIndex,1)
+    %Time the max Frequency occurs
+    frequencyContentAnalysis(i,7) = dominantFreq(maxIndex,2) - windowSize;      
+        
+end
+
+%organize groups
+dominantFreqControl = frequencyContentAnalysis (indexControl, :);
+dominantFreqTest = frequencyContentAnalysis (indexTest, :);
+dominantFreqPosttest = frequencyContentAnalysis (indexPosttest, :);
+
+%Max Dominant Frequency Matrix
+dominantFreqMatrix(1:size(dominantFreqControl,1),1) = dominantFreqControl(:,6);
+dominantFreqMatrix(1:size(dominantFreqTest,1),2) = dominantFreqTest(:,6);
+dominantFreqMatrix(1:size(dominantFreqPosttest,1),3) = dominantFreqPosttest(:,6);
+dominantFreqMatrix(dominantFreqMatrix==0) = NaN;
+
+%Analysis
+%Control Condition
+resultsDominantFreq(1,:) = stage3Analysis (dominantFreqControl(:,6), 'nonparametric', 'no figure');
+%Test Condition
+resultsDominantFreq(2,:) = stage3Analysis (dominantFreqTest(:,6), 'nonparametric', 'no figure');
+%Posttest Conditions
+if numel(dominantFreqPosttest(:,6)) >2
+resultsDominantFreq(3,:) = stage3Analysis (dominantFreqPosttest(:,6), 'nonparametric', 'no figure');   
+end
+
+%Comparisons
+[h,p,D] = kstest2(dominantFreqControl(:,6), dominantFreqTest(:,6)); %2-sample KS Test
+p_value_KS_dominantFreq = p;    %KS Test's p value
+d_KS_dominantFreq = D;  %KS Test's D statistic
+cliffs_d_dominantFreq = CliffDelta(dominantFreqControl(:,6), dominantFreqTest(:,6));   %Cliff's d
+
+%one-way ANOVA
+[p,tbl,stats] = anova1(dominantFreqMatrix);
+tbl_1ANOVA_dominantFreq = tbl;
+
+%multiple comparisons, Tukey-Kramer Method
+c = multcompare(stats);
+c_dominantFreq = c;
+
+%% Combine all the results
+result = horzcat(resultsDuration(:,1:3),resultsIntensity(:,1:3),resultsTheta, resultsDominantFreq(:,1:3));  %only the first three columns
 
 %ictal events # in each group
 n(1,1)=numel(thetaControl);
@@ -176,19 +301,23 @@ A = 'Treatment Group';
 B = 'Duration (s), median';
 C = 'Duration (s), IQR';
 D = 'AD test, normality';
-E = 'Intensity (mV^2/s), average';
-F = 'Intensity (mV^2/s), std';
+E = 'Intensity (mV^2/s), median';
+F = 'Intensity (mV^2/s), IQR';
 G = 'AD test, normality';
 H = 'Light-triggered';
-I = 'Dominant Frequency';
+I = 'Dominant Frequency, median';
 
-II = 'n';
+II = 'Dominant Frequency, IQR';
+JJ = 'AD test, normality';
+KK = 'n';
 
 J = 'KS Test, 1 vs 2';
 K = 'one-way ANOVA, duration';
 M = 'Multiple Comparison (Tukey-Kramer method), duration';
 N = 'one-way ANOVA, intensity';
 O = 'Multiple Comparison (Tukey-Kramer method), intensity';
+NN = 'one-way ANOVA, dominant frequency';
+OO = 'Multiple Comparison (Tukey-Kramer method), dominant frequency';
 
 P = 'Group';
 Q = 'p-value';
@@ -198,11 +327,11 @@ S = 'KS D stat';
 T = 'Cliffs D';
 
 %Write General Results
-    subtitle1 = {A, B, C, D, E, F, G, H, I, II};
+    subtitle1 = {A, B, C, D, E, F, G, H, I, II, JJ, KK};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A1');
     xlswrite(sprintf('%s',excelFileName),treatmentGroups,sprintf('%s',sheetName),'A2');
-    xlswrite(sprintf('%s',excelFileName),result,sprintf('%s',sheetName),'B2');
-    xlswrite(sprintf('%s',excelFileName),n,sprintf('%s',sheetName),'J2');
+    xlswrite(sprintf('%s',excelFileName),result,sprintf('%s',sheetName),'B2');    
+    xlswrite(sprintf('%s',excelFileName),n,sprintf('%s',sheetName),'L2');
 %Write KS Test results
     subtitle1 = {J};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');    
@@ -212,9 +341,13 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',excelFileName),p_value_KS_intensity,sprintf('%s',sheetName),'E6'); %KS Test p-value
     xlswrite(sprintf('%s',excelFileName),d_KS_intensity,sprintf('%s',sheetName),'F6'); %KS Test D value
     xlswrite(sprintf('%s',excelFileName),cliffs_d_intensity, sprintf('%s',sheetName),'G6'); %Cliff's D
+    xlswrite(sprintf('%s',excelFileName),p_value_KS_dominantFreq,sprintf('%s',sheetName),'I6'); %KS Test p-value
+    xlswrite(sprintf('%s',excelFileName),d_KS_dominantFreq,sprintf('%s',sheetName),'J6'); %KS Test D value
+    xlswrite(sprintf('%s',excelFileName),cliffs_d_dominantFreq, sprintf('%s',sheetName),'K6'); %Cliff's D
     subtitle2 = {R,S,T};
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'B5');
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'E5');
+    xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'I5');
 % if numel(durationPosttest)>2
 %Write one-way ANOVA results, duration
     subtitle1 = {K};
@@ -237,8 +370,27 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'A27'); %Group subtitle
     xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B27'); %Group subtitle
     xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F27'); %p-value subtitle
-    xlswrite(sprintf('%s',excelFileName),c_intensity,sprintf('%s',sheetName),'A28');
+    xlswrite(sprintf('%s',excelFileName),c_intensity,sprintf('%s',sheetName),'A28');    
+%Write one-way ANOVA results, dominant frequency
+    subtitle1 = {NN};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A32');
+    xlswrite(sprintf('%s',excelFileName),tbl_1ANOVA_dominantFreq,sprintf('%s',sheetName),'A33');
+%Write multiple comparison (Tukey-Kramer), dominant frequency
+    subtitle1 = {OO};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A38');
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'A39'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B39'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F39'); %p-value subtitle
+    xlswrite(sprintf('%s',excelFileName),c_dominantFreq,sprintf('%s',sheetName),'A40');
 % end
+
+%Write frequency content analysis of epileptiform events
+    subtitle1 = {A,B,C,D};
+    xlswrite(sprintf('%s',FileName),subtitle1,'Freq Content Analysis','A1');    
+    xlswrite(sprintf('%s',FileName),events(:,1:4),'Freq Content Analysis','A2');   
+    subtitle1 = {'Classification', 'Onset, Tonic Phase', 'Offset, Tonic Phase',	'Duration, Tonic Phase', '% into SLE', 'Max Frequency',	'Time of Max Frequency'};
+    xlswrite(sprintf('%s',FileName),subtitle1,'Freq Content Analysis','E1');
+    xlswrite(sprintf('%s',FileName),frequencyContentAnalysis,'Freq Content Analysis','E2');   
 
 fprintf(1,'\nComplete: A summary of the results can be found in the current working folder: %s\n', pwd)
     
