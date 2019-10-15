@@ -3,6 +3,9 @@
 %Copyright (c) 2018, Valiante Lab
 %Version 8.2: Analyze Frequency of Epileptiform Events (Complete)
 
+%This is a standalone script to analyze frequency content of ictal events
+%from a saved workspace
+
 % Description: Locates segments in the time series that do not have any
 % epileptiform activity by looking for sections of activty between
 % detected events by the algorithm. It will then select the interictal period 
@@ -76,8 +79,8 @@ t = t';
 
 %Seperate signals from .abf files
 LFP = x(:,1);   %original LFP signal
-if userInput(4)>0
-    LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
+if size(x,2)>1
+    LED = x(:,size(x,2));   %light pulse signal, as defined by user's input via GUI
     onsetDelay = 0.13;  %seconds
     offsetDelay = 1.5;  %seconds
     lightpulse = LED > 1;
@@ -87,7 +90,7 @@ else
 end
 
 %Filter Bank
-filter = guiInput{4}; %Description for subtitles
+% filter = guiInput{4}; %Description for subtitles
 
 %Band Pass Filter
 [b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
@@ -143,6 +146,7 @@ if LED
         lightTriggeredOnsetZone{i} = lightTriggeredOnsetRange;
         clear lightTriggeredRange
     end
+    
     %Combine all the ranges where light triggered events occur into one array
     lightTriggeredOnsetZones = cat(2, lightTriggeredOnsetZone{:});  %2 is vertcat
 
@@ -156,21 +160,13 @@ end
 epileptiformEvent = cell(numel(events(:,1)),3);   %preallocate cell array
 
 %Pad the epileptiform event vector equal to the overlapSize and windowSize
-windowSize = userInput(1);
-windowOverlap = userInput(2);
+% windowSize = userInput(1);
+% windowOverlap = userInput(2);
 minInterictalPeriod = windowSize*2;   %secs
 
 %Make vectors of SLEs 
-for i = 1:numel(events(:,1))
-%     if events(i,1) > windowOverlap
-%         startTime = int64((events(i,1-windowOverlap)*frequency);
-%     else
-%         startTime = int64((events(i,1-windowOverlap)*frequency)
-%     end
-%     
-%     endTime = int64((events(i,2)+windowSize)*frequency);    
-    [~, indicesBackground] = eventIndices(LFP_filteredLowPass, events(i,:), windowSize, frequency);    %Make vectors based on original times detected by algorithm, padded by windowSize (2.5 s)
-            
+for i = 1:numel(events(:,1))  
+    [~, indicesBackground] = eventIndices(LFP_filteredLowPass, events(i,:), windowSize, frequency);    %Make vectors based on original times detected by algorithm
     epileptiformEvent{i,1} = LFP_filteredLowPass(indicesBackground); 
 end
 
@@ -196,7 +192,10 @@ indexDelete = find ([interictal{:,4}] == -1); %locate
 interictal(indexDelete,:)=[]; %Delete
 clear indexDelete
 
+
 %Creating powerpoint slide
+if figureInput == 1
+    
 isOpen  = exportToPPTX();
 if ~isempty(isOpen)
     % If PowerPoint already started, then close first and then open a new one
@@ -228,12 +227,13 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 2 5 1],...
 text = 'Rayleigh frequency: 1/windowSize (Hz), is the minimum frequency that can be resolved from signal';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = sprintf('The window size used is %d s. so the minimum valid frequency is %.1f Hz', windowSize, 1/windowSize);
+text = sprintf('The window size used is %.1f s. so the minimum valid frequency is %.1f Hz', windowSize, 1/windowSize);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant frequency detected was above 100 Hz, it was considered invalid and reported as 0 Hz', filter);
+text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant frequency detected was above %s Hz, it was considered invalid and reported as 0 Hz', filter, fc);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
+
 
 %Part D: Analysis
 %Locate the interictal with the lowest sigma, use as baseline
@@ -259,6 +259,8 @@ xlabel('Size of Voltage Activity (mV)')
 exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
 exportToPPTX('addpicture',figHandle);
 close(figHandle)
+
+end
 
 
 %Calculate Frequency Content of Epileptiform Events
@@ -286,7 +288,8 @@ for i = indexEvents'
 
     %decipher
     [label, classification] = decipher (events,i);
-        
+    
+    if figureInput == 1
     %Plot Figures
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -295,7 +298,6 @@ for i = indexEvents'
 
     subplot (3,1,1)
     plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
-%     plot (timeVector(round(windowOverlap*frequency):max(t)*frequency)), eventVector(round(windowOverlap*frequency):max(t)*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -325,8 +327,11 @@ for i = indexEvents'
      exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
      exportToPPTX('addpicture',figHandle);
      close(figHandle)
+     
+    end    
 end
 
+if figureInput == 1
 %Add New Slide
 exportToPPTX('addslide');
 exportToPPTX('addtext', 'Interictal periods used as Baseline Segments to normalized the frequency', 'Position',[2 1 8 2],...
@@ -336,7 +341,8 @@ exportToPPTX('addtext', sprintf('File: %s', FileName), 'Position',[3 3 6 2],...
 text = 'The spectrogram of all the baselines, only the center portion equal to the window size was used to calculate PSD';
 exportToPPTX('addtext', sprintf('%s', text), 'Position',[4 4 4 2],...
              'Horiz','center', 'Vert','middle', 'FontSize', 20);
-             
+end
+
 %Calculate Frequency Content of Baseline (interictal period)
 [nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
 
@@ -360,11 +366,12 @@ for i = 1:nr
     %store the max frequency content of each event 
     interictal{i, 2} = t;
     interictal{i, 3} = maxFreq;    
-                
+    
+    if figureInput == 1
     %decipher
     label = 'baseline';
     classification = 'baseline';   
-         
+    
     %Plot Figures
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
@@ -402,15 +409,16 @@ for i = 1:nr
     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
     exportToPPTX('addpicture',figHandle);
     close(figHandle)
+    end    
 end
 
 
 %% save and close the .PPTX
-subtitle = guiInput{5};
+if figureInput == 1
+% subtitle = guiInput{5};
 excelFileName = FileName(1:end-4);
 exportToPPTX('saveandclose',sprintf('%s(%s)', excelFileName, subtitle));
+end
 
 %Closing Message
 fprintf(1,'\nFrequency Content Analysis is Complete.\n')
-
-   

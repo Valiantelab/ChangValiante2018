@@ -4,11 +4,8 @@ function [epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE
 %Copyright (c) 2018, Valiante Lab
 %Version 8.2: Analyze Frequency of Epileptiform Events (Complete)
 
-% Description: Locates segments in the time series that do not have any
-% epileptiform activity by looking for sections of activty between
-% detected events by the algorithm. It will then select the interictal period 
-% with the lowest sigma to be the best segment of the time series to use as
-% baseline. It will analyze the frequency content of the baseline,
+% Description: Function reports the dominant frequency (w/ max PSD) during
+% the ictal event. Run function within a script. The data is filted: 
 % bandpassed between 0-50 Hz; this is because ictal activity in population 
 % activity have important frequencies that are below 20 Hz, we don't need
 % any of the frequency above that. Furthermore, we have 60 Hz noise and 76
@@ -188,10 +185,10 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 2 5 1],...
 text = 'Rayleigh frequency: 1/windowSize (Hz), is the minimum frequency that can be resolved from signal';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = sprintf('The window size used is %d s. so the minimum valid frequency is %.1f Hz', windowSize, 1/windowSize);
+text = sprintf('The window size used is %.1f s. so the minimum valid frequency is %.1f Hz', windowSize, 1/windowSize);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant frequency detected was above 100 Hz, it was considered invalid and reported as 0 Hz', filter);
+text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant frequency detected was above %s Hz, it was considered invalid and reported as 0 Hz', filter, fc);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
@@ -258,7 +255,7 @@ for i = indexEvents'
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
+    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -340,7 +337,7 @@ for i = 1:nr
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector(round(windowOverlap*frequency):end-round(windowSize*frequency)), eventVector(round(windowOverlap*frequency):end-round(windowSize*frequency)))
+    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
