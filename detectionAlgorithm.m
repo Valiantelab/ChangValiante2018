@@ -24,7 +24,7 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\2) Hepes-buffered Experiments\August 5, 2019';
+inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\2) Hepes-buffered Experiments';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -32,12 +32,12 @@ titleInput = 'Specify Detection Parameters';
 prompt1 = 'Epileptiform Spike Threshold: average + (3.9 x Sigma)';
 prompt2 = 'Artifact Threshold: average + (70 x Sigma)';
 prompt3 = 'Figure: Yes (1) or No (0)';
-prompt4 = 'Stimulus channel (enter 0 if none):';
+prompt4 = 'Stimulus channel (enter 0 if none; "size (x,2)" if last channel):';
 prompt5 = 'Troubleshooting: plot SLEs(1), IIEs(2), IISs(3), Artifacts (4), Review(5), all(6), None(0):';
 prompt6 = 'To analyze multiple files, provide the folder directory (leave blank to select individual files):';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'4', '70', '0', '3', '0', ''};
+definput = {'4', '70', '0', 'size (x,2)', '0', ''};
 
 opts = 'on';    %allow end user to resize the GUI window
 InputGUI = (inputdlg(prompt,titleInput,dims,definput, opts));  %GUI to collect End User Inputs

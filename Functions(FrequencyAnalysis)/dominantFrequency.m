@@ -79,9 +79,19 @@ end
 %Part B: Prepare Time Series 
 %Remove spikes (IISs)
 for i = 1:size(spikes,1)
-    timeStart = int64((spikes(i,1)-1)*frequency);
-    timeEnd = int64((spikes(i,2)+6)*frequency);    %Remove 6 s after spike offset
-    interictalPeriod(timeStart:timeEnd) = [-1]; %Marked for removal 
+    %Find start time for IIS with padding for content
+    if spikes(i,1)> 1
+        timeStart = int64((spikes(i,1)-1)*frequency);   %1 second of content before the spike
+    else
+        timeStart = 1;  %The beginning of the recording, if there's not enough context prior to spike
+    end
+    %Find end time for IIS with padding for content
+    if int64((spikes(i,2)+6)*frequency) < numel(x)
+        timeEnd = int64((spikes(i,2)+6)*frequency);    %Remove 6 s after spike offset
+    else
+        timeEnd = numel(x);    %Take the end of the recording as the end of the IIS
+    end
+    interictalPeriod(timeStart:timeEnd) = [-1]; %Marked for removal (in part C) 
     clear timeStart timeEnd
 end
 
@@ -89,7 +99,7 @@ end
 for i = 1:size(artifactSpikes,1)
     timeStart = int64(artifactSpikes(i,1)*frequency);
     timeEnd = int64(artifactSpikes(i,2)*frequency);    %Remove 6 s after spike offset
-    interictalPeriod (timeStart:timeEnd) = [-1];    %Marked for removal 
+    interictalPeriod (timeStart:timeEnd) = [-1];    %Marked for removal (in part C)
 end
 
 %Note: no need to remove artifact events because they are already accounted for in the epileptiformEventTimes
@@ -133,7 +143,7 @@ interictalPeriodCount = numel(epileptiformEventTimes(:,1))-1;   %Period between 
 interictal = cell(interictalPeriodCount, 5);
 for i = 1:interictalPeriodCount
     interictal{i} = interictalPeriod(epileptiformEventTimes(i,2)*frequency:epileptiformEventTimes(i+1,1)*frequency);    %Make vectors based on adjusted times to errors made by detection algorithm
-    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacts or light pulses during the interictal period 
+    interictal{i} (interictal{i} == -1) = [];   %remove any spikes, artifacts or light pulses, that were marked for removal, during the interictal period 
     if length(interictal{i}) < (minInterictalPeriod*frequency)
         interictal{i} = -1; %This is a marker to ignore the interictal period below the minimum; I only want to analyze periods larger than 10 s
     end

@@ -69,6 +69,12 @@ t = t';
 
 %% Seperate signals from .abf files
 LFP = x(:,1);   %original LFP signal
+
+%Program so it will take the last channel as the stimulus if you enter a NaN
+if isnan(userInput(4))
+    userInput(4) = size(x,2);
+end
+
 if userInput(4)>0
     LED = x(:,userInput(4));   %light pulse signal, as defined by user's input via GUI
     onsetDelay = 0.13;  %seconds
@@ -683,7 +689,7 @@ A = 'Onset (s)';
 B = 'Offset (s)';
 C = 'Duration (s)';
 D = 'Spike Rate (Hz), average';
-E = 'Intensity (mV^2/s), average';
+E = 'Power (mV^2/s)';
 F = 'peak-to-peak Amplitude (mV)';
 G = 'Classification';
 H = 'Light-triggered';

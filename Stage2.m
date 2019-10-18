@@ -14,18 +14,19 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\4) Acidosis\Mouse 16 - August 8, 2019';
+inputdir = 'C:\Users\Michael\Documents\ChangValiante2018';
 
     % Load .mat file
     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
     fnm = fullfile(PathName,FileName);
-%     myVars = {'details', 'samplingInterval', 'x', 'metadata'};
-%     load(sprintf('%s', fnm), myVars{:})
-    load(sprintf('%s', fnm));
+    myVars = {'artifactSpikes', 'details', 'samplingInterval', 'SLE', 'spikes', 'x', 'metadata'};
+    load(sprintf('%s', fnm), myVars{:})
+%     load(sprintf('%s', fnm));
     
 %Load excel file - with human adjusted onset/offset times
-    [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
-    excel_filename = fullfile(PathName, FileName);
+%     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
+    excelFileName = sprintf('%s(organized).xls', FileName(1:end-4));    %find the excel sheet in the same folder as .mat file (because it's predictable naming structure)
+    excel_filename = fullfile(PathName, excelFileName);
     excelSheet = xlsread(excel_filename, 3);
     %events that were selected after editing the excel sheet by humans
     events = excelSheet(2:end,:);   
@@ -133,8 +134,8 @@ for i = 1:size(events,1)
     intensityPerMinute{i} = intensity;    %store the intensity per minute of each SLE for analysis later
     
     %Calculate average intensity of epileptiform event
-    totalPower(i) = sum(powerFeature(eventVector)); %This is the power of the event
-    events (i,5) = totalPower(i) /sleDuration;  %This is the average power/minute
+    totalPower(i) = sum(powerFeature(eventVector)); %This is the energy of the event; totalPower is a misnomer
+    events (i,5) = totalPower(i) /sleDuration;  %This is the power of the event; you previously considered it as the average power/minute
 
     %Calculate peak-to-peak amplitude of epileptiform event
     eventVectorLFP = LFP_centered(eventVector);
@@ -378,10 +379,13 @@ end
 %https://dsp.stackexchange.com/questions/40180/the-exact-definition-of-dominant-frequency
 waitbar(0.85, f, 'Statistical Analysis of Epileptiform Events: Dominant Frequency');
 
-%Preallocate
+ %Preallocate
 frequencyContentAnalysis = zeros(size(epileptiformEvent,1),9);
 
-for i = 1:size(epileptiformEvent,1)
+indexEvents = find(events(:,3) > windowSize);
+% for i = 1:size(epileptiformEvent,1)
+for i = indexEvents'
+
     %Place time next to the dominant frequency for each epileptiform event
     epileptiformEvent{i,3}(:,2) = epileptiformEvent{i,2};
     
@@ -393,24 +397,36 @@ for i = 1:size(epileptiformEvent,1)
     
     %locate start of Tonic phase | Contingous segments above threshold    
     for j = 1: numel (indexTonic) %slide along the SLE; 
-        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, classify event as a IIE            
+        if j+1 > numel(indexTonic)  %If you scan through the entire SLE and don't find a tonic phase, classify event as a IIE                 
             j = find(indexTonic(:),1,'first');  %Take the 1st sec where frequency is 'high' as the onset if back-to-back high frequency are not found
-                if isempty(j)
-                    j = 1;  %honory position, just to push the function through                    
+                if isempty(j) %There is no Tonic Phase
+                    j = 1;  %honory position, just to push the function through 
+%                     classification = 0;       
+                else if j == numel(indexTonic)
+                        j = j-1;
+                    else
+                        j = j;
+                    end
                 end                
             startTonicPhase(1,1) = dominantFreq(j,2);    %time (s)
-            startTonicPhase(1,2) = j;    %store the index
-                
-                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & dominantFreq(j,1) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+            startTonicPhase(1,2) = j;    %store the index                
+%                 while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & dominantFreq(j,1) ~= 0; %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
+                while ~and(indexTonic(j) == 0, indexTonic(j+1) == 0) & j+1 < numel(indexTonic); %Locate the offset time as the first point as either two continueous segments with low frequency or zero frequency, which ever comes first
                     j = j+1;    %keep sliding along the SLE until the statement above is false.
                     if j+1 > numel(indexTonic)  %If you slide all the way to the end and still can't find tonic phase offset, 
                         j = numel(indexTonic)+1;  %take the last point as the offset of the tonic phase - this means there is no clonic phase; add 1 because note you will remove it in line 33
                         classification = 2;   %1 = SLE;   2 = Tonic-only     
                         break
                     end                                    
-                end            
+                end
+            if j > 1    
                 endTonic(1,1) = dominantFreq(j-1,2); %take the point before the frequency drops to be the end of the tonic-phase
-                endTonic(1,2) = j-1;  %store the index                    
+            else
+                j = 2;  %in the event, j = 1 to push the algorithm through (line 400), make j = 2 so you can find an arbitary endTonic point
+                endTonic(1,1) = dominantFreq(j-1,2); %This is an arbitary point to push the algorithm though.
+            end
+                endTonic(1,2) = j-1;  %store the index  
+            classification = 0; %There is no tonic-clonic ictal event, just forced the algorithm through to locate the potential tonic phase
         else                        
             if indexTonic(j) > 0 && indexTonic(j+1) > 0 %If you locate two continuous segments with high frequency, mark the first segment as start of tonic phase                        
                 startTonicPhase(1,1) = dominantFreq(j,2);  %store the onset time
@@ -526,8 +542,8 @@ A = 'Treatment Group';
 B = 'Duration (s), median';
 C = 'Duration (s), IQR';
 D = 'AD test, normality';
-E = 'Intensity (mV^2/s), median';
-F = 'Intensity (mV^2/s), IQR';
+E = 'Power (mV^2/s), median';
+F = 'Power (mV^2/s), IQR';
 G = 'AD test, normality';
 H = 'Light-triggered';
 I = 'Dominant Frequency, median';
@@ -539,8 +555,8 @@ KK = 'n';
 J = 'KS Test, 1 vs 2';
 K = 'one-way ANOVA, duration';
 M = 'Multiple Comparison (Tukey-Kramer method), duration';
-N = 'one-way ANOVA, intensity';
-O = 'Multiple Comparison (Tukey-Kramer method), intensity';
+N = 'one-way ANOVA, power';
+O = 'Multiple Comparison (Tukey-Kramer method), power';
 NN = 'one-way ANOVA, dominant frequency';
 OO = 'Multiple Comparison (Tukey-Kramer method), dominant frequency';
 
@@ -610,6 +626,8 @@ T = 'Cliffs D';
 % end
 
 %% Write Results of frequency content analysis 
+    FileName = excel_filename;  %rename excel filename
+    
     subtitle1 = {'Onset (s)', 'Offset (s)', 'Duration (s)', A};
     xlswrite(sprintf('%s',FileName),subtitle1,'Freq Content Analysis','A1');    
     xlswrite(sprintf('%s',FileName),events(:,1:4),'Freq Content Analysis','A2');   
@@ -627,6 +645,7 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',FileName),n,'Median Freq Content','K2');   
     
 %% save final output
+close all %Close all figures
 waitbar(0.93, f, 'Saving workspace(stage 2) as .mat file');
     save(sprintf('%s(stage2).mat', FileName(1:end-4)))  %Save Workspace
     
