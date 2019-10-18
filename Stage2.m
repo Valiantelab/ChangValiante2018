@@ -355,25 +355,25 @@ thetaPosttest = events(events(:,4)==3,feature);
 resultsTheta(1,1)=circ_vtest(thetaControl,0);
 resultsTheta(2,1)=circ_vtest(thetaTest,0);
 
-%Figures for Visual Analysis
-    FigE=figure;
-    set(gcf,'Name','Control', 'NumberTitle', 'off');
-    circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Control Condition, p = %.3f', resultsTheta(1,1)));
-
-    FigF=figure;
-    set(gcf,'Name','Test','NumberTitle', 'off');
-    circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
-
-if numel(thetaPosttest)>2
-    resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
-    %Figures for visual analysis
-    FigG=figure;
-    set(gcf,'Name','Post-Test','NumberTitle', 'off');
-    circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
-end
+% %Figures for Visual Analysis
+%     FigE=figure;
+%     set(gcf,'Name','Control', 'NumberTitle', 'off');
+%     circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
+%     title (sprintf('Control Condition, p = %.3f', resultsTheta(1,1)));
+% 
+%     FigF=figure;
+%     set(gcf,'Name','Test','NumberTitle', 'off');
+%     circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
+%     title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
+% 
+% if numel(thetaPosttest)>2
+%     resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
+%     %Figures for visual analysis
+%     FigG=figure;
+%     set(gcf,'Name','Post-Test','NumberTitle', 'off');
+%     circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
+%     title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
+% end
 
 %% Dominant Frequency Content; the frequency that carries more power (PSD) w.r.t.
 %https://dsp.stackexchange.com/questions/40180/the-exact-definition-of-dominant-frequency
@@ -381,6 +381,13 @@ waitbar(0.85, f, 'Statistical Analysis of Epileptiform Events: Dominant Frequenc
 
  %Preallocate
 frequencyContentAnalysis = zeros(size(epileptiformEvent,1),9);
+
+%Re-calculate window size (for frequency analysis); previous window size
+%was for analyzing 'intensity'; terrible mistake naming the different
+%vaiable with the same name
+
+windowOverlap = epileptiformEvent{i,2}(1);    %the first window size represents the overlap
+windowSize = windowOverlap*2;
 
 indexEvents = find(events(:,3) > windowSize);
 % for i = 1:size(epileptiformEvent,1)
@@ -456,11 +463,7 @@ for i = indexEvents'
     meanTonicFreq = mean(epileptiformEvent{i,3}(startTonicPhase(2):endTonic(2),1));
 
     %Calculate average Frequency during clonic phase
-    meanClonicFreq = mean(epileptiformEvent{i,3}(endTonic(2)+1:end,1));
-    
-    %Calculate window size
-    windowOverlap = epileptiformEvent{i,3}(1,2);    %the first window size represents the overlap
-    windowSize = windowOverlap*2;
+    meanClonicFreq = mean(epileptiformEvent{i,3}(endTonic(2)+1:end,1));   
     
     %Ictal Event Classification 
     frequencyContentAnalysis(i,1) = classification; %0 = no ictal; 1 = tonic-clonic ictal; 2 = tonic-only ictal
@@ -645,7 +648,7 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',FileName),n,'Median Freq Content','K2');   
     
 %% save final output
-close all %Close all figures
+
 waitbar(0.93, f, 'Saving workspace(stage 2) as .mat file');
     save(sprintf('%s(stage2).mat', FileName(1:end-4)))  %Save Workspace
     
@@ -654,3 +657,4 @@ waitbar(1, f, 'Stage 2 Analysis: Complete')
 fprintf(1,'\nComplete: A summary of the results can be found in the current working folder: %s\n', pwd)
 
 close (f)
+close all %Close all figures
