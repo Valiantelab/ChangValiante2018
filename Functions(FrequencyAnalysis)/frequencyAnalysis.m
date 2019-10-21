@@ -364,7 +364,7 @@ if numel(thetaPosttest)>2
         FigG=figure;
         set(gcf,'Name','Post-Test','NumberTitle', 'off');
         circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-        title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
+        title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
     end    
 end
 
@@ -664,6 +664,8 @@ waitbar(0.93, f, 'Saving workspace(stage 2) as .mat file');
 waitbar(1, f, 'Stage 2 Analysis: Complete')
 
 close (f)
+
+fprintf(1,'\nStage 2 Analysis Complete: %s\n', FileName)
 end
 
 

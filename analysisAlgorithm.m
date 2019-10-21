@@ -34,7 +34,7 @@ prompt5 = 'Unique Title';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'1.1', '.1', '1', 'HEPES-buffered ACSF (VGAT-ChR2)', 'result_manuscriptIII.xlsx', ''};
+definput = {'1.1', '.1', '1', 'HEPES-buffered (VGAT-ChR2)', 'manuscriptIII(HEPES_VGAT-ChR2).xlsx', ''};
 
 
 opts = 'on';    %allow end user to resize the GUI window
