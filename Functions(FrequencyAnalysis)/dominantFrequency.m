@@ -189,7 +189,7 @@ exportToPPTX('addtext', 'Legend', 'Position',[0 0 4 1],...
 text = 'Note: If the dominant frequency detected was >50, it was ignored and replaced with 0 Hz (Bandpass filter set 1-50 Hz)';
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 1 6 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = sprintf('Nyquist frequency (%d Hz) is the maximum valid frequency (sampling frequency/2)', frequency/2);
+text = sprintf('Nyquist frequency (%.3f Hz) is the maximum valid frequency (sampling frequency/2)', frequency/2);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 2 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
 text = 'Rayleigh frequency: 1/windowSize (Hz), is the minimum frequency that can be resolved from signal';
@@ -198,7 +198,7 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 3 5 1],...
 text = sprintf('The window size used is %.1f s. so the minimum valid frequency is %.1f Hz', windowSize, 1/windowSize);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 4 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 14);
-text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant frequency detected was above %s Hz, it was considered invalid and reported as 0 Hz', filter, fc);
+text = sprintf('Data was bandpass filtered (%s). Accordingly, if the dominant frequency detected was above %.0f Hz, it was considered invalid and reported as 0 Hz', filter, fc);
 exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
@@ -383,9 +383,10 @@ end
 
 %% save and close the .PPTX
 if figureInput == 1
-% subtitle = guiInput{5};
-excelFileName = FileName(1:end-4);
-exportToPPTX('saveandclose',sprintf('%s(%s)', excelFileName, subtitle));
+% % subtitle = guiInput{5};
+% excelFileName = FileName(1:end-4);
+% exportToPPTX('saveandclose',sprintf('%s(%s)', excelFileName, subtitle));
+exportToPPTX('saveandclose',sprintf('%s', FileName));
 end
 
 %Closing Message

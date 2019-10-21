@@ -1,38 +1,34 @@
+function [epileptiformEvent, frequencyContentAnalysis] = frequencyAnalysis (InputGUI, PathName, FileName)
 %% Stage 2: Re-process the File (after manual changes) for further analysis
 % Author: Michael Chang
 % Run this file after the detection algorithm to analyze the results and do
 % additional analysis to the detected events. This creates the time vector,
 % LFP time series, LED if there is light, and filters the data using a
-% bandpass filter (1-50 Hz) and a low pass filter (@68 Hz)
+% bandpass filter (1-50 Hz) and a low pass filter (@68 Hz). It will also
+% report the dominant frequency content of a time series.
 
-% clear all (reset)
-close all
-clear all
-clc
-
-%Add all subfolders in working directory to the path.
-addpath(genpath(pwd));  
-
-%Manually set File Directory
-inputdir = 'C:\Users\Michael\Documents\ChangValiante2018';
+%User Input variables
+userInput = str2double(InputGUI(1:3)); %convert inputs into numbers
 
     % Load .mat file
-    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    fnm = fullfile(PathName,FileName);
-    myVars = {'artifactSpikes', 'details', 'samplingInterval', 'SLE', 'spikes', 'x', 'metadata'};
-    load(sprintf('%s', fnm), myVars{:})
-%     load(sprintf('%s', fnm));
+    matFileName = fullfile(PathName,FileName);  %location of the .matfile    
+    myVars = {'artifactSpikes', 'details', 'samplingInterval', 'SLE', 'spikes', 'x', 'metadata'};   %variables of interest from .mat file
+    load(sprintf('%s', matFileName), myVars{:}) %load .mat file into workspace
+    
+    % Auto-load .abf file; to load 'x' into workspace (can't save if it's too large)
+    abfFileName = sprintf('%s.abf', matFileName(1:end-4));  %Locate the .abf file from the same folder as the .mat file     
+    x=abfload(abfFileName); %load 'x' from .abf into workspace
     
 % %Load excel file - with human adjusted onset/offset times
 %     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
 %     excel_filename = fullfile(PathName, FileName);
-%Automate
-    excelFileName = sprintf('%s(organized).xls', FileName(1:end-4));    %find the excel sheet in the same folder as .mat file (because it's predictable naming structure)
-    excel_filename = fullfile(PathName, excelFileName);
-%Read the sheets
-    excelSheet = xlsread(excel_filename, 3);
-    %events that were selected after editing the excel sheet by humans
-    events = excelSheet(2:end,:);   
+    
+    %Auto-load excel file with onset/offset times into workspace
+    excel_filename = sprintf('%s(organized).xls', matFileName(1:end-4));    %name of .xls file in the same folder as .mat file
+    
+    excelSheet = xlsread(excel_filename, 3); %Read the 3rd sheets in excel file
+    
+    events = excelSheet(2:end,:);   %events selected after editing the excel sheet by humans
 
 f = waitbar(0,'Loading Data: Please wait while data is prepared...','Name', 'Stage 2 Analysis: in progress');
 
@@ -112,7 +108,7 @@ for i = 1:size(events,1)
     eventVector = int64(onsetTime:offsetTime);  %SLE Vector
 
     %Split the event vector into (1 min) windows
-    windowSize = 1;  %seconds; you can change window size as desired
+    window_size = 1;  %seconds; you can change window size as desired
     sleDuration = round(numel(eventVector)/frequency);    %rounded to whole number; Note: sometimes the SLE crawler can drop the duration of the event to <1 s
     if sleDuration == 0
         sleDuration = 1;    %need to fix this so you don't analyze event vectors shorter than 1 s
@@ -122,8 +118,8 @@ for i = 1:size(events,1)
     %Calculate the intensity (per sec) for epileptiform events; intensity (per sec) is average power
     clear spikeRateMinute intensity    
     for j = 1:sleDuration
-        startWindow = onsetTime+((windowSize*frequency)*(j-1));          
-        endWindow = onsetTime+((windowSize*frequency)*j);
+        startWindow = onsetTime+((window_size*frequency)*(j-1));          
+        endWindow = onsetTime+((window_size*frequency)*j);
         %Calculate the intensity per minute for epileptiform events
         if numel(powerFeature) > endWindow
             PowerPerMinute = sum(powerFeature (startWindow:endWindow));
@@ -155,7 +151,8 @@ end
 
 %Calculate dominant frequency
 waitbar(0.35, f, 'Calculating Frequency Content of Epileptiform Events');
-[epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, FileName, 1.1, .55, 0);
+pptx_filename = sprintf('%s(frequencyContent).pptx', matFileName(1:end-4));    %name of .pptx file in the same folder as .mat file
+[epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, pptx_filename, userInput(1), userInput(2), userInput(3));    %userInput(3) is figure 0=no 1=yes
 
 %Determine if event is light-triggered, delay to onset
 waitbar(0.55, f, 'Determine if Epileptiform Events are light-triggered');
@@ -213,18 +210,7 @@ end
 % Author: Michael Chang
 % Run this file after Stage 2 to analyze the results statistically
 
-%% Customize Analysis 
 waitbar(0.75, f, 'Statistical Analysis of Epileptiform Events');
-excelFileName = 'result_manuscriptIII.xlsx'; %excel sheet output is written
-
-%Label treatment groups
-treatmentGroups(1,1) = {'Control'};
-treatmentGroups(2,1) = {'Test'};
-treatmentGroups(3,1) = {'PostTest'};
-% treatmentGroups = [1:3]';
-
-%Add all subfolders in working directory to the path.
-addpath(genpath(pwd));  
 
 %organize groups index
 indexControl = events(:,4)==1;
@@ -359,6 +345,7 @@ resultsTheta(1,1)=circ_vtest(thetaControl,0);
 resultsTheta(2,1)=circ_vtest(thetaTest,0);
 
 %Figures for Visual Analysis
+if userInput(3) == 1
     FigE=figure;
     set(gcf,'Name','Control', 'NumberTitle', 'off');
     circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
@@ -368,14 +355,17 @@ resultsTheta(2,1)=circ_vtest(thetaTest,0);
     set(gcf,'Name','Test','NumberTitle', 'off');
     circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
     title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
+end
 
 if numel(thetaPosttest)>2
     resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
     %Figures for visual analysis
-    FigG=figure;
-    set(gcf,'Name','Post-Test','NumberTitle', 'off');
-    circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
+    if userInput(3) == 1
+        FigG=figure;
+        set(gcf,'Name','Post-Test','NumberTitle', 'off');
+        circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
+        title (sprintf('Post-Test Condition, p = %dominantFreqControl.3f',resultsTheta(3,1)));
+    end    
 end
 
 %% Dominant Frequency Content; the frequency that carries more power (PSD) w.r.t.
@@ -389,8 +379,9 @@ frequencyContentAnalysis = zeros(size(epileptiformEvent,1),9);
 %was for analyzing 'intensity'; terrible mistake naming the different
 %vaiable with the same name
 
-windowOverlap = epileptiformEvent{i,2}(1);    %the first window size represents the overlap
-windowSize = windowOverlap*2;
+% windowOverlap = epileptiformEvent{i,2}(1);    %the first window size represents the overlap
+% windowSize = windowOverlap*2;
+windowSize = userInput(1);
 
 indexEvents = find(events(:,3) > windowSize);
 % for i = 1:size(epileptiformEvent,1)
@@ -542,7 +533,21 @@ n(3,1)=numel(thetaPosttest);
 
 %% Write results to .xls 
 waitbar(0.90, f, 'Write Results to excel sheets');
+
+% Customize Analysis 
+excelFileName = InputGUI{5}; %excel sheet output is written
 sheetName = FileName(1:8);
+
+%Label treatment groups
+treatmentGroups(1,1) = {'Control'};
+if InputGUI{4} == ""
+    treatmentGroups(2,1) = {'Test'};
+else
+    treatmentGroups(2,1) = {InputGUI{4}};
+end
+treatmentGroups(3,1) = {'PostTest'};
+% treatmentGroups = [1:3]';
+
 
 %set subtitle
 A = 'Treatment Group';
@@ -596,7 +601,7 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'B5');
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'E5');
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'I5');
-% if numel(durationPosttest)>2
+
 %Write one-way ANOVA results, duration
     subtitle1 = {K};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A8');
@@ -630,7 +635,6 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B39'); %Group subtitle
     xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F39'); %p-value subtitle
     xlswrite(sprintf('%s',excelFileName),c_dominantFreq,sprintf('%s',sheetName),'A40');
-% end
 
 %% Write Results of frequency content analysis 
     FileName = excel_filename;  %rename excel filename
@@ -655,11 +659,11 @@ T = 'Cliffs D';
 
 close all %Close all figures
 waitbar(0.93, f, 'Saving workspace(stage 2) as .mat file');
-    save(sprintf('%s(stage2).mat', FileName(1:end-4)))  %Save Workspace
+%     save(sprintf('%s(stage2).mat', FileName(1:end-4)))  %Save Workspace
     
 waitbar(1, f, 'Stage 2 Analysis: Complete')
 
-fprintf(1,'\nComplete: A summary of the results can be found in the current working folder: %s\n', pwd)
-
 close (f)
+end
+
 

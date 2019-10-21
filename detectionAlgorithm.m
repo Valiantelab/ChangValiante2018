@@ -6,7 +6,7 @@
 % For quick start: i) Run the script, ii) click OK, iii) select the 
 % .abf file to analyze; for demo select "13226009(exampleFile).abf" 
 
-%Description: Standard stage 1 to detect epileptiform events. THe script
+%Description: Standard stage 1 to detect epileptiform events. The script
 %can process a single file that you select or a collection of files from a
 %directory that you have provided. Additionally, this script will save the
 %work space as a .mat file which contains the time points of the seizure
