@@ -3,6 +3,10 @@
 %Copyright (c) 2018, Valiante Lab
 %Version FrequencyAnalysis V1.0 
 
+%Instructions: select .mat file generated from Stage 1. Feed in an excel
+%file which has grouped the epileptiform events (3rd sheet) into treatment
+%groups (1 to 3) in column 4 (where spiking rate is).
+
 %Description: Standard stage 2 to analyze your epileptiform events. The script
 %can process a single .mat file that you select or a collection of .mat files from a
 %directory that you have provided. Additionally, this script will save the
