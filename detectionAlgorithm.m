@@ -48,7 +48,12 @@ if (InputGUI(6)=="")
     [FileName,PathName] = uigetfile ('*.abf','pick .abf file', inputdir);%Choose abf file
     [x,samplingInterval,metadata]=abfload([PathName FileName]); %Load the file name with x holding the channel data(10,000 sampling frequency) -> Convert index to time value by dividing 10k
     [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
-    save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace  
+    if whos('x').bytes < 2e9    %if 'x' variable larger than 2 GB have to save as v7.3
+        save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace 
+    else
+        save(sprintf('%s.mat', FileName(1:end-4)), '-v7.3', '-nocompression')  %Save Workspace 
+    end        
+
 else
     % Analyze all files in folder, multiple files
     PathName = char(InputGUI(6));
@@ -60,7 +65,11 @@ else
         FileName = S(k).name;
         [x,samplingInterval,metadata]=abfload(fnm);
         [spikes, events, SLE, details, artifactSpikes] = detectionInVitro4AP(FileName, userInput, x, samplingInterval, metadata);
-        save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace 
+        if whos('x').bytes < 2e9    %if 'x' variable larger than 2 GB have to save as v7.3
+            save(sprintf('%s.mat', FileName(1:end-4)))  %Save Workspace 
+        else
+            save(sprintf('%s.mat', FileName(1:end-4)), '-v7.3', '-nocompression')  %Save Workspace 
+        end         
         %Collect the average intensity ratio for SLEs
         %indexSLE = events(:,7) == 1;
         %intensity{k} = events(indexSLE,18);                   

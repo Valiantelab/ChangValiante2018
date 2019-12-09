@@ -54,10 +54,15 @@ end
 [b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
 LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
+%High Pass Filter
+fc = 1; % Cut off frequency; a hard stop at 2 Hz
+[b,a] = butter(4,fc/(frequency/2), 'high'); %Butterworth filter of order 4
+LFP_filteredHighPass = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
+
 %Low Pass Filter
 fc = 50; % Cut off frequency; a hard stop at 50 Hz
-[b,a] = butter(4,fc/(frequency/2), 'low'); %Butterworth filter of order 4
-LFP_filteredLowPass = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
+[b,a] = butter(4,fc/(frequency/2), 'low'); %Bessel filter of order 8
+LFP_filteredLowPass = filtfilt(b,a,LFP_filteredHighPass); %filtered signal
 
 %% Stage 3: Find suitable baseline (interictal period with no epileptiform activity), originally used to normalize frequency content 
 interictalPeriod = LFP_filteredLowPass;    %data analyzed will be the LFP_filtered
@@ -203,30 +208,30 @@ exportToPPTX('addtext', sprintf('%s',text), 'Position',[0 5 5 1],...
              'Horiz','left', 'Vert','middle', 'FontSize', 16);
 
 
-%Part D: Analysis
-%Locate the interictal with the lowest sigma, use as baseline
-[~, indexMin] = min ([interictal{:,5}]); %locate 
-
-%Plot for your records
-i = indexMin;
-figHandle = figure;
-set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-set(gcf, 'Position', get(0, 'Screensize'));
-subplot (2,1,1)
-plot (interictal{i})
-title(sprintf('Interictal period with lowest Sigma selected to be Baseline | Interictal Period #%d. Sigma: %.4f ', i, interictal{i,3}))
-ylabel('Voltage Activity (mV)')
-xlabel(sprintf('data points (Sampling Rate: %d Hz)', frequency))
-subplot (2,1,2)
-histogram(interictal{i})
-title(sprintf('Distribution of voltage activity from Interictal Period #%d', i))
-ylabel('Count (Frequency)')
-xlabel('Size of Voltage Activity (mV)')
-
-%Export figures to .pptx
-exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-exportToPPTX('addpicture',figHandle);
-close(figHandle)
+% %Part D: Analysis
+% %Locate the interictal with the lowest sigma, use as baseline
+% [~, indexMin] = min ([interictal{:,5}]); %locate 
+% 
+% %Plot for your records
+% i = indexMin;
+% figHandle = figure;
+% set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+% set(gcf, 'Position', get(0, 'Screensize'));
+% subplot (2,1,1)
+% plot (interictal{i})
+% title(sprintf('Interictal period with lowest Sigma selected to be Baseline | Interictal Period #%d. Sigma: %.4f ', i, interictal{i,3}))
+% ylabel('Voltage Activity (mV)')
+% xlabel(sprintf('data points (Sampling Rate: %d Hz)', frequency))
+% subplot (2,1,2)
+% histogram(interictal{i})
+% title(sprintf('Distribution of voltage activity from Interictal Period #%d', i))
+% ylabel('Count (Frequency)')
+% xlabel('Size of Voltage Activity (mV)')
+% 
+% %Export figures to .pptx
+% exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+% exportToPPTX('addpicture',figHandle);
+% close(figHandle)
 
 end
 
@@ -269,7 +274,7 @@ for i = indexEvents'
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
-    title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
+    title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d   |   Treatment Group:%d', filter, label, i, events(i,4)))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
     axis tight   
@@ -298,87 +303,87 @@ for i = indexEvents'
      
     end    
 end
-
-if figureInput == 1
-%Add New Slide
-exportToPPTX('addslide');
-exportToPPTX('addtext', 'Interictal periods used as Baseline Segments to normalized the frequency', 'Position',[2 1 8 2],...
-             'Horiz','center', 'Vert','middle', 'FontSize', 36);
-exportToPPTX('addtext', sprintf('File: %s', FileName), 'Position',[3 3 6 2],...
-             'Horiz','center', 'Vert','middle', 'FontSize', 20);
-text = 'The spectrogram of all the baselines, only the center portion equal to the window size was used to calculate PSD';
-exportToPPTX('addtext', sprintf('%s', text), 'Position',[4 4 4 2],...
-             'Horiz','center', 'Vert','middle', 'FontSize', 20);
-end
-
-%Calculate Frequency Content of Baseline (interictal period)
-[nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
-
-for i = 1:nr
-    %Event Vector
-    eventVector = interictal{i, 1};
-    
-    %Time Vector
-    timeVector = (0:(length(eventVector)- 1))/frequency;
-    timeVector = timeVector';    
-    
-    %Frequency content of baseline event 
-    [s,f,t,p] = spectrogram (eventVector, round(windowSize*frequency), round(windowOverlap*frequency), 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
-    
-    %Dominant Frequency at each time point | NEW
-    [maxS, idx] = max(p);    
-    maxFreq = f(idx);
-    indexInvalid = find (maxFreq > fc);  %Ignore all frequency
-    maxFreq(indexInvalid) = 0;
-    
-    %store the max frequency content of each event 
-    interictal{i, 2} = t;
-    interictal{i, 3} = maxFreq;    
-    
-    if figureInput == 1
-    %decipher
-    label = 'baseline';
-    classification = 'baseline';   
-    
-    %Plot Figures
-    figHandle = figure;
-    set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('%s Event #%d', label, i)); %select the name you want
-    set(gcf, 'Position', get(0, 'Screensize'));
-
-    subplot (3,1,1)
-    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
-    hold on
-    plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
-    title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
-    xlabel('Time (sec)')
-    ylabel('Voltage (mV)')
-    axis tight   
-          
-    subplot (3,1,2)
-    imagesc(t,f,10*log10(p))
-    c = colorbar;
-    c.Label.String = 'Power (dB)';  
-    ylim([0 100])
-    title (sprintf('Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')   
-    
-    subplot (3,1,3)
-    plot(t,maxFreq) 
-    title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
-    ylabel('Frequency (Hz)')
-    xlabel('Time (sec)')
-    axis tight   
-    ylim  ([0 70])            
-    
-    %Export figures to .pptx
-    exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
-    exportToPPTX('addpicture',figHandle);
-    close(figHandle)
-    end    
-end
+% 
+% if figureInput == 1
+% %Add New Slide
+% exportToPPTX('addslide');
+% exportToPPTX('addtext', 'Interictal periods used as Baseline Segments to normalized the frequency', 'Position',[2 1 8 2],...
+%              'Horiz','center', 'Vert','middle', 'FontSize', 36);
+% exportToPPTX('addtext', sprintf('File: %s', FileName), 'Position',[3 3 6 2],...
+%              'Horiz','center', 'Vert','middle', 'FontSize', 20);
+% text = 'The spectrogram of all the baselines, only the center portion equal to the window size was used to calculate PSD';
+% exportToPPTX('addtext', sprintf('%s', text), 'Position',[4 4 4 2],...
+%              'Horiz','center', 'Vert','middle', 'FontSize', 20);
+% end
+% 
+% %Calculate Frequency Content of Baseline (interictal period)
+% [nr, ~] = size (interictal);   %Count how many interictal periods there are, "nr"
+% 
+% for i = 1:nr
+%     %Event Vector
+%     eventVector = interictal{i, 1};
+%     
+%     %Time Vector
+%     timeVector = (0:(length(eventVector)- 1))/frequency;
+%     timeVector = timeVector';    
+%     
+%     %Frequency content of baseline event 
+%     [s,f,t,p] = spectrogram (eventVector, round(windowSize*frequency), round(windowOverlap*frequency), 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
+%     
+%     %Dominant Frequency at each time point | NEW
+%     [maxS, idx] = max(p);    
+%     maxFreq = f(idx);
+%     indexInvalid = find (maxFreq > fc);  %Ignore all frequency
+%     maxFreq(indexInvalid) = 0;
+%     
+%     %store the max frequency content of each event 
+%     interictal{i, 2} = t;
+%     interictal{i, 3} = maxFreq;    
+%     
+%     if figureInput == 1
+%     %decipher
+%     label = 'baseline';
+%     classification = 'baseline';   
+%     
+%     %Plot Figures
+%     figHandle = figure;
+%     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
+%     set(gcf,'Name', sprintf ('%s Event #%d', label, i)); %select the name you want
+%     set(gcf, 'Position', get(0, 'Screensize'));
+% 
+%     subplot (3,1,1)
+%     plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
+%     hold on
+%     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+%     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+%     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d', filter, label, i))
+%     xlabel('Time (sec)')
+%     ylabel('Voltage (mV)')
+%     axis tight   
+%           
+%     subplot (3,1,2)
+%     imagesc(t,f,10*log10(p))
+%     c = colorbar;
+%     c.Label.String = 'Power (dB)';  
+%     ylim([0 100])
+%     title (sprintf('Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
+%     ylabel('Frequency (Hz)')
+%     xlabel('Time (sec)')   
+%     
+%     subplot (3,1,3)
+%     plot(t,maxFreq) 
+%     title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
+%     ylabel('Frequency (Hz)')
+%     xlabel('Time (sec)')
+%     axis tight   
+%     ylim  ([0 70])            
+%     
+%     %Export figures to .pptx
+%     exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide
+%     exportToPPTX('addpicture',figHandle);
+%     close(figHandle)
+%     end    
+% end
 
 
 %% save and close the .PPTX

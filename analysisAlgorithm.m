@@ -25,7 +25,7 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\Michael\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\B. HEPES (VGAT-ChR2)';
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\D. KCC2 Blockers\Bumethanide Analysis (Jan 29, 2016)';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -38,7 +38,7 @@ prompt5 = 'Unique Title';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
 dims = [1 70];
-definput = {'1.1', '.1', '1', 'HEPES-buffered (VGAT-ChR2)', 'manuscriptIII(HEPES_VGAT-ChR2).xlsx', ''};
+definput = {'1.1', '.1', '0', 'BUM [50 uM]', 'manuscriptIII(VGAT-ChR2).xlsx', ''};
 
 
 opts = 'on';    %allow end user to resize the GUI window
@@ -55,7 +55,7 @@ if (InputGUI(6)=="")
     save(sprintf('%s(stage2).mat', FileName(1:end-4)))  %Save Workspace  
 else
     % Analyze all .mat files in folder, multiple files
-    PathName = char(InputGUI(6));
+    PathName = char(InputGUI(6)); 
     S = dir(fullfile(PathName,'*.mat'));
 
     for k = 1:numel(S)

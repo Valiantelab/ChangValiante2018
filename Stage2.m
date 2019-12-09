@@ -16,19 +16,19 @@ addpath(genpath(pwd));
 %Manually set File Directory
 inputdir = 'C:\Users\Michael\Documents\ChangValiante2018';
 
-    % Load .mat file
-    [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
-    fnm = fullfile(PathName,FileName);
-    myVars = {'artifactSpikes', 'details', 'samplingInterval', 'SLE', 'spikes', 'x', 'metadata'};
-    load(sprintf('%s', fnm), myVars{:})
-%     load(sprintf('%s', fnm));
+%     % Load .mat file
+%     [FileName,PathName] = uigetfile ('*.mat','pick .mat file to load Workspace', inputdir);%Choose file    
+%     fnm = fullfile(PathName,FileName);
+%     myVars = {'artifactSpikes', 'details', 'samplingInterval', 'SLE', 'spikes', 'x', 'metadata'};
+%     load(sprintf('%s', fnm), myVars{:})
+% %     load(sprintf('%s', fnm));
     
-% %Load excel file - with human adjusted onset/offset times
-%     [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
-%     excel_filename = fullfile(PathName, FileName);
-%Automate
-    excelFileName = sprintf('%s(organized).xls', FileName(1:end-4));    %find the excel sheet in the same folder as .mat file (because it's predictable naming structure)
-    excel_filename = fullfile(PathName, excelFileName);
+%Manually Load excel file - with human adjusted onset/offset times
+    [FileName,PathName] = uigetfile ('*.xls','pick .xls file to load excel sheet', inputdir);%Choose file    
+    excel_filename = fullfile(PathName, FileName);
+% %Automate
+%     excelFileName = sprintf('%s(organized).xls', FileName(1:end-4));    %find the excel sheet in the same folder as .mat file (because it's predictable naming structure)
+%     excel_filename = fullfile(PathName, excelFileName);
 %Read the sheets
     excelSheet = xlsread(excel_filename, 3);
     %events that were selected after editing the excel sheet by humans

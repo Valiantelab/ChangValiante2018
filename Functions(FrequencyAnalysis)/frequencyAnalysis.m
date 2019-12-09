@@ -490,8 +490,27 @@ dominantFreqControl = frequencyContentAnalysis (indexControl, :);
 dominantFreqTest = frequencyContentAnalysis (indexTest, :);
 dominantFreqPosttest = frequencyContentAnalysis (indexPosttest, :);
 
-%Calculate median values | For plotting later into excel sheets
-medianDominantFreq = vertcat(median(dominantFreqControl),median(dominantFreqTest),median(dominantFreqPosttest));
+%Calculate median values 
+if sum(indexControl)>1
+    medianFreqControl = median(dominantFreqControl);
+else
+    medianFreqControl = dominantFreqControl;
+end
+
+if sum(indexTest)>1    
+    medianFreqTest = median(dominantFreqTest);
+else
+    medianFreqTest = (dominantFreqTest);
+end
+
+if sum(indexPosttest)>1
+    medianFreqPosttest = median(dominantFreqPosttest);
+else
+    medianFreqPosttest = (dominantFreqPosttest);
+end
+
+%Concatenate for plotting later into excel sheets
+medianDominantFreq = vertcat(medianFreqControl,medianFreqTest,medianFreqPosttest);
 
 %Max Dominant Frequency Matrix
 dominantFreqMatrix(1:size(dominantFreqControl,1),1) = dominantFreqControl(:,6);
