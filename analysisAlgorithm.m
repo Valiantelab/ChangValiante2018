@@ -25,7 +25,7 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\D. KCC2 Blockers\Bumethanide Analysis (Jan 29, 2016)';
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\B. HEPES (VGAT-ChR2)';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -36,9 +36,10 @@ prompt3 = 'Figure: Yes (1) or No (0)';
 prompt4 = 'Test Group:';
 prompt5 = 'Unique Title';
 prompt6 = 'To analyze multiple files in folder, provide File Directory:';
-prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6};
+prompt7 = 'Spike Analysis: Yes (1) or No (0)';
+prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6, prompt7};
 dims = [1 70];
-definput = {'1.1', '.1', '0', 'BUM [50 uM]', 'manuscriptIII(VGAT-ChR2).xlsx', ''};
+definput = {'1.1', '.1', '0', 'BUM [50 uM]', 'manuscriptIII(VGAT-ChR2).xlsx', '', '1'};
 
 
 opts = 'on';    %allow end user to resize the GUI window

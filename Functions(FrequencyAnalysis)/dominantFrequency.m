@@ -270,7 +270,7 @@ for i = indexEvents'
     set(gcf, 'Position', get(0, 'Screensize'));
 
     subplot (3,1,1)
-    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))
+    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))  %Plot ictal event
     hold on
     plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
     plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
@@ -282,7 +282,7 @@ for i = indexEvents'
     subplot (3,1,2)
     imagesc(t,f,10*log10(p))
     c = colorbar;
-    c.Label.String = 'Power (dB)';  
+    c.Label.String = 'Power Spectral Density (dB/Hz)';  %Originally I wrote 'Power (dB)', but I think I've been calculating the PSD
     ylim([0 100])
     title (sprintf('Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
     ylabel('Frequency (Hz)')
