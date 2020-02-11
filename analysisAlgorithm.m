@@ -25,7 +25,7 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3.1) Manuscript III (Mar 2020)\1) Control\Control (VGAT-ChR2)\Mouse 18 - August 12, 2019';
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\A. Acidosis (Controls)';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold
@@ -39,7 +39,7 @@ prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt7 = 'Spike Analysis: Yes (1) or No (0)';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6, prompt7};
 dims = [1 70];
-definput = {'1.1', '.1', '0', 'Control', 'control.xlsx', '', '0'};
+definput = {'1', '.1', '0', 'Acidosis (6.3)', 'test.xlsx', '', '1'};
 
 
 opts = 'on';    %allow end user to resize the GUI window

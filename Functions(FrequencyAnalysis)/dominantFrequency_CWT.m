@@ -238,61 +238,40 @@ end
 
 %Calculate Frequency Content of Epileptiform Events
 indexEvents = find(events(:,3) > windowSize);
-
-%Decimate Data
-if frequency > 1000
-    decimation_factor = 10;
-    frequency_deciminated = frequency/decimation_factor;
-else
-    frequency_decimated = frequency;
-end
-
-P = round(frequency_deciminated);   %To calculate average freq
- 
+p = round(frequency);   %to calculate the average freq/sec 
 for i = indexEvents'
     %Event Vector
-    eventVector = decimate(epileptiformEvent{i, 1},decimation_factor);
+    eventVector = epileptiformEvent{i, 1};
     
     %Time Vector
-    timeVector = (0:(length(eventVector)- 1))/frequency_deciminated;
+    timeVector = (0:(length(eventVector)- 1))/frequency;
     timeVector = timeVector';    
     
-   %Make filterbank | Focus on a specific frequency range 
-    fb = cwtfilterbank('SignalLength', numel(eventVector), 'SamplingFrequency', frequency_deciminated, 'FrequencyLimits', [0 fc], 'Wavelet','amor');
-   %Perform continuous wavelet transform to calculate frequency content
+    %Make filterbank | Focus on a specific frequency range 
+    fb = cwtfilterbank('SignalLength', numel(eventVector), 'SamplingFrequency', frequency, 'FrequencyLimits', [0 fc], 'Wavelet','amor');
+    %Perform continuous wavelet transform to calculat frequency content
     [wt, f] = cwt(eventVector, 'FilterBank',fb);
-    p = abs(wt);    %Calculate power 
+    p = abs(wt);    %Calculate power
     
     %Dominant Frequency at each time point 
     [maxS, idx] = max(p);        
-    maxFreq = f(idx);   %finding the frequency with the maximum PSD      
-    
-    %Remove noise
-    
-    %if the maximum power at that time point is: p <0.01, make the
-    %dominan frequency 0, regardless
-    index_LowPower = maxS<max(maxS)*0.08;
-    maxFreq(index_LowPower) = 1.314;    %This is my assumption for what baseline frequency would be.
+    maxFreq = f(idx);   %finding the frequency with the maximum PSD
+        
     
     %Calculate the average frequency per second
-%     P = round(frequency);     %I moved it up outside the for-loop
+%     p = round(frequency);
     x = timeVector;
     x2 = maxFreq;
 
     S = numel(x);
-    xx = reshape(x(1:S-mod(S,P)),P,[]);
-    xx2 = reshape(x2(1:S-mod(S,P)),P,[]);
+    xx = reshape(x(1:S-mod(S,p)),p,[]);
+    xx2 = reshape(x2(1:S-mod(S,p)),p,[]);
     
-    % Average per second
-    y = sum(xx,1).'/P;
-    y(:,2) = sum(xx2,1).'/P;
+    y = sum(xx,1).'/p;
+    y(:,2) = sum(xx2,1).'/p;
     
-%     % Median per second
-%     y = median(xx)';
-%     y(:,2) = median(xx2)';
-
     %store the averaged max frequency content of each event 
-    epileptiformEvent{i, 2} = y(:,1);
+    epileptiformEvent{i, 2} = y;
     epileptiformEvent{i, 3} = y(:,2);   
     
     clear x x2 S xx xx2 y
@@ -310,9 +289,9 @@ for i = indexEvents'
 
     s1=subplot (3,1,1);
     plot (timeVector, eventVector)  %Plot ictal event
-    hold on
-    plot (timeVector(round(windowSize*frequency_deciminated)), eventVector(round(windowSize*frequency_deciminated)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), eventVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+        hold on
+    plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d   |   Treatment Group:%d', filter, label, i, events(i,4)))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
@@ -334,9 +313,8 @@ for i = indexEvents'
     set(s2,'position',s2Pos);
     
     subplot (3,1,3)
-%     plot(timeVector,maxFreq)
-    plot(epileptiformEvent{i, 2},epileptiformEvent{i, 3})
-    title (sprintf('Avg. Dominant Frequency per minute over duration of %s Event #%d', label, i))
+    plot(timeVector,maxFreq) 
+    title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
     axis tight

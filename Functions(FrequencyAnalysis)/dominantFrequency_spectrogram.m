@@ -238,108 +238,63 @@ end
 
 %Calculate Frequency Content of Epileptiform Events
 indexEvents = find(events(:,3) > windowSize);
-
-%Decimate Data
-if frequency > 1000
-    decimation_factor = 10;
-    frequency_deciminated = frequency/decimation_factor;
-else
-    frequency_decimated = frequency;
-end
-
-P = round(frequency_deciminated);   %To calculate average freq
- 
 for i = indexEvents'
     %Event Vector
-    eventVector = decimate(epileptiformEvent{i, 1},decimation_factor);
+    eventVector = epileptiformEvent{i, 1};
     
     %Time Vector
-    timeVector = (0:(length(eventVector)- 1))/frequency_deciminated;
+    timeVector = (0:(length(eventVector)- 1))/frequency;
     timeVector = timeVector';    
     
-   %Make filterbank | Focus on a specific frequency range 
-    fb = cwtfilterbank('SignalLength', numel(eventVector), 'SamplingFrequency', frequency_deciminated, 'FrequencyLimits', [0 fc], 'Wavelet','amor');
-   %Perform continuous wavelet transform to calculate frequency content
-    [wt, f] = cwt(eventVector, 'FilterBank',fb);
-    p = abs(wt);    %Calculate power 
+    %Frequency content of epileptiform event 
+    [s,f,t,p] = spectrogram (eventVector,round(windowSize*frequency),round(windowOverlap*frequency), 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
     
     %Dominant Frequency at each time point 
     [maxS, idx] = max(p);        
-    maxFreq = f(idx);   %finding the frequency with the maximum PSD      
+    maxFreq = f(idx);   %finding the frequency with the maximum PSD
+    indexInvalid = find (maxFreq > fc);  %Ignore all frequency above fc (frequency cutoff)
+    maxFreq(indexInvalid) = 0;
     
-    %Remove noise
-    
-    %if the maximum power at that time point is: p <0.01, make the
-    %dominan frequency 0, regardless
-    index_LowPower = maxS<max(maxS)*0.08;
-    maxFreq(index_LowPower) = 1.314;    %This is my assumption for what baseline frequency would be.
-    
-    %Calculate the average frequency per second
-%     P = round(frequency);     %I moved it up outside the for-loop
-    x = timeVector;
-    x2 = maxFreq;
+    %store the max frequency content of each event 
+    epileptiformEvent{i, 2} = t;
+    epileptiformEvent{i, 3} = maxFreq;    
 
-    S = numel(x);
-    xx = reshape(x(1:S-mod(S,P)),P,[]);
-    xx2 = reshape(x2(1:S-mod(S,P)),P,[]);
-    
-    % Average per second
-    y = sum(xx,1).'/P;
-    y(:,2) = sum(xx2,1).'/P;
-    
-%     % Median per second
-%     y = median(xx)';
-%     y(:,2) = median(xx2)';
-
-    %store the averaged max frequency content of each event 
-    epileptiformEvent{i, 2} = y(:,1);
-    epileptiformEvent{i, 3} = y(:,2);   
-    
-    clear x x2 S xx xx2 y
-    
     %decipher
     [label, classification] = decipher (events,i);
     
     if figureInput == 1
-   
     %Plot Figures
     figHandle = figure;
     set(gcf,'NumberTitle','off', 'color', 'w'); %don't show the figure number
-    set(gcf,'Name', sprintf ('%s Event #%d (shading flat)', label, i)); %select the name you want
+    set(gcf,'Name', sprintf ('%s Event #%d', label, i)); %select the name you want
     set(gcf, 'Position', get(0, 'Screensize'));
 
-    s1=subplot (3,1,1);
-    plot (timeVector, eventVector)  %Plot ictal event
+    subplot (3,1,1)
+    plot (timeVector(round(windowOverlap*frequency):round(t(end)*frequency)), eventVector(round(windowOverlap*frequency):round(t(end)*frequency)))  %Plot ictal event
     hold on
-    plot (timeVector(round(windowSize*frequency_deciminated)), eventVector(round(windowSize*frequency_deciminated)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), eventVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+    plot (timeVector(round(windowSize*frequency)), eventVector(round(windowSize*frequency)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (timeVector(round(numel(eventVector)-(windowSize*frequency))), eventVector(round(numel(eventVector)-(windowSize*frequency))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d   |   Treatment Group:%d', filter, label, i, events(i,4)))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
     axis tight   
     
-    s2=subplot (3,1,2);
-    contourf(timeVector, f,p, 'edgecolor', 'none')
-    shading flat
+    subplot (3,1,2)
+    imagesc(t,f,10*log10(p))
     c = colorbar;
     c.Label.String = 'Power Spectral Density (dB/Hz)';  %Originally I wrote 'Power (dB)', but I think I've been calculating the PSD
+    ylim([0 100])
     title (sprintf('Frequency Content (PSD) of %s Event #%d. Michaels Algorithm detected: %s', label, i, classification))
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')         
     
-    %reposition scale bar
-    s1Pos = get(s1,'position');
-    s2Pos = get(s2,'position');
-    s2Pos(3:4) = [s1Pos(3:4)];
-    set(s2,'position',s2Pos);
-    
     subplot (3,1,3)
-%     plot(timeVector,maxFreq)
-    plot(epileptiformEvent{i, 2},epileptiformEvent{i, 3})
-    title (sprintf('Avg. Dominant Frequency per minute over duration of %s Event #%d', label, i))
+    plot(t,maxFreq) 
+    title (sprintf('Dominant Frequency over duration of %s Event #%d', label, i))
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
     axis tight
+    ylim  ([0 70])   
     
      %Export figures to .pptx
      exportToPPTX('addslide'); %Draw seizure figure on new powerpoint slide

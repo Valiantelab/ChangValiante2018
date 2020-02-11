@@ -73,7 +73,7 @@ if size (x,2) > 1
     onsetDelayLED = 0.13;  %seconds
     offsetDelayLED = 1.5;  %seconds
     lightpulse = LED > 1;
-else
+else        
     LED =[];
     onsetDelay = [];
 end
@@ -183,7 +183,7 @@ end
 %% Part 2.1 - Feature Extraction: Dominant Frequency
 waitbar(0.35, f, 'Calculating Frequency Content of Epileptiform Events');
 pptx_filename = sprintf('%s(frequencyContent).pptx', matFileName(1:end-4));    %name of .pptx file in the same folder as .mat file
-%Perform Frequency Content Analysis
+%Perform Frequency Content Analysis | make an option to use CWT
 [epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, pptx_filename, userInput(1), userInput(2), userInput(3));    %userInput(3) is figure 0=no 1=yes
 
 %% Part 2.2 - Determine if event is light-triggered, delay to onset
@@ -358,47 +358,52 @@ c_intensity = c;
 % ylabel ('intensity (e-5)')
 
 %% Circular Variance and Plots of Ictal Event with photosimulation    
-waitbar(0.83, f, 'Statistical Analysis of Epileptiform Events: Circ Stat');
-%Calculate Theta
-for i = 1:numel(events(:,1))
-    events(i, 29) = events(i, 26)/events(i, 27) * (2*pi);
-end
-%Organize Group
-feature = 29;
-thetaControl = events(events(:,4)==1,feature);
-thetaTest = events(events(:,4)==2,feature);
-thetaPosttest = events(events(:,4)==3,feature);
+if ~isempty(LED)    
+    waitbar(0.83, f, 'Statistical Analysis of Epileptiform Events: Circ Stat');
+    %Calculate Theta
+    for i = 1:numel(events(:,1))
+        events(i, 29) = events(i, 26)/events(i, 27) * (2*pi);
+    end
+    %Organize Group
+    feature = 29;
+    thetaControl = events(events(:,4)==1,feature);
+    thetaTest = events(events(:,4)==2,feature);
+    thetaPosttest = events(events(:,4)==3,feature);
 
-% thetaControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
-% thetaTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
-% thetaPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
+    % thetaControl=SLE(controlStart<SLE(:,1) & SLE(:,1)<controlEnd,feature);
+    % thetaTest=SLE(testStart<SLE(:,1) & SLE(:,1)<testEnd,feature);
+    % thetaPosttest=SLE(posttestStart<SLE(:,1) & SLE(:,1)<posttestEnd,feature);
 
-% Analysis, light correlation?
-resultsTheta(1,1)=circ_vtest(thetaControl,0);
-resultsTheta(2,1)=circ_vtest(thetaTest,0);
+    % Analysis, light correlation?
+    resultsTheta(1,1)=circ_vtest(thetaControl,0);
+    resultsTheta(2,1)=circ_vtest(thetaTest,0);
 
-%Figures for Visual Analysis
-if userInput(3) == 1
-    FigE=figure;
-    set(gcf,'Name','Control', 'NumberTitle', 'off');
-    circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Control Condition, p = %.3f', resultsTheta(1,1)));
-
-    FigF=figure;
-    set(gcf,'Name','Test','NumberTitle', 'off');
-    circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
-    title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
-end
-
-if numel(thetaPosttest)>2
-    resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
-    %Figures for visual analysis
+    %Figures for Visual Analysis
     if userInput(3) == 1
-        FigG=figure;
-        set(gcf,'Name','Post-Test','NumberTitle', 'off');
-        circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
-        title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
-    end    
+        FigE=figure;
+        set(gcf,'Name','Control', 'NumberTitle', 'off');
+        circ_plot(thetaControl,'hist',[],50,false,true,'linewidth',2,'color','r');
+        title (sprintf('Control Condition, p = %.3f', resultsTheta(1,1)));
+
+        FigF=figure;
+        set(gcf,'Name','Test','NumberTitle', 'off');
+        circ_plot(thetaTest,'hist',[],50,false,true,'linewidth',2,'color','r');
+        title (sprintf('Test Condition, p = %.3f', resultsTheta(2,1)));
+    end
+
+    if numel(thetaPosttest)>2
+        resultsTheta(3,1)=circ_vtest(thetaPosttest,0);
+        %Figures for visual analysis
+        if userInput(3) == 1
+            FigG=figure;
+            set(gcf,'Name','Post-Test','NumberTitle', 'off');
+            circ_plot(thetaPosttest,'hist',[],50,false,true,'linewidth',2,'color','r');
+            title (sprintf('Post-Test Condition, p = %.3f',resultsTheta(3,1)));
+        end    
+    end
+else
+    resultsTheta(1,1)=NaN;  %place holders (if no light pulse is analyzed) to push the algorithm through
+    resultsTheta(2,1)=NaN;
 end
 
 %% Dominant Frequency Content; the frequency that carries more power (PSD) w.r.t.
@@ -419,12 +424,13 @@ windowSize = userInput(1);
 indexEvents = find(events(:,3) > windowSize);
 % for i = 1:size(epileptiformEvent,1)
 for i = indexEvents'
-
-    %Place time next to the dominant frequency for each epileptiform event
-    epileptiformEvent{i,3}(:,2) = epileptiformEvent{i,2};
     
+    %Note: cell 1: LFP; cell 2: time; cell 3: dominant Frequency
+    %Place time next to the dominant frequency for each epileptiform event
+    epileptiformEvent{i,3}(:,2) = epileptiformEvent{i,2};  
+            
     %Calculate Tonic Phase
-    tonicPhase = 5; %Hz
+    tonicPhase = 5; %Hz     Tonic phase cut off 5 Hz, bsaed on Quiroga et al., 2002 
     dominantFreq = epileptiformEvent{i,3}(:,1:2);
     indexTonic = dominantFreq(:,1) > tonicPhase;   %locate the period of time when ictal event has tonic phase
     epileptiformEvent{i,3}(:,3) = indexTonic;  %store Boolean index          
@@ -487,6 +493,7 @@ for i = indexEvents'
         end        
     end
     
+       
     %Calculate average Frequency during tonic phase
     meanTonicFreq = mean(epileptiformEvent{i,3}(startTonicPhase(2):endTonic(2),1));
 
@@ -508,7 +515,7 @@ for i = indexEvents'
     %Max Frequency
     frequencyContentAnalysis(i,6) = dominantFreq(maxIndex,1);
     %Time the max Frequency occurs
-    frequencyContentAnalysis(i,7) = dominantFreq(maxIndex,2) - windowSize;  
+    frequencyContentAnalysis(i,7) = dominantFreq(maxIndex,2) - windowSize;  %remove the padding added on to ictal event onset
 
     %Mean Frequency during Tonic Phase
     frequencyContentAnalysis(i,8) = meanTonicFreq;
@@ -518,6 +525,7 @@ for i = indexEvents'
         
 end
 
+%% Compare the dominate frequency 
 %organize groups
 dominantFreqControl = frequencyContentAnalysis (indexControl, :);
 dominantFreqTest = frequencyContentAnalysis (indexTest, :);
@@ -575,13 +583,72 @@ tbl_1ANOVA_dominantFreq = tbl;
 c = multcompare(stats);
 c_dominantFreq = c;
 
+%% Compare when the dominate frequency was observed (delay from ictal onset to max frequency)
+%organize groups
+time_dominantFreqControl = frequencyContentAnalysis (indexControl, :);
+time_dominantFreqTest = frequencyContentAnalysis (indexTest, :);
+time_dominantFreqPosttest = frequencyContentAnalysis (indexPosttest, :);
+
+%Calculate median values 
+if sum(indexControl)>1
+    median_TimeToMaxFreq_Control = median(time_dominantFreqControl);
+else
+    median_TimeToMaxFreq_Control = time_dominantFreqControl;
+end
+
+if sum(indexTest)>1    
+    median_TimeToMaxFreq_Test = median(time_dominantFreqTest);
+else
+    median_TimeToMaxFreq_Test = (time_dominantFreqTest);
+end
+
+if sum(indexPosttest)>1
+    median_TimeToMaxFreq_Posttest = median(time_dominantFreqPosttest);
+else
+    median_TimeToMaxFreq_Posttest = (time_dominantFreqPosttest);
+end
+
+%Concatenate for plotting later into excel sheets
+median_TimeToDominantFreq = vertcat(median_TimeToMaxFreq_Control,median_TimeToMaxFreq_Test,median_TimeToMaxFreq_Posttest);
+
+%Max Dominant Frequency Matrix
+TimeToDominantFreqMatrix(1:size(time_dominantFreqControl,1),1) = time_dominantFreqControl(:,7);
+TimeToDominantFreqMatrix(1:size(time_dominantFreqTest,1),2) = time_dominantFreqTest(:,7);
+TimeToDominantFreqMatrix(1:size(time_dominantFreqPosttest,1),3) = time_dominantFreqPosttest(:,7);
+TimeToDominantFreqMatrix(TimeToDominantFreqMatrix==0) = NaN;
+
+%Analysis
+%Control Condition
+resultsTimeToDominantFreq(1,:) = stage3Analysis (time_dominantFreqControl(:,7), 'nonparametric', 'no figure');
+%Test Condition
+resultsTimeToDominantFreq(2,:) = stage3Analysis (time_dominantFreqTest(:,7), 'nonparametric', 'no figure');
+%Posttest Conditions
+if numel(dominantFreqPosttest(:,6)) >2
+resultsTimeToDominantFreq(3,:) = stage3Analysis (time_dominantFreqPosttest(:,7), 'nonparametric', 'no figure');   
+end
+
+%Comparisons
+[h,p,D] = kstest2(time_dominantFreqControl(:,7), time_dominantFreqTest(:,7)); %2-sample KS Test
+p_value_KS_timeToDominantFreq = p;    %KS Test's p value
+d_KS_timeToDominantFreq = D;  %KS Test's D statistic
+cliffs_d_timeToDominantFreq = CliffDelta(dominantFreqControl(:,7), dominantFreqTest(:,7));   %Cliff's d
+
+%one-way ANOVA
+[p,tbl,stats] = anova1(TimeToDominantFreqMatrix);
+tbl_1ANOVA_timeToDominantFreq = tbl;
+
+%multiple comparisons, Tukey-Kramer Method
+c = multcompare(stats);
+c_timeToDominantFreq = c;
+
+
 %% Combine all the results
-result = horzcat(resultsDuration(:,1:3),resultsIntensity(:,1:3),resultsTheta, resultsDominantFreq(:,1:3));  %only the first three columns
+result = horzcat(resultsDuration(:,1:3),resultsIntensity(:,1:3),resultsTheta, resultsDominantFreq(:,1:3), resultsTimeToDominantFreq(:,1:3));  %only the first three columns
 
 %ictal events # in each group
-n(1,1)=numel(thetaControl);
-n(2,1)=numel(thetaTest);
-n(3,1)=numel(thetaPosttest);
+n(1,1)=numel(durationControl);
+n(2,1)=numel(durationTest);
+n(3,1)=numel(durationPosttest);
 
 %% Stage Bonus: Analyze the light-triggered response in tissue 
 % Author: Michael Chang
@@ -861,21 +928,23 @@ C = 'Duration (s), IQR';
 D = 'AD test, normality';
 E = 'Power (mV^2/s), median';
 F = 'Power (mV^2/s), IQR';
-G = 'AD test, normality';
+G = 'n';
 H = 'Light-triggered';
 I = 'Dominant Frequency, median';
 
 II = 'Dominant Frequency, IQR';
-JJ = 'AD test, normality';
-KK = 'n';
+JJ = 'Delay to Dominant Frequency, median';
+KK = 'Delay to Dominant Frequency, IQR';
 
 J = 'KS Test, 1 vs 2';
 K = 'one-way ANOVA, duration';
 M = 'Multiple Comparison (Tukey-Kramer method), duration';
 N = 'one-way ANOVA, power';
 O = 'Multiple Comparison (Tukey-Kramer method), power';
-NN = 'one-way ANOVA, dominant frequency';
-OO = 'Multiple Comparison (Tukey-Kramer method), dominant frequency';
+NN = 'one-way ANOVA, max dominant frequency';
+OO = 'Multiple Comparison (Tukey-Kramer method), max dominant frequency';
+PP = 'one-way ANOVA, delay to dominant frequency';
+QQ = 'Multiple Comparison (Tukey-Kramer method), delay to dominant frequency';
 
 P = 'Group';
 Q = 'p-value';
@@ -885,27 +954,35 @@ S = 'KS D stat';
 T = 'Cliffs D';
 
 %% Write General Results for Statistical Analysis
-    subtitle1 = {A, B, C, D, E, F, G, H, I, II, JJ, KK};
+    subtitle1 = {A, B, C, D, E, F, D, H, I, II, D, JJ, KK, D, G};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A1');
     xlswrite(sprintf('%s',excelFileName),treatmentGroups,sprintf('%s',sheetName),'A2');
     xlswrite(sprintf('%s',excelFileName),result,sprintf('%s',sheetName),'B2');    
-    xlswrite(sprintf('%s',excelFileName),n,sprintf('%s',sheetName),'L2');
+    xlswrite(sprintf('%s',excelFileName),n,sprintf('%s',sheetName),'O2');
 %Write KS Test results
     subtitle1 = {J};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A6');    
+    %Median Duration of ictal event
     xlswrite(sprintf('%s',excelFileName),p_value_KS_duration,sprintf('%s',sheetName),'B6'); %KS Test p-value
     xlswrite(sprintf('%s',excelFileName),d_KS_duration,sprintf('%s',sheetName),'C6');   %KS Test D Value
     xlswrite(sprintf('%s',excelFileName),cliffs_d_duration,sprintf('%s',sheetName),'D6');    %Cliff's D        
+    %Median Power of ictal event
     xlswrite(sprintf('%s',excelFileName),p_value_KS_intensity,sprintf('%s',sheetName),'E6'); %KS Test p-value
     xlswrite(sprintf('%s',excelFileName),d_KS_intensity,sprintf('%s',sheetName),'F6'); %KS Test D value
     xlswrite(sprintf('%s',excelFileName),cliffs_d_intensity, sprintf('%s',sheetName),'G6'); %Cliff's D
+    %Median, Max Dominant Frequency Observed during ictal event
     xlswrite(sprintf('%s',excelFileName),p_value_KS_dominantFreq,sprintf('%s',sheetName),'I6'); %KS Test p-value
     xlswrite(sprintf('%s',excelFileName),d_KS_dominantFreq,sprintf('%s',sheetName),'J6'); %KS Test D value
     xlswrite(sprintf('%s',excelFileName),cliffs_d_dominantFreq, sprintf('%s',sheetName),'K6'); %Cliff's D
+    %Median, Delay to Max Frequency
+    xlswrite(sprintf('%s',excelFileName),p_value_KS_timeToDominantFreq,sprintf('%s',sheetName),'L6'); %KS Test p-value
+    xlswrite(sprintf('%s',excelFileName),d_KS_timeToDominantFreq,sprintf('%s',sheetName),'M6'); %KS Test D value
+    xlswrite(sprintf('%s',excelFileName),cliffs_d_timeToDominantFreq, sprintf('%s',sheetName),'N6'); %Cliff's D
     subtitle2 = {R,S,T};
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'B5');
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'E5');
     xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'I5');
+    xlswrite(sprintf('%s',excelFileName),subtitle2,sprintf('%s',sheetName),'L5');
 
 %Write one-way ANOVA results, duration
     subtitle1 = {K};
@@ -933,7 +1010,7 @@ T = 'Cliffs D';
     subtitle1 = {NN};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A32');
     xlswrite(sprintf('%s',excelFileName),tbl_1ANOVA_dominantFreq,sprintf('%s',sheetName),'A33');
-%Write multiple comparison (Tukey-Kramer), dominant frequency
+%Write multiple comparison (Tukey-Kramer), max dominant frequency
     subtitle1 = {OO};
     xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A38');
     xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'A39'); %Group subtitle
@@ -941,6 +1018,17 @@ T = 'Cliffs D';
     xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F39'); %p-value subtitle
     xlswrite(sprintf('%s',excelFileName),c_dominantFreq,sprintf('%s',sheetName),'A40');
 
+%Write one-way ANOVA results, delay to max dominant frequency
+    subtitle1 = {PP};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A44');
+    xlswrite(sprintf('%s',excelFileName),tbl_1ANOVA_timeToDominantFreq,sprintf('%s',sheetName),'A45');
+%Write multiple comparison (Tukey-Kramer), delay to dominant frequency
+    subtitle1 = {QQ};
+    xlswrite(sprintf('%s',excelFileName),subtitle1,sprintf('%s',sheetName),'A50');
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'A51'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{P},sprintf('%s',sheetName),'B51'); %Group subtitle
+    xlswrite(sprintf('%s',excelFileName),{Q},sprintf('%s',sheetName),'F51'); %p-value subtitle
+    xlswrite(sprintf('%s',excelFileName),c_timeToDominantFreq,sprintf('%s',sheetName),'A52');
 %% Write Results of frequency content analysis 
     FileName = excel_filename;  %rename excel filename
     
@@ -954,7 +1042,7 @@ T = 'Cliffs D';
 %Write average dominant frequency content of epileptiform events
     subtitle1 = {A};    %Label Treatment Group
     xlswrite(sprintf('%s',FileName),subtitle1,'Median Freq Content','A1');    
-    subtitle1 = {'Classification', 'Onset (s), Tonic Phase', 'Offset (s), Tonic Phase',	'Duration (s), Tonic Phase', '% into SLE', 'Max Frequency (Hz)', 'Time of Max Frequency (s)', 'Tonic Freq (Hz), mean', 'Clonic Freq (Hz), mean', KK};
+    subtitle1 = {'Classification', 'Onset (s), Tonic Phase', 'Offset (s), Tonic Phase',	'Duration (s), Tonic Phase', '% into SLE', 'Max Frequency (Hz)', 'Time of Max Frequency (s)', 'Tonic Freq (Hz), mean', 'Clonic Freq (Hz), mean', G};
     xlswrite(sprintf('%s',FileName),subtitle1,'Median Freq Content','B1');   
     xlswrite(sprintf('%s',FileName),treatmentGroups,'Median Freq Content','A2');   
     xlswrite(sprintf('%s',FileName),medianDominantFreq,'Median Freq Content','B2');

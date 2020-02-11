@@ -32,10 +32,8 @@ for i = 1:numel(events(:,1))
     epileptiformEvent{i,1} = LFP_filteredLowPass(indicesBackground); 
 end
 
-
-
 %Calculate Frequency Content of Epileptiform Events
-for i = 6
+for i = 7
     %Event Vector
     eventVector = epileptiformEvent{i, 1};
     eventVector_unfiltered = detrend(epileptiformEvent_unfiltered{i,1});
