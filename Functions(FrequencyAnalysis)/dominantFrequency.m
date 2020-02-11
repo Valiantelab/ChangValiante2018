@@ -19,7 +19,7 @@ if nargin < 6
     windowOverlap = 1.25;   %seconds; userInput(2)
     figureInput = 1; %plot Figure: Yes (1) or No (0)
 end
-    filter = '1-50 Hz + Low Pass at 50 hz'; %Description for subtitles; guiInput{4}
+    filter = 'Bandpass: 1-100 Hz'; %Description for subtitles; guiInput{4}
     subtitle = 'frequencyContent';  %set the unique title for .ppt output; guiInput{5}
 
 %% Stage 2: Process the File
@@ -51,8 +51,8 @@ end
 % filter = guiInput{4}; %Description for subtitles
 
 %Band Pass Filter
-[b,a] = butter(2, ([1 50]/(frequency/2)), 'bandpass');  %Band pass filter
-LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 50 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
+[b,a] = butter(2, ([1 100]/(frequency/2)), 'bandpass');  %Band pass filter
+LFP_filteredBandPass = filtfilt (b,a,LFP);             %Bandpass filtered [1 - 100 Hz] singal; because of the 76 Hz noise above, also SLEs only have frequencies up to 20 Hz
 
 %High Pass Filter
 fc = 1; % Cut off frequency; a hard stop at 2 Hz
@@ -60,7 +60,7 @@ fc = 1; % Cut off frequency; a hard stop at 2 Hz
 LFP_filteredHighPass = filtfilt(b,a,LFP_filteredBandPass); %filtered signal
 
 %Low Pass Filter
-fc = 50; % Cut off frequency; a hard stop at 50 Hz
+fc = 100; % Cut off frequency; a hard stop at 50 Hz
 [b,a] = butter(4,fc/(frequency/2), 'low'); %Bessel filter of order 8
 LFP_filteredLowPass = filtfilt(b,a,LFP_filteredHighPass); %filtered signal
 

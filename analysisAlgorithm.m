@@ -39,7 +39,7 @@ prompt6 = 'To analyze multiple files in folder, provide File Directory:';
 prompt7 = 'Spike Analysis: Yes (1) or No (0)';
 prompt = {prompt1, prompt2, prompt3, prompt4, prompt5, prompt6, prompt7};
 dims = [1 70];
-definput = {'1.1', '.1', '0', 'BUM [50 uM]', 'manuscriptIII(VGAT-ChR2).xlsx', '', '1'};
+definput = {'1.1', '.1', '0', 'Control', 'control.xlsx', '', '0'};
 
 
 opts = 'on';    %allow end user to resize the GUI window
