@@ -25,7 +25,7 @@ clc
 addpath(genpath(pwd));  
 
 %Manually set File Directory
-inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3) Manuscript III (Nature)\Section 2\B. HEPES (VGAT-ChR2)';
+inputdir = 'C:\Users\micha\OneDrive - University of Toronto\3.1) Manuscript III (Mar 2020)\1) Control\Control (VGAT-ChR2)\Mouse 18 - August 12, 2019';
 
 %GUI to set thresholds
 %Settings, request for user input on threshold

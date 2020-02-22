@@ -132,7 +132,7 @@ end
 % eventTimes = int64(events(indexEvent,:));
 epileptiformEvent = cell(numel(events(:,1)),3);   %preallocate cell array
 
-%Pad the epileptiform event vector equal to the overlapSize and windowSize
+%Pad the epileptiform event vector equal to the windowSize
 % windowSize = userInput(1);
 % windowOverlap = userInput(2);
 minInterictalPeriod = windowSize*2;   %secs
