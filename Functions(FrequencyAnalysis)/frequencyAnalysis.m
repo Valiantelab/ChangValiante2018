@@ -30,9 +30,7 @@ userInput = str2double(InputGUI(1:7)); %convert inputs into numbers
     
     %Auto-load excel file with onset/offset times into workspace
     excel_filename = sprintf('%s(organized).xls', matFileName(1:end-4));    %name of .xls file in the same folder as .mat file
-    
     excelSheet = xlsread(excel_filename, 3); %Read the 3rd sheets in excel file
-    
     events = excelSheet(2:end,:);   %events selected after editing the excel sheet by humans
 
 %% Stage Bonus: Spike Analysis
@@ -61,8 +59,6 @@ if userInput(7) == 1
     userInput_time_spec = str2double(InputGUI_time_spec); %convert inputs into numbers
 end
     
-
-
 f = waitbar(0,'Loading Data: Please wait while data is prepared...','Name', 'Stage 2 Analysis: in progress');
 
 %Create time vector
@@ -124,8 +120,10 @@ avgPowerFeature = mean(powerFeature);   %for use as the intensity ratio threshol
 
 %% Part 2 - Feature Extraction: Duration, Intensity, and Peak-to-Peak Amplitude
 waitbar(0.1, f, 'Extracting Features from detected Epileptiform Events');
+%Preallocate cells
 intensityPerMinute = cell(size(events,1),1);
 totalPower = zeros(size(events,1),1);
+%Perform feature extraction
 for i = 1:size(events,1)
     %Convert times (s) into points in data
     onsetTime = int64(events(i,1)*frequency);
@@ -182,12 +180,13 @@ for i = 1:size(events,1)
 
 end
 
-%Calculate dominant frequency
+%% Part 2.1 - Feature Extraction: Dominant Frequency
 waitbar(0.35, f, 'Calculating Frequency Content of Epileptiform Events');
 pptx_filename = sprintf('%s(frequencyContent).pptx', matFileName(1:end-4));    %name of .pptx file in the same folder as .mat file
+%Perform Frequency Content Analysis
 [epileptiformEvent, interictal] = dominantFrequency(spikes, events, SLE, artifactSpikes, samplingInterval, x, pptx_filename, userInput(1), userInput(2), userInput(3));    %userInput(3) is figure 0=no 1=yes
 
-%Determine if event is light-triggered, delay to onset
+%% Part 2.2 - Determine if event is light-triggered, delay to onset
 waitbar(0.55, f, 'Determine if Epileptiform Events are light-triggered');
 if ~isempty(LED)
     %Classify which SLEs were light triggered | if the spike onset is after light pulse

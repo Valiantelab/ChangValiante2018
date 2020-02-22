@@ -1,21 +1,40 @@
- %Event Vector
+%% CWT script
+%Instruction: Run analysisAlgorithm.m, then pause the function
+%"dominantFrequency.m" at line 241
+
+i=7
+
+    %Event Vector
     eventVector = epileptiformEvent{i, 1};
     
     %Time Vector
     timeVector = (0:(length(eventVector)- 1))/frequency;
     timeVector = timeVector';    
     
-    %deciminate
-    eventVector = deciminate(eventVector, 100);
-    timeVector = deciminate(timeVector,100);
-    frequency = 1000;
+    
+    %Deciminated Event 
+    eventVector = decimate(eventVector, 100);
+    timeVector = decimate(timeVector,100);
+    frequency_decimated = frequency/100;
+    
+    %Time Vector (decimated)
+    timeVector = (0:(length(eventVector)- 1))/frequency_decimated;
+    timeVector = timeVector';    
+    
     
     %Frequency content of epileptiform event 
 %     [s,f,t,p] = spectrogram (eventVector,round(windowSize*frequency),round(windowOverlap*frequency), 2.^nextpow2(windowSize*frequency), frequency, 'yaxis');
-    
     [wt, f] = cwt(eventVector, 'amor', frequency);
     p = abs(wt);
     contourf(timeVector, f,p)
+    
+    
+    %calculate decimated event vector
+    [wt, f] = cwt(eventVector, 'amor', frequency_decimated);
+    p = abs(wt);
+    contourf(timeVector, f,p)
+    
+    
     
     figure()
     surface(timeVector, f,p)
