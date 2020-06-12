@@ -16,7 +16,7 @@ fc = 100; % Cut off frequency; a hard stop at 50 Hz
 LFP_filteredLowPass = filtfilt(b,a,LFP_filteredHighPass); %filtered signal
 
 %detrend the LFP data
-LFP_detrended = detrend(LFP); 
+LFP_detrend = detrend(LFP); 
 
 windowSize = 1.1;
 windowOverlap = .1;
@@ -24,7 +24,7 @@ windowOverlap = .1;
 %Make vectors of SLEs, unfiltered 
 for i = 1:numel(events(:,1))  
     [~, indicesBackground] = eventIndices(LFP, events(i,:), 5, frequency);    %Make vectors based on original times detected by algorithm
-    epileptiformEvent_unfiltered{i,1} = LFP(indicesBackground); 
+    epileptiformEvent_unfiltered{i,1} = LFP_detrend(indicesBackground); 
     LED_event{i,1} = LED(indicesBackground); 
 end
 
@@ -37,10 +37,11 @@ end
 
 
 %Calculate Frequency Content of Epileptiform Events
-for i = 7
+for i = 6
      %Event Vector
-    eventVector = decimate(epileptiformEvent{i, 1},decimation_factor);
-    
+    eventVector = decimate(epileptiformEvent{i, 1},decimation_factor);  %decimated
+    eventVector_detrend = decimate(epileptiformEvent_unfiltered{i, 1},decimation_factor);   %decimated
+        
     %Time Vector
     timeVector = (0:(length(eventVector)- 1))/frequency_deciminated;
     timeVector = timeVector';    
@@ -92,10 +93,10 @@ for i = 7
     set(gcf, 'Position', get(0, 'Screensize'));
 
     s1=subplot (3,1,1);
-    plot (timeVector, eventVector)  %Plot ictal event
+    plot (timeVector, eventVector_detrend, 'color', 'k')  %Plot ictal event
     hold on
-    plot (timeVector(round(windowSize*frequency_deciminated)), eventVector(round(windowSize*frequency_deciminated)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
-    plot (timeVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), eventVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
+    plot (timeVector(round(windowSize*frequency_deciminated)), eventVector_detrend(round(windowSize*frequency_deciminated)), 'ro', 'color', 'black', 'MarkerFaceColor', 'green')    %SLE onset
+    plot (timeVector(round(numel(eventVector)-(windowSize*frequency_deciminated))), eventVector_detrend(round(numel(eventVector)-(windowSize*frequency_deciminated))), 'ro', 'color', 'black', 'MarkerFaceColor', 'red')    %SLE offset
     title (sprintf('LFP Bandpass Filtered (%s), %s Event #%d   |   Treatment Group:%d', filter, label, i, events(i,4)))
     xlabel('Time (sec)')
     ylabel('Voltage (mV)')
@@ -123,6 +124,8 @@ for i = 7
     ylabel('Frequency (Hz)')
     xlabel('Time (sec)')
     axis tight
-       
+    
+    ylim ([0 30])
+    
 end
 
