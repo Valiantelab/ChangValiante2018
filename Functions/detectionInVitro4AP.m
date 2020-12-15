@@ -179,7 +179,7 @@ if isempty(epileptiformLocation)
     return
 end
 
-%% Stage 2a: SLE Classifier; Part 1 - Classifier, duration
+%% Stage 2a: SLE Classifier; Part 1 - Classifier, filter out events with short duration
 waitbar(0.5, f, 'Detecting exact Onset and Offset of Events using Signals Power');
 % pause(1)
 %Putative IIS
