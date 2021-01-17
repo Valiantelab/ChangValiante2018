@@ -19,7 +19,7 @@ Quick start (For demonstration):
 4) Specify Detection Parameters, or click "OK" and use default settings
 5) Select .abf you want to analyze, or select 13226009(exampleFile).abf provided
 
-Description:
+## Full Description:
 High speed detection of ictal events (SLEs), according to the rules and specifications of  Chang et al., 2018a. The detection algorithm works by detecting all the spikes in the time series provided (.abf file) and groups spikes that are within 10 sec of each other as one event. These events are then classified based on their spiking characteristics (duration, rate, intensity, and amplitude). Events can be classified as ictal event (SLE), questionable ictal event (requires human intuition),  interictal event (IIE), interictal spike (IIS), or an artifact.
 
 Specifying Detection Parameters (overview of GUI inputs):
