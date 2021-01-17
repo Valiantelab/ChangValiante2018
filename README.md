@@ -8,14 +8,14 @@ Requirements:
 - Microsoft Office
 - 8 GB of RAM
 
-[Video Tutorial](https://www.dropbox.com/s/wpta1wt5facegp4/Detection%20Algorithm%20%28Demo%29%20Nov%2022%2C%202018.mov?dl=0)
-
 Quick start (For demonstration):
 1) Set MatLab's working directory to ChangValiante2018.
 2) Open detectionAlgorithm.m
 3) Run the script
 4) Specify Detection Parameters, or click "OK" and use default settings
 5) Select .abf you want to analyze, or select 13226009(exampleFile).abf provided
+
+[Video Tutorial of Full Instructions](https://www.dropbox.com/s/wpta1wt5facegp4/Detection%20Algorithm%20%28Demo%29%20Nov%2022%2C%202018.mov?dl=0)
 
 ## Full Description:
 High speed detection of ictal events (SLEs), according to the rules and specifications of  Chang et al., 2018a. The detection algorithm works by detecting all the spikes in the time series provided (.abf file) and groups spikes that are within 10 sec of each other as one event. These events are then classified based on their spiking characteristics (duration, rate, intensity, and amplitude). Events can be classified as ictal event (SLE), questionable ictal event (requires human intuition),  interictal event (IIE), interictal spike (IIS), or an artifact.
